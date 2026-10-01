@@ -41,6 +41,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .cc header h3{flex:1;margin:0;font-size:14px;font-weight:650}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--cc)}
 .cc.closed .rows{display:none}
+.cc footer.ufoot{border-top:1px dashed var(--line)}
 .chev{display:inline-block;color:var(--muted);font-size:12px;transition:transform .2s;width:14px;text-align:center}
 .cc.closed .chev{transform:rotate(-90deg)}
 .wk.cu{color:var(--ink)}
@@ -334,15 +335,17 @@ const savingOf=m=>{const d=plainDep(m);return d?+d.amount:0};
 function setSaving(m,v){let d=plainDep(m);if(!v){if(d)S.deposits=S.deposits.filter(x=>x!==d);return}if(d)d.amount=v;else{S.deposits.push({id:uid(),month:m,amount:v,note:''});S.deposits.sort((a,b)=>a.month.localeCompare(b.month))}}
 function migrate(){let ch=false;
   if(!S.cards){S.cards=DEF_CARDS.map(c=>({...c,close:(S.close&&S.close[c.id])||c.close}));delete S.close;ch=true}for(const[m,M]of Object.entries(S.months||{})){if('saving'in M){if(M.saving&&!plainDep(m))setSaving(m,M.saving);delete M.saving;ch=true}}return ch}
-function monthTotals(m){const M=S.months[m]||lastMonth(m);const tc=cardsAll().reduce((s,c)=>s+lines(c.id,m).reduce((a,l)=>a+l.net,0),0);const tx=(M.taxes||[]).reduce((s,t)=>s+num(t.amount),0);const sal=num(M.salary),sv=savingOf(m);return{sal,tc,tx,sv,rest:sal-sv-tc-tx}}
+function cardTot(c,m){const L=lines(c.id,m),A=L.filter(l=>!l.u),U=L.filter(l=>l.u);const b=sumBy(A,'val'),r=sumBy(A,'ref'),ub=sumBy(U,'uval'),ur=sumBy(U,'uref');return{c,L,b,r,n:b-r,ub,ur,un:ub-ur}}
+function tcTotal(cs,M){const ars=cs.reduce((s,x)=>s+x.n,0),un=cs.reduce((s,x)=>s+x.un,0);return ars+Math.max(0,un-num(M.usdPaid||0))*(num(M.usd)||0)}
+function monthTotals(m){const M=S.months[m]||lastMonth(m);const tc=tcTotal(cardsAll().map(c=>cardTot(c,m)),{usd:rate(m),usdPaid:(S.months[m]||{}).usdPaid||0});const tx=(M.taxes||[]).reduce((s,t)=>s+num(t.amount),0);const sal=num(M.salary),sv=savingOf(m);return{sal,tc,tx,sv,rest:sal-sv-tc-tx}}
 function lines(card,m){
   return S.purchases.filter(p=>p.card===card).map(p=>{
     let n=diffM(m,p.first)+1,cu=p.cuota;
     if(p.hist&&S.histEnd&&m<=S.histEnd){if(!(m in p.hist))return null;n=p.hist[m];cu=p.hc?.[m]??p.cuota}
     else if(p.rec){if(n<1||(p.until&&m>p.until))return null}else if(n<1||n>p.cuotas)return null;
-    const val=p.cur==='USD'?cu*rate(m):cu;
-    const ref=p.refAll?val:(p.refunds?.[m]||0);
-    return{p,n,val,ref,net:val-ref};
+    const u=p.cur==='USD',rt=u?rate(m):1,uref=p.refAll?cu:(p.refunds?.[m]||0);
+    const val=cu*rt,ref=uref*rt;
+    return{p,n,val,ref,net:val-ref,u,uval:u?cu:0,uref:u?uref:0};
   }).filter(Boolean).sort((a,b)=>(a.p.date||'').localeCompare(b.p.date||'')||a.p.desc.localeCompare(b.p.desc));
 }
 function monday(iso){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
@@ -368,18 +371,18 @@ function render(){
 
 function vMes(){
   const m=view,M=ensureMonth(m);
-  const cs=cardsAll().map(c=>{const L=lines(c.id,m),b=sumBy(L,'val'),r=sumBy(L,'ref');return{c,L,b,r,n:b-r}});
-  const tc=cs.reduce((s,x)=>s+x.n,0),tx=M.taxes.reduce((s,t)=>s+num(t.amount),0);
+  const cs=cardsAll().map(c=>cardTot(c,m));
+  const tc=tcTotal(cs,M),tx=M.taxes.reduce((s,t)=>s+num(t.amount),0);
   const sv=savingOf(m),rest=num(M.salary)-sv-tc-tx;
-  const hasUSD=S.purchases.some(p=>p.cur==='USD');
-  let h=(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta</b> para crear tus tarjetas y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+`<div class="sumwrap"><div class="card pad">
+    let h=(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta</b> para crear tus tarjetas y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+`<div class="sumwrap"><div class="card pad">
     <div class="sum">
       <div class="fld"><label>Sueldo</label><input inputmode="decimal" data-mf="salary" value="${M.salary?nf(M.salary):''}" placeholder="0,00"></div>
       <div class="fld"><label>Ahorro esperado</label><input inputmode="decimal" data-mf="saving" value="${sv?nf(sv):''}" placeholder="0,00"></div>
       <div class="fld"><label>Dólar del mes</label><input inputmode="decimal" data-mf="usd" value="${M.usd?nf(M.usd):''}" placeholder="0,00"></div>
       <div class="fld"><label>Ahorros disponibles</label><div style="padding:9px 0;font-weight:650">${fmt(savBal())}</div></div>
     </div>
-    ${hasUSD&&!M.usd?'<div class="warn">Hay compras en USD y falta el dólar del mes.</div>':''}
+    ${cs.some(x=>x.ub)?`<div class="sum" style="margin-top:10px"><div class="fld"><label>U$D del mes (neto)</label><div style="padding:9px 0;font-weight:650">${fmtU(cs.reduce((s,x)=>s+x.un,0))}</div></div><div class="fld"><label>U$D pagados en dólares</label><input inputmode="decimal" data-mf="usdPaid" value="${M.usdPaid?nf(M.usdPaid):''}" placeholder="0,00"></div></div><div class="hint">Lo que pagues en dólares no se suma al total en pesos; el resto se convierte con el dólar del mes.</div>`:''}
+    ${cs.some(x=>x.ub)&&!M.usd?'<div class="warn">Hay compras en USD y falta el dólar del mes.</div>':''}
   </div>
   <div class="card pad hero">
     <div class="kv"><span>Sueldo</span><span>${fmt(num(M.salary))}</span></div>
@@ -399,15 +402,15 @@ function vMes(){
       if(!l.p.rec&&l.p.cuotas<=1){if(!l.p.date){if(wk!=='none'){wk='none';rows+=`<div class="wk">Sin fecha</div>`}}else{const mo=monday(l.p.date),k=mo.toISOString().slice(0,10);
       if(k!==wk){wk=k;const su=new Date(mo);su.setDate(su.getDate()+6);rows+=`<div class="wk">Semana ${dm(mo)} al ${dm(su)}</div>`}}}
       rows+=`<div class="row" role="button" tabindex="0" data-act="edit" data-id="${l.p.id}">
-        <div style="min-width:0"><div class="r-desc">${esc(l.p.desc)}</div><div class="r-sub">${l.p.date?dmy(l.p.date)+' · ':''}${esc(l.p.cat)}${l.p.cur==='USD'?' · '+fmtU(l.p.cuota):''}</div>${l.p.note?`<div class="r-note"><span>💬 ${esc(l.p.note)}</span><button class="nx" data-act="delnote" data-id="${l.p.id}" aria-label="Borrar comentario">×</button></div>`:''}</div>
+        <div style="min-width:0"><div class="r-desc">${esc(l.p.desc)}</div><div class="r-sub">${l.p.date?dmy(l.p.date)+' · ':''}${esc(l.p.cat)}${l.u?' · dólares':''}</div>${l.p.note?`<div class="r-note"><span>💬 ${esc(l.p.note)}</span><button class="nx" data-act="delnote" data-id="${l.p.id}" aria-label="Borrar comentario">×</button></div>`:''}</div>
         <span class="r-cu">${l.p.rec?'↻':l.p.cuotas>1?l.n+'/'+l.p.cuotas:'—'}</span>
-        <div class="r-amt">${fmt(l.val)}${l.ref?`<small>↩ reint. ${fmt(-l.ref)}</small><small class="r-net">neto ${fmt(l.net)}</small>`:''}</div>
+        <div class="r-amt">${l.u?fmtU(l.uval):fmt(l.val)}${l.ref||l.uref?`<small>↩ reint. ${l.u?'-'+fmtU(l.uref):fmt(-l.ref)}</small><small class="r-net">neto ${l.u?fmtU(l.uval-l.uref):fmt(l.net)}</small>`:''}</div>
         <button class="dots ${l.p.note?'has':''}" data-act="note" data-id="${l.p.id}" aria-label="Comentario">⋯</button></div>`;
     }
     h+=`<section class="card cc ${opened.has(x.c.id)?'':'closed'}" style="--cc:${x.c.color}">
-      <header data-act="toggle" data-id="${x.c.id}"><span class="chev">▼</span><span class="dot"></span><h3>${esc(x.c.name)} <span class="mut" style="font-weight:400">· ${x.L.length} gastos</span><span class="cdate">Cierre ${closeDate(x.c,m)}</span></h3><b>${fmt(x.n)}</b><button class="x" data-act="editcard" data-id="${x.c.id}" aria-label="Editar tarjeta">✎</button></header>
+      <header data-act="toggle" data-id="${x.c.id}"><span class="chev">▼</span><span class="dot"></span><h3>${esc(x.c.name)} <span class="mut" style="font-weight:400">· ${x.L.length} gastos</span><span class="cdate">Cierre ${closeDate(x.c,m)}</span></h3><b>${fmt(x.n)}${x.ub?`<span class="cdate" style="text-align:right">+ ${fmtU(x.un)}</span>`:''}</b><button class="x" data-act="editcard" data-id="${x.c.id}" aria-label="Editar tarjeta">✎</button></header>
       <div class="rows">${rows||'<div class="empty">Sin cuotas este mes.</div>'}</div>
-      <footer><span>Bruto ${fmt(x.b)}</span><span class="pos">Reint. ${fmt(x.r)}</span><b>Neto ${fmt(x.n)}</b></footer></section>`;
+      <footer><span>Bruto ${fmt(x.b)}</span><span class="pos">Reint. ${fmt(x.r)}</span><b>Neto ${fmt(x.n)}</b></footer>${x.ub?`<footer class="ufoot"><span>U$D bruto ${fmtU(x.ub)}</span><span class="pos">Reint. ${fmtU(x.ur)}</span><b>Neto ${fmtU(x.un)}</b></footer>`:''}</section>`;
   }
   h+=`</div><button class="addcard" data-act="addcard">+ Nueva tarjeta</button>`;
   h+=`<div class="grid4"><div><h2>Impuestos y servicios</h2><div class="card">`;
