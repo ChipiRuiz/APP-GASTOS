@@ -66,7 +66,9 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .r-amt small{display:block;font-size:11px;color:var(--pos)}
 .cc footer{display:flex;justify-content:space-between;gap:8px;padding:10px 14px;font-size:13px;border-top:1px solid var(--line);background:var(--week)}
 .empty{padding:14px;color:var(--muted);font-size:13px}
-.tax{display:grid;grid-template-columns:auto 1fr 110px auto;gap:8px;align-items:center;padding:8px 14px;border-top:1px solid var(--line)}
+.paid{border:1.5px solid var(--accent);background:none;color:var(--accent);border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.03em;padding:4px 8px;cursor:pointer;white-space:nowrap;min-width:84px}
+.paid.on{background:var(--accent);color:var(--onacc)}
+.tax{display:grid;grid-template-columns:auto minmax(0,1fr) 100px auto;gap:8px;align-items:center;padding:8px 14px;border-top:1px solid var(--line)}
 .tax:first-child{border-top:0}
 .tax input[type=text]{border:1px solid transparent;background:none;border-radius:7px;padding:6px;width:100%}
 .tax input[type=text]:focus{border-color:var(--line);background:var(--bg)}
@@ -201,7 +203,7 @@ const curYM=todayISO().slice(0,7);
 function emptyState(){
   return {purchases:[],deposits:[],savingsExp:[],trips:[],months:{},
     cats:['GASTOS COMÚNES','COMPRAS VARIAS','IMPUESTO','TRANSPORTE','DEPORTE','SUSCRIPCIÓN','PADEL','GASTO AJENO'],
-    cards:JSON.parse(JSON.stringify(DEF_CARDS.filter(c=>!c.hidden))),theme:{p:'sakura2',mode:'dark'}};
+    cards:[],theme:{p:'sakura2',mode:'dark'}};
 }
 const PAL={
  menta:{n:'Menta',l:{bg:'#f4f5f7',card:'#fff',ink:'#16181d',muted:'#6b7280',line:'#e5e7eb',accent:'#0f766e',soft:'#e6f4f1',week:'#f1f5f9',onacc:'#fff'},d:{bg:'#0f1115',card:'#181b21',ink:'#e8eaee',muted:'#9aa1ac',line:'#2a2f38',accent:'#2dd4bf',soft:'#12332f',week:'#20252d',onacc:'#06201d'}},
@@ -269,7 +271,7 @@ async function start(){
   if(data.session){user=data.session.user;await boot()}else showLogin();
 }
 let view=curYM, tab='mes';
-const closed=new Set();
+const closed=new Set(),opened=new Set();
 
 /* ---------- lógica ---------- */
 function ensureMonth(m){
@@ -324,7 +326,7 @@ function vMes(){
   const tc=cs.reduce((s,x)=>s+x.n,0),tx=M.taxes.reduce((s,t)=>s+num(t.amount),0);
   const sv=savingOf(m),rest=num(M.salary)-sv-tc-tx;
   const hasUSD=S.purchases.some(p=>p.cur==='USD');
-  let h=(S.purchases.length?'':`<div class="banner">Todavía no hay datos. Andá a <b>Ajustes → Importar</b> y elegí el archivo <b>historial.json</b>.</div>`)+`<div class="sumwrap"><div class="card pad">
+  let h=(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta</b> para crear tus tarjetas y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+`<div class="sumwrap"><div class="card pad">
     <div class="sum">
       <div class="fld"><label>Sueldo</label><input inputmode="decimal" data-mf="salary" value="${M.salary?nf(M.salary):''}" placeholder="0,00"></div>
       <div class="fld"><label>Ahorro esperado</label><input inputmode="decimal" data-mf="saving" value="${sv?nf(sv):''}" placeholder="0,00"></div>
@@ -356,14 +358,14 @@ function vMes(){
         <div class="r-amt">${fmt(l.net)}${l.ref?`<small>reint. ${fmt(-l.ref)}</small>`:''}</div>
         <button class="dots ${l.p.note?'has':''}" data-act="note" data-id="${l.p.id}" aria-label="Comentario">⋯</button></div>`;
     }
-    h+=`<section class="card cc ${closed.has(x.c.id)?'closed':''}" style="--cc:${x.c.color}">
+    h+=`<section class="card cc ${opened.has(x.c.id)?'':'closed'}" style="--cc:${x.c.color}">
       <header data-act="toggle" data-id="${x.c.id}"><span class="chev">▼</span><span class="dot"></span><h3>${esc(x.c.name)} <span class="mut" style="font-weight:400">· ${x.L.length} gastos</span><span class="cdate">Cierre ${closeDate(x.c,m)}</span></h3><b>${fmt(x.n)}</b><button class="x" data-act="editcard" data-id="${x.c.id}" aria-label="Editar tarjeta">✎</button></header>
       <div class="rows">${rows||'<div class="empty">Sin cuotas este mes.</div>'}</div>
       <footer><span>Bruto ${fmt(x.b)}</span><span class="pos">Reint. ${fmt(x.r)}</span><b>Neto ${fmt(x.n)}</b></footer></section>`;
   }
   h+=`</div><button class="addcard" data-act="addcard">+ Nueva tarjeta</button>`;
   h+=`<div class="grid4"><div><h2>Impuestos y servicios</h2><div class="card">`;
-  h+=M.taxes.map(t=>`<div class="tax"><input type="checkbox" data-tx="paid" data-id="${t.id}" ${t.paid?'checked':''} aria-label="Pagado">
+  h+=M.taxes.map(t=>`<div class="tax"><button class="paid ${t.paid?'on':''}" data-act="paidtx" data-id="${t.id}" aria-pressed="${!!t.paid}">${t.paid?'✓ PAGADA':'NO PAGADA'}</button>
     <input type="text" data-tx="name" data-id="${t.id}" value="${esc(t.name)}">
     <input type="text" class="amt" inputmode="decimal" data-tx="amount" data-id="${t.id}" value="${num(t.amount)?nf(num(t.amount)):''}" placeholder="0,00">
     <button class="x" data-act="deltax" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('');
@@ -520,11 +522,12 @@ document.addEventListener('click',e=>{
   if(a==='prev'){view=addM(view,-1);render()}
   else if(a==='next'){view=addM(view,1);render()}
   else if(a==='quick')purchaseForm();
-  else if(a==='toggle'){closed.has(id)?closed.delete(id):closed.add(id);render()}
+  else if(a==='toggle'){const set=cardById(id)?opened:closed;set.has(id)?set.delete(id):set.add(id);render()}
   else if(a==='edit')purchaseForm(S.purchases.find(p=>p.id===id));
   else if(a==='delnote'){const x=S.purchases.find(p=>p.id===id);delete x.note;save();render()}
   else if(a==='note'){const x=S.purchases.find(p=>p.id===id);sheet(`<h3>Comentario</h3><div class="hint" style="margin-bottom:8px">${esc(x.desc)}</div>${fld('',`<textarea name="note" rows="3" placeholder="Escribí un comentario breve">${esc(x.note||'')}</textarea>`)}`,d=>{const n=(d.note||'').trim();if(n)x.note=n;else delete x.note})}
   else if(a==='addcard'||a==='editcard')cardForm(a==='editcard'?cardById(id):null);
+  else if(a==='paidtx'){const x=S.months[view].taxes.find(y=>y.id===id);x.paid=!x.paid;save();render()}
   else if(a==='addtax'){S.months[view].taxes.push({id:uid(),name:'',amount:0,paid:false});save();render()}
   else if(a==='deltax'){const M=S.months[view];M.taxes=M.taxes.filter(x=>x.id!==id);save();render()}
   else if(a==='adddep')simpleForm('Nuevo ahorro',[['month','Mes','month',curYM],['amount','Monto','num'],['note','Nota']],null,d=>{S.deposits.push({id:uid(),month:d.month,amount:num(d.amount),note:d.note})});
