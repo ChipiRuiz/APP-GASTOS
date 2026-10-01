@@ -426,12 +426,12 @@ function vMes(){
   return h;
 }
 
-const CATPAL={l:['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#4a3aa7','#e34948'],d:['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767']};
+const CATPAL={l:['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#4a3aa7','#e34948','#0891b2','#84cc16','#c026d3','#a16207','#0f766e','#f43f5e','#6366f1','#ca8a04','#7c3aed','#b91c1c','#0369a1','#65a30d'],d:['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767','#22d3ee','#a3e635','#e879f9','#d4a056','#2dd4bf','#fb7185','#818cf8','#facc15','#c084fc','#f87171','#38bdf8','#86efac']};
 let DON=[];
 function catSlot(c){S.catSlots=S.catSlots||{};const m=S.catSlots;
   for(const k of Object.keys(m))if(!S.cats.includes(k))delete m[k];
   if(c in m)return m[c];if(!S.cats.includes(c))return -1;
-  for(const k of S.cats){if(k in m)continue;const used=new Set(Object.values(m));let f=0;while(used.has(f))f++;if(f>=8)break;m[k]=f;if(k===c)break}
+  for(const k of S.cats){if(k in m)continue;const used=new Set(Object.values(m));let f=0;while(used.has(f))f++;if(f>=20)break;m[k]=f;if(k===c)break}
   return c in m?m[c]:-1}
 function donutHTML(cat){
   const dark=!!window.__dark;
@@ -502,7 +502,7 @@ function vAjustes(){
   return `<h2>Apariencia</h2><div class="card pad"><div class="pals">${Object.entries(PAL).map(([k,p])=>`<button class="pal ${t.p===k?'on':''}" data-act="pal" data-id="${k}"><i style="background:linear-gradient(135deg,${p.l.accent} 50%,${p.d.accent} 50%)"></i>${p.n}</button>`).join('')}</div>
     <div class="seg">${[['auto','Automático'],['light','Claro'],['dark','Oscuro']].map(([k,n])=>`<label><input type="radio" name="mode" data-mode="${k}" ${t.mode===k?'checked':''}><span>${n}</span></label>`).join('')}</div></div>
   <h2>Categorías</h2><div class="card pad"><div class="chips">${S.cats.map((c,i)=>`<span class="chip"><i style="background:${catSlot(c)>=0?CATPAL[window.__dark?'d':'l'][catSlot(c)]:'var(--muted)'}"></i>${esc(c)}<button data-act="delcat" data-id="${i}" aria-label="Borrar ${esc(c)}">×</button></span>`).join('')}</div>
-    <button class="lnk" style="padding:12px 0 0" data-act="addcat">+ Nueva categoría</button><div class="hint">Hasta 8 categorías tienen color propio en el gráfico; el resto se agrupa en "Otros". Al borrar una, su color pasa a la siguiente sin color.</div></div>
+    <button class="lnk" style="padding:12px 0 0" data-act="addcat">+ Nueva categoría</button><div class="hint">Hasta 20 categorías tienen color propio en el gráfico; a partir de la 21 se agrupan en "Otros". Al borrar una, su color pasa a la siguiente sin color.</div></div>
   <h2>Datos</h2><div class="card pad"><div class="btns"><button class="btn sec" data-act="export">Exportar</button><label class="btn sec" style="text-align:center">Importar<input type="file" accept=".json" id="imp" hidden></label></div>
   <div class="dinfo"><p><b>Exportar</b> descarga un archivo <b>.json</b> <code style="white-space:nowrap">gastos-AAAA-MM-DD.json</code> con todos tus datos: tarjetas, gastos y cuotas, reintegros, comentarios, sueldo, ahorros, vacaciones, categorías y apariencia. Sirve como copia de seguridad.</p>
     <p><b>Importar</b> acepta solo un <b>.json</b> exportado desde esta app (o el historial que armamos de la planilla). No acepta Excel ni CSV.</p>
