@@ -156,6 +156,8 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .chip i{width:9px;height:9px;border-radius:3px}
 .chip button{border:0;background:none;color:var(--muted);font-size:15px;line-height:1;padding:0 6px;cursor:pointer;border-radius:999px}.chip button:hover{color:var(--neg)}
 .dinfo{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.45}.dinfo p{margin:0 0 6px}.dinfo b{color:var(--ink)}.dinfo code{font-size:11.5px;background:var(--week);padding:1px 5px;border-radius:5px}
+.dwrap{position:relative}.dwrap input{padding-right:34px}
+.dclr{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:4px 8px;cursor:pointer;border-radius:6px}.dclr:hover{color:var(--neg)}
 .banner{background:var(--soft);border:1px dashed var(--accent);border-radius:14px;padding:14px;margin-bottom:12px;font-size:14px}
 </style>
 </head>
@@ -534,7 +536,7 @@ function purchaseForm(p){
   const inMonth=!isNew&&diffM(view,p.first)>=0&&(p.rec?(!p.until||view<=p.until):diffM(view,p.first)<p.cuotas);
   const f=sheet(`<h3>${isNew?'Nuevo gasto':'Editar gasto'}</h3>
     ${fld('Descripción',`<input name="desc" required value="${esc(p.desc)}">`)}
-    <div class="f2">${fld('Fecha',`<input type="date" name="date" required value="${p.date}">`)}${fld('Tarjeta',`<select name="card">${dest}</select>`)}</div>
+    <div class="f2">${fld('Fecha',`<div class="dwrap"><input type="date" name="date" value="${p.date||''}"><button type="button" class="dclr" id="dclr" aria-label="Sin fecha" title="Sin fecha">×</button></div>`)}${fld('Tarjeta',`<select name="card">${dest}</select>`)}</div>
     <div class="f2"><div class="fld"><label id="amtlbl">Monto</label><input name="total" inputmode="decimal" required value="${amt0?nf(amt0):''}" placeholder="0,00"><div class="hint" id="amthint"></div></div>${fld('Moneda',curSeg(p.cur))}</div>
     <div class="f2 cardonly">${fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${p.cuotas}">`)}${fld('Categoría',catSel(p.cat))}</div>
     <label class="chk cardonly"><input type="checkbox" name="rec" ${p.rec&&!p.until?'checked':''}> Se repite todos los meses (débito automático / suscripción)</label>
@@ -547,7 +549,7 @@ function purchaseForm(p){
     if(d.card==='AHORRO'){S.savingsExp.push({id:uid(),desc:d.desc,amount:total,date:d.date,note:(d.note||'').trim()||undefined});return}
     const cu=Math.max(1,parseInt(d.cuotas)||1);
     const o=isNew?{id:uid(),refunds:{}}:p;
-    Object.assign(o,{card:d.card,date:d.date,desc:d.desc,cuotas:cu,cuota:Math.round(total*100)/100,cur:d.cur,cat:d.cat,first:d.first||firstFor(d.card,d.date)});
+    Object.assign(o,{card:d.card,date:d.date,desc:d.desc,cuotas:cu,cuota:Math.round(total*100)/100,cur:d.cur,cat:d.cat,first:d.first||(d.date?firstFor(d.card,d.date):view)});
     const nt=(d.note||'').trim();if(nt)o.note=nt;else delete o.note;
     if(d.rec){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew)o.rec=false;else o.until=view}
     if(!isNew){o.refAll=!!d.refAll;if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
@@ -559,6 +561,7 @@ function purchaseForm(p){
     $('#amtlbl').textContent=!ah&&n>1?'Valor de cada cuota':'Monto';
     $('#amthint').textContent=!ah&&n>1&&v?`Total: ${u?fmtU(v*n):fmt(v*n)} en ${n} cuotas`:''};
   f.cuotas.oninput=amtUI;f.total.oninput=amtUI;f.querySelectorAll('[name=cur]').forEach(x=>x.onchange=amtUI);
+  const dsync=()=>{$('#dclr').style.visibility=f.date.value?'visible':'hidden'};$('#dclr').onclick=()=>{f.date.value='';dsync()};f.date.addEventListener('input',dsync);dsync();
   f.card.onchange=()=>{sync();amtUI()};f.date.onchange=sync;sync();amtUI();
 }
 
