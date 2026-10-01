@@ -529,13 +529,13 @@ const curSeg=v=>`<div class="seg"><label><input type="radio" name="cur" value="A
 function purchaseForm(p){
   const isNew=!p;
   p=p||{card:tab==='ahorros'?'AHORRO':'VP',date:todayISO(),desc:'',cuotas:1,cur:'ARS',cat:'COMPRAS VARIAS',refunds:{}};
-  const total=p.cuota?p.cuota*p.cuotas:'';
+  const amt0=p.cuota||'';
   const dest=cardsAll().filter(c=>!c.hidden||c.id===p.card).map(c=>`<option value="${c.id}" ${p.card===c.id?'selected':''}>${esc(c.name)}</option>`).join('')+(isNew?`<option value="AHORRO" ${p.card==='AHORRO'?'selected':''}>Desde ahorros</option>`:'');
   const inMonth=!isNew&&diffM(view,p.first)>=0&&(p.rec?(!p.until||view<=p.until):diffM(view,p.first)<p.cuotas);
   const f=sheet(`<h3>${isNew?'Nuevo gasto':'Editar gasto'}</h3>
     ${fld('Descripción',`<input name="desc" required value="${esc(p.desc)}">`)}
     <div class="f2">${fld('Fecha',`<input type="date" name="date" required value="${p.date}">`)}${fld('Tarjeta',`<select name="card">${dest}</select>`)}</div>
-    <div class="f2">${fld('Monto total',`<input name="total" inputmode="decimal" required value="${total?nf(total):''}" placeholder="0,00">`)}${fld('Moneda',curSeg(p.cur))}</div>
+    <div class="f2"><div class="fld"><label id="amtlbl">Monto</label><input name="total" inputmode="decimal" required value="${amt0?nf(amt0):''}" placeholder="0,00"><div class="hint" id="amthint"></div></div>${fld('Moneda',curSeg(p.cur))}</div>
     <div class="f2 cardonly">${fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${p.cuotas}">`)}${fld('Categoría',catSel(p.cat))}</div>
     <label class="chk cardonly"><input type="checkbox" name="rec" ${p.rec&&!p.until?'checked':''}> Se repite todos los meses (débito automático / suscripción)</label>
     <div class="cardonly">${fld('Primera cuota',`<input type="month" name="first" value="${p.first||firstFor(p.card,p.date)}">`,'Se calcula con el día de cierre; cambiala si hace falta.')}</div>
@@ -547,7 +547,7 @@ function purchaseForm(p){
     if(d.card==='AHORRO'){S.savingsExp.push({id:uid(),desc:d.desc,amount:total,date:d.date,note:(d.note||'').trim()||undefined});return}
     const cu=Math.max(1,parseInt(d.cuotas)||1);
     const o=isNew?{id:uid(),refunds:{}}:p;
-    Object.assign(o,{card:d.card,date:d.date,desc:d.desc,cuotas:cu,cuota:Math.round(total/cu*100)/100,cur:d.cur,cat:d.cat,first:d.first||firstFor(d.card,d.date)});
+    Object.assign(o,{card:d.card,date:d.date,desc:d.desc,cuotas:cu,cuota:Math.round(total*100)/100,cur:d.cur,cat:d.cat,first:d.first||firstFor(d.card,d.date)});
     const nt=(d.note||'').trim();if(nt)o.note=nt;else delete o.note;
     if(d.rec){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew)o.rec=false;else o.until=view}
     if(!isNew){o.refAll=!!d.refAll;if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
@@ -555,7 +555,11 @@ function purchaseForm(p){
   }, isNew?null:()=>{S.purchases=S.purchases.filter(x=>x!==p)});
   let prevCat=f.cat.value;f.cat.onchange=()=>{if(f.cat.value!=='__new'){prevCat=f.cat.value;return}const n=prompt('Nombre de la nueva categoría');const c=n&&addCat(n);if(!c){f.cat.value=prevCat;return}const o=document.createElement('option');o.textContent=c;f.cat.insertBefore(o,f.cat.lastElementChild);f.cat.value=c;prevCat=c;save()};
   const sync=()=>{const c=f.card.value,ah=c==='AHORRO';f.querySelectorAll('.cardonly').forEach(e=>e.style.display=ah?'none':'');if(!ah&&isNew)f.first.value=firstFor(c,f.date.value)};
-  f.card.onchange=sync;f.date.onchange=sync;sync();
+  const amtUI=()=>{const n=Math.max(1,parseInt(f.cuotas.value)||1),ah=f.card.value==='AHORRO',v=num(f.total.value),u=f.querySelector('[name=cur]:checked')?.value==='USD';
+    $('#amtlbl').textContent=!ah&&n>1?'Valor de cada cuota':'Monto';
+    $('#amthint').textContent=!ah&&n>1&&v?`Total: ${u?fmtU(v*n):fmt(v*n)} en ${n} cuotas`:''};
+  f.cuotas.oninput=amtUI;f.total.oninput=amtUI;f.querySelectorAll('[name=cur]').forEach(x=>x.onchange=amtUI);
+  f.card.onchange=()=>{sync();amtUI()};f.date.onchange=sync;sync();amtUI();
 }
 
 function cardForm(c){
