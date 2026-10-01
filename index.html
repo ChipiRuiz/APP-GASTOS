@@ -563,7 +563,15 @@ function shLedgerForm(){
     if(o&&d.oname)await sb.from('ledger_members').update({name:d.oname.trim()}).eq('ledger_id',SH.ledger.id).eq('user_id',o.user_id);
     if(!o&&d.email){const {data,error}=await sb.rpc('ledger_invite',{l:SH.ledger.id,email:d.email});if(error){alert(error.message.replace(/^.*?: /,''));return false}toast(`${data} ya está en la cuenta`)}
     await shLoad();render();
+  },async()=>{
+    const owner=SH.ledger.created_by===user.id,n=SH.entries.length;
+    if(owner&&!confirm(`Se borra la cuenta "${SH.ledger.name}" con sus ${n} movimientos, para vos y para ${o?esc(o.name):'la otra persona'}. No se puede deshacer. ¿Seguro?`))return false;
+    const q=owner?sb.from('ledgers').delete().eq('id',SH.ledger.id):sb.from('ledger_members').delete().eq('ledger_id',SH.ledger.id).eq('user_id',user.id);
+    const {error}=await q;if(error){alert('No se pudo: '+error.message);return false}
+    if(SH.chan){try{sb.removeChannel(SH.chan)}catch(e){}SH.chan=null}
+    await shLoad();render();toast(owner?'Cuenta compartida eliminada':'Saliste de la cuenta compartida');
   });
+  if(SH.ledger.created_by!==user.id){const b=f.querySelector('[data-x=del]');if(b)b.textContent='Salir'}
 }
 
 function vAhorros(){
