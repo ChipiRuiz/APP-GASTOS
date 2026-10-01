@@ -97,7 +97,11 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .nav button{flex:1;border:0;background:none;padding:10px 0 12px;font-size:12px;color:var(--muted);cursor:pointer}
 .nav button.on{color:var(--accent);font-weight:650}
 .nav span{display:block;font-size:19px;line-height:1.2}
-@media(max-width:430px){.nav button{font-size:10.5px;letter-spacing:-.01em}}
+.nmorebtn{display:none}
+@media(max-width:700px){.nav .nmore{display:none}.nav .nmorebtn{display:block}}
+.moremenu{position:fixed;right:10px;bottom:calc(66px + env(safe-area-inset-bottom));z-index:21;background:var(--card);border:2px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:14px;padding:6px;min-width:190px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.moremenu button{display:flex;gap:12px;align-items:center;width:100%;border:0;background:none;padding:12px 12px;border-radius:9px;font-size:15px;cursor:pointer;text-align:left}
+.moremenu button:hover,.moremenu button.on{background:var(--week);color:var(--accent)}
 .fab{position:fixed;right:18px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:7;width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:var(--onacc);font-size:30px;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--card);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
@@ -163,6 +167,9 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 #toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 12px 10px 16px;display:flex;gap:14px;align-items:center;font-size:14px;opacity:0;pointer-events:none;transition:.2s;z-index:40;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:calc(100% - 32px)}
 #toast.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
 #toast button{border:0;background:none;color:inherit;font-weight:800;text-decoration:underline;cursor:pointer;padding:4px 6px;font-size:14px}
+.shchips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}.shchips::-webkit-scrollbar{display:none}
+.shchip{flex:none;border:2px solid var(--line);background:var(--card);border-radius:12px;padding:7px 12px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:1px;font-size:13px}
+.shchip span{font-size:11.5px;color:var(--muted)}.shchip.on{border-color:var(--accent)}.shchip.add{justify-content:center;color:var(--accent);font-weight:650;border-style:dashed}
 .shfoot{display:flex;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--line);background:var(--week);font-size:14px}
 .banner{background:var(--soft);border:1px dashed var(--accent);border-radius:14px;padding:14px;margin-bottom:12px;font-size:14px}
 </style>
@@ -182,9 +189,10 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
   <button data-tab="mes"><span>▦</span>Mes</button>
   <button data-tab="ahorros"><span>◎</span>Ahorros</button>
   <button data-tab="proy"><span>↗</span>Proyección</button>
-  <button data-tab="viajes"><span>✈</span>Vacaciones</button>
+  <button data-tab="viajes" class="nmore"><span>✈</span>Vacaciones</button>
   <button data-tab="comp"><span>⇄</span>Compartido</button>
-  <button data-tab="ajustes"><span>⚙</span>Ajustes</button>
+  <button data-tab="ajustes" class="nmore"><span>⚙</span>Ajustes</button>
+  <button class="nmorebtn" data-act="more"><span>⋯</span>Más</button>
 </nav>
 <div id="ov"></div>
 <div id="login"></div>
@@ -375,7 +383,7 @@ const savBal=()=>sumBy(depDone(),'amount')-sumBy(S.savingsExp,'amount')-tripSav(
 
 /* ---------- vistas ---------- */
 function render(){
-  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab||(b.classList.contains('nmorebtn')&&['viajes','ajustes'].includes(tab))));
   $('#mnav').style.visibility=tab==='mes'||tab==='comp'?'visible':'hidden';
   $('#mlabel').textContent=mLabel(view);
   $('#ttl').textContent={mes:'Mis Gastos',ahorros:'Ahorros',proy:'Proyección',viajes:'Vacaciones',comp:'Compartido',ajustes:'Ajustes'}[tab];
@@ -472,66 +480,79 @@ document.addEventListener('pointermove',e=>{const d=e.target.closest&&e.target.c
 document.addEventListener('pointerleave',()=>donutHL(null));
 document.addEventListener('click',e=>{const d=e.target.closest&&e.target.closest('#donut [data-dj]');if(d){const j=+d.dataset.dj;donutHL(d.classList.contains('on')&&e.pointerType!=='mouse'?null:j,e)}});
 
-/* ---------- cuenta compartida ---------- */
-const SH={loaded:false,ledger:null,members:[],entries:[],chan:null,err:''};
+/* ---------- cuentas compartidas ---------- */
+const SH={loaded:false,all:[],ledger:null,members:[],entries:[],chan:null,err:''};
 const shOther=()=>SH.members.find(m=>m.user_id!==user?.id);
 const shName=id=>id===user?.id?'Vos':((SH.members.find(m=>m.user_id===id)||{}).name||'La otra persona');
 const shOtherName=()=>shOther()?.name||'la otra persona';
+const shOtherOf=L=>(L.members.find(m=>m.user_id!==user?.id)||{}).name;
 function shMonthsOf(e){const out=[];for(let i=0;i<e.cuotas;i++)out.push(addM(e.first_month,i));return out}
 function shSigned(e){const v=+e.cuota*(e.kind==='pago'?1:+e.share);return e.paid_by===user?.id?v:-v}
-function shBalance(upTo){let b=0,fut=0;for(const e of SH.entries)for(const m of shMonthsOf(e)){const v=shSigned(e);if(m<=upTo)b+=v;else fut+=v}return{b,fut}}
+function shBalance(upTo,entries=SH.entries){let b=0,fut=0;for(const e of entries)for(const m of shMonthsOf(e)){const v=shSigned(e);if(m<=upTo)b+=v;else fut+=v}return{b,fut}}
+function shSelect(id){const L=SH.all.find(x=>x.ledger.id===id)||SH.all[0];if(!L){SH.ledger=null;SH.members=[];SH.entries=[];return}
+  SH.ledger=L.ledger;SH.members=L.members;SH.entries=L.entries;if(S.shCur!==L.ledger.id){S.shCur=L.ledger.id;cache()}}
 async function shLoad(){
   if(!sb||!user)return;
   try{
-    const {data:mem,error:e1}=await sb.from('ledger_members').select('ledger_id').eq('user_id',user.id).limit(1);
+    const {data:mem,error:e1}=await sb.from('ledger_members').select('ledger_id').eq('user_id',user.id);
     if(e1)throw e1;
-    if(!mem.length){SH.ledger=null;SH.members=[];SH.entries=[];SH.loaded=true;return}
-    const lid=mem[0].ledger_id;
-    const [{data:lg},{data:ms},{data:es}]=await Promise.all([
-      sb.from('ledgers').select('*').eq('id',lid).maybeSingle(),
-      sb.from('ledger_members').select('*').eq('ledger_id',lid),
-      sb.from('ledger_entries').select('*').eq('ledger_id',lid).order('first_month').order('date',{nullsFirst:true})]);
-    SH.ledger=lg;SH.members=ms||[];SH.entries=es||[];SH.loaded=true;SH.err='';
-    if(!SH.chan&&sb.channel){SH.chan=sb.channel('ledger-'+lid)
-      .on('postgres_changes',{event:'*',schema:'public',table:'ledger_entries',filter:'ledger_id=eq.'+lid},()=>shRefresh())
-      .on('postgres_changes',{event:'*',schema:'public',table:'ledger_members',filter:'ledger_id=eq.'+lid},()=>shRefresh())
+    const ids=[...new Set((mem||[]).map(m=>m.ledger_id))];
+    if(!ids.length){SH.all=[];shSelect(null);SH.loaded=true;return}
+    const [{data:lgs},{data:ms},{data:es}]=await Promise.all([
+      sb.from('ledgers').select('*').in('id',ids),
+      sb.from('ledger_members').select('*').in('ledger_id',ids),
+      sb.from('ledger_entries').select('*').in('ledger_id',ids).order('first_month')]);
+    SH.all=(lgs||[]).sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||'')).map(l=>({ledger:l,members:(ms||[]).filter(m=>m.ledger_id===l.id),entries:(es||[]).filter(e=>e.ledger_id===l.id)}));
+    shSelect(S.shCur);SH.loaded=true;SH.err='';
+    const myName=(S.myName||'').trim();
+    if(myName)for(const L of SH.all){const me=L.members.find(m=>m.user_id===user.id);if(me&&me.name!==myName){me.name=myName;sb.from('ledger_members').update({name:myName}).eq('ledger_id',L.ledger.id).eq('user_id',user.id).then(()=>{})}}
+    if(!SH.chan&&sb.channel){SH.chan=sb.channel('ledgers-'+user.id)
+      .on('postgres_changes',{event:'*',schema:'public',table:'ledger_entries'},()=>shRefresh())
+      .on('postgres_changes',{event:'*',schema:'public',table:'ledger_members'},()=>shRefresh())
       .subscribe()}
-  }catch(err){SH.err='No se pudo cargar la cuenta compartida.';SH.loaded=true;console.warn(err)}
+  }catch(err){SH.err='No se pudo cargar lo compartido.';SH.loaded=true;console.warn(err)}
 }
-let shT=null;function shRefresh(){clearTimeout(shT);shT=setTimeout(async()=>{await shLoad();if(tab==='comp'||tab==='mes')render()},250)}
+let shT=null;function shRefresh(){clearTimeout(shT);shT=setTimeout(async()=>{await shLoad();if(tab==='comp')render()},250)}
+async function shCreate(){
+  const n=prompt('Nombre de la cuenta compartida (ej: Con mi novia, Viaje con amigos)');if(n===null)return;
+  const {data,error}=await sb.from('ledgers').insert({name:n.trim()||'Compartido'}).select();
+  if(error)return alert('No se pudo crear: '+error.message);
+  if(data&&data[0])S.shCur=data[0].id;await shLoad();render();shLedgerForm();
+}
 function vComp(){
   if(!SH.loaded){shLoad().then(render);return '<div class="empty">Cargando…</div>'}
   if(SH.err)return `<div class="banner">${esc(SH.err)} <button class="lnk" data-act="shreload">Reintentar</button></div>`;
-  if(!SH.ledger)return `<div class="card pad hero"><div class="big" style="font-size:20px">Cuenta compartida</div>
-    <p class="hint" style="font-size:13.5px;margin:8px 0 12px">Un lugar donde vos y otra persona cargan los gastos que comparten. Los dos ven lo mismo en tiempo real y la app calcula quién le debe a quién, incluidas las cuotas.</p>
+  if(!SH.ledger)return `<div class="card pad hero"><div class="big" style="font-size:20px">Cuentas compartidas</div>
+    <p class="hint" style="font-size:13.5px;margin:8px 0 12px">Un lugar donde vos y otra persona cargan los gastos que comparten. Los dos ven lo mismo en tiempo real y la app calcula quién le debe a quién, incluidas las cuotas. Podés tener una cuenta con cada persona.</p>
     <button class="btn" style="width:100%" data-act="shcreate">Crear cuenta compartida</button></div>`;
+  const chips=`<div class="shchips">${SH.all.map(L=>{const {b}=shBalance(view,L.entries);return `<button class="shchip ${L.ledger.id===SH.ledger.id?'on':''}" data-act="shsel" data-id="${L.ledger.id}"><b>${esc(L.ledger.name)}</b><span>${esc(shOtherOf(L)||'sin invitar')} · ${b>0.005?'+':b<-0.005?'−':''}${fmt(Math.abs(b))}</span></button>`}).join('')}<button class="shchip add" data-act="shcreate">+ Nueva</button></div>`;
   const o=shOther(),m=view,{b,fut}=shBalance(m);
   const who=b>0.005?`${esc(shOtherName())} te debe`:b<-0.005?`Le debés a ${esc(shOtherName())}`:'Están a mano';
-  let h=`<div class="card pad hero"><div class="mut">${esc(SH.ledger.name)} · hasta ${mLabel(m)}</div><div class="kv" style="border:0;align-items:baseline"><span><b>${who}</b></span><span class="big ${b<-0.005?'neg':''}">${fmt(Math.abs(b))}</span></div>
+  let h=chips+`<div class="card pad hero"><div class="mut" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(SH.ledger.name)} · hasta ${mLabel(m)}</span><button class="x" style="margin:-6px -8px 0 0" data-act="shedit" aria-label="Editar cuenta">✎</button></div><div class="kv" style="border:0;align-items:baseline"><span><b>${who}</b></span><span class="big ${b<-0.005?'neg':''}">${fmt(Math.abs(b))}</span></div>
     ${Math.abs(fut)>0.005?`<div class="kv"><span>Cuotas futuras</span><span>${fut>0?'+':'−'}${fmt(Math.abs(fut))} <span class="mut">${fut>0?'a tu favor':'en contra'}</span></span></div>`:''}
-    ${!o?`<div class="warn" style="margin-top:8px">Todavía estás sola en esta cuenta. Invitá a la otra persona en ✎.</div>`:''}
+    ${!o?`<div class="warn" style="margin-top:8px">Todavía estás sola en esta cuenta. Invitá a la otra persona con ✎.</div>`:''}
     <div class="btns" style="margin-top:12px"><button class="btn" data-act="shadd">+ Gasto compartido</button><button class="btn sec" data-act="shpay">Registrar pago</button></div></div>`;
   const rows=SH.entries.flatMap(e=>{const ms=shMonthsOf(e),i=ms.indexOf(m);return i<0?[]:[{e,n:i+1}]}).sort((a,c)=>(a.e.date||'').localeCompare(c.e.date||''));
   let tot=0;
-  h+=`<h2 style="display:flex;justify-content:space-between;align-items:center">Movimientos de ${mLabel(m)}<button class="x" data-act="shedit" aria-label="Editar cuenta">✎</button></h2><div class="card">`;
-  h+=rows.map(({e,n})=>{const v=shSigned(e);tot+=v;const mine=e.paid_by===user?.id;
+  h+=`<h2>Movimientos de ${mLabel(m)}</h2><div class="card">`;
+  h+=rows.map(({e,n})=>{const v=shSigned(e);tot+=v;
     return `<div class="row" role="button" tabindex="0" data-act="shentry" data-id="${e.id}"><div style="min-width:0"><div class="r-desc">${e.kind==='pago'?'💸 ':''}${esc(e.descr||(e.kind==='pago'?'Pago':'Gasto'))}</div>
       <div class="r-sub">${e.date?dmy(e.date)+' · ':''}${e.kind==='pago'?(e.paid_by===user?.id?'Pagaste vos':`Pagó ${esc(shName(e.paid_by))}`):`${e.paid_by===user?.id?'Pagaste vos':'Pagó '+esc(shName(e.paid_by))} · ${Math.round(e.share*100)}% del otro`}</div>${e.note?`<div class="r-note"><span>💬 ${esc(e.note)}</span></div>`:''}</div>
       <span class="r-cu">${e.cuotas>1?n+'/'+e.cuotas:'—'}</span>
-      <div class="r-amt">${fmt(+e.cuota)}<small class="${v>=0?'':'r-net'}" style="${v<0?'color:var(--neg)':''}">${v>=0?'te deben ':'debés '}${fmt(Math.abs(v))}</small></div><span></span></div>`}).join('')||'<div class="empty">Sin movimientos este mes.</div>';
+      <div class="r-amt">${fmt(+e.cuota)}<small style="${v<0?'color:var(--neg)':''}">${v>=0?'te deben ':'debés '}${fmt(Math.abs(v))}</small></div><span></span></div>`}).join('')||'<div class="empty">Sin movimientos este mes.</div>';
   h+=`<footer class="shfoot"><span>Neto del mes</span><b class="${tot<0?'neg':'pos'}">${tot>=0?'+':'−'}${fmt(Math.abs(tot))}</b></footer></div>
   <div class="hint" style="margin:6px 2px">Positivo: a tu favor. Negativo: le debés. Las cuotas se suman mes a mes.</div>`;
   return h;
 }
 function shEntryForm(e,kind){
   const isNew=!e;kind=e?.kind||kind||'gasto';const o=shOther();
-  if(isNew&&!o){alert('Primero invitá a la otra persona (✎ en Compartido).');return}
+  if(isNew&&!o){alert('Primero invitá a la otra persona (✎ en esta cuenta).');return}
   e=e||{paid_by:user.id,cuota:'',cuotas:1,first_month:view,share:kind==='pago'?1:.5,date:todayISO(),descr:kind==='pago'?'Pago':''};
   const pct=Math.round(+e.share*100);
   const payOpts=SH.members.map(m=>`<option value="${m.user_id}" ${m.user_id===e.paid_by?'selected':''}>${m.user_id===user.id?'Yo':esc(m.name)}</option>`).join('');
-  const f=sheet(`<h3>${kind==='pago'?(isNew?'Registrar pago':'Editar pago'):(isNew?'Gasto compartido':'Editar gasto compartido')}</h3>
+  const f=sheet(`<h3>${kind==='pago'?(isNew?'Registrar pago':'Editar pago'):(isNew?'Gasto compartido':'Editar gasto compartido')}</h3><div class="hint" style="margin:-6px 0 10px">${esc(SH.ledger.name)} · con ${esc(shOtherName())}</div>
     ${fld('Descripción',`<input name="descr" required value="${esc(e.descr||'')}">`)}
-    <div class="f2">${fld(kind==='pago'?'Pagó':'Pagó',`<select name="paid_by">${payOpts}</select>`)}${fld('Fecha',`<div class="dwrap"><input type="date" name="date" value="${e.date||''}"><button type="button" class="dclr" id="dclr2">×</button></div>`)}</div>
+    <div class="f2">${fld('Pagó',`<select name="paid_by">${payOpts}</select>`)}${fld('Fecha',`<div class="dwrap"><input type="date" name="date" value="${e.date||''}"><button type="button" class="dclr" id="dclr2">×</button></div>`)}</div>
     <div class="f2">${fld(kind==='pago'?'Monto':'<span id="shamtl">Monto</span>',`<input name="cuota" inputmode="decimal" required value="${e.cuota?nf(+e.cuota):''}" placeholder="0,00">`,'<span id="shamth"></span>')}${kind==='pago'?'<div></div>':fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${e.cuotas}">`)}</div>
     ${kind==='pago'?'':`<div class="f2">${fld('Le toca al otro',`<select name="share">${[[50,'50%'],[100,'100% (todo es del otro)'],[0,'0% (solo registro)']].map(([v,l])=>`<option value="${v}" ${v===pct?'selected':''}>${l}</option>`).join('')}${[0,50,100].includes(pct)?'':`<option value="${pct}" selected>${pct}%</option>`}<option value="otro">Otro %…</option></select>`)}${fld('<span id="shfl">Primera cuota</span>',`<input type="month" name="first_month" value="${e.first_month}">`)}</div>`}
     ${kind==='pago'?fld('Mes',`<input type="month" name="first_month" value="${e.first_month}">`):''}
@@ -552,24 +573,21 @@ function shEntryForm(e,kind){
   $('#dclr2').onclick=()=>{f.date.value=''};
 }
 function shLedgerForm(){
-  const me=SH.members.find(m=>m.user_id===user.id),o=shOther();
+  const o=shOther();
   const f=sheet(`<h3>Cuenta compartida</h3>
     ${fld('Nombre de la cuenta',`<input name="lname" required value="${esc(SH.ledger.name)}">`)}
-    ${fld('Tu nombre (como te ve la otra persona)',`<input name="me" required value="${esc(me?.name||'')}">`)}
-    ${o?fld('Comparte con',`<input name="oname" value="${esc(o.name)}">`,'Podés cambiar cómo se ve su nombre.'):fld('Invitar por email',`<input name="email" type="email" placeholder="email con el que entra a la app">`,'Tiene que tener usuario en la app.')}`,
+    ${o?`<div class="kv" style="margin-bottom:10px"><span class="mut">Comparte con</span><b>${esc(o.name)}</b></div>`:fld('Invitar por email',`<input name="email" type="email" placeholder="email con el que entra a la app">`,'Tiene que tener usuario en la app.')}
+    <div class="hint" style="margin-bottom:8px">Tu nombre visible lo cambiás en Ajustes → Cuenta.</div>`,
   async d=>{
     await sb.from('ledgers').update({name:d.lname.trim()}).eq('id',SH.ledger.id);
-    await sb.from('ledger_members').update({name:d.me.trim()}).eq('ledger_id',SH.ledger.id).eq('user_id',user.id);
-    if(o&&d.oname)await sb.from('ledger_members').update({name:d.oname.trim()}).eq('ledger_id',SH.ledger.id).eq('user_id',o.user_id);
     if(!o&&d.email){const {data,error}=await sb.rpc('ledger_invite',{l:SH.ledger.id,email:d.email});if(error){alert(error.message.replace(/^.*?: /,''));return false}toast(`${data} ya está en la cuenta`)}
     await shLoad();render();
   },async()=>{
     const owner=SH.ledger.created_by===user.id,n=SH.entries.length;
-    if(owner&&!confirm(`Se borra la cuenta "${SH.ledger.name}" con sus ${n} movimientos, para vos y para ${o?esc(o.name):'la otra persona'}. No se puede deshacer. ¿Seguro?`))return false;
+    if(owner&&!confirm(`Se borra la cuenta "${SH.ledger.name}" con sus ${n} movimientos, para vos y para ${o?o.name:'la otra persona'}. No se puede deshacer. ¿Seguro?`))return false;
     const q=owner?sb.from('ledgers').delete().eq('id',SH.ledger.id):sb.from('ledger_members').delete().eq('ledger_id',SH.ledger.id).eq('user_id',user.id);
     const {error}=await q;if(error){alert('No se pudo: '+error.message);return false}
-    if(SH.chan){try{sb.removeChannel(SH.chan)}catch(e){}SH.chan=null}
-    await shLoad();render();toast(owner?'Cuenta compartida eliminada':'Saliste de la cuenta compartida');
+    S.shCur=null;await shLoad();render();toast(owner?'Cuenta compartida eliminada':'Saliste de la cuenta compartida');
   });
   if(SH.ledger.created_by!==user.id){const b=f.querySelector('[data-x=del]');if(b)b.textContent='Salir'}
 }
@@ -621,7 +639,7 @@ function vAjustes(){
   <div class="dinfo"><p><b>Exportar</b> descarga un archivo <b>.json</b> <code style="white-space:nowrap">gastos-AAAA-MM-DD.json</code> con todos tus datos: tarjetas, gastos y cuotas, reintegros, comentarios, sueldo, ahorros, vacaciones, categorías y apariencia. Sirve como copia de seguridad.</p>
     <p><b>Importar</b> acepta solo un <b>.json</b> exportado desde esta app (o el historial que armamos de la planilla). No acepta Excel ni CSV.</p>
     <p><b>Ojo:</b> importar <b>reemplaza todo</b>; no suma ni mezcla. Exportá antes para no perder nada.</p></div></div>
-  <h2>Cuenta</h2><div class="card pad"><div class="hint" style="margin-bottom:8px">${esc(user?.email||'')}</div><button class="btn sec" style="width:100%;margin-bottom:8px" data-act="chpass">Cambiar contraseña</button><button class="btn sec" style="width:100%" data-act="logout">Cerrar sesión</button></div>`;
+  <h2>Cuenta</h2><div class="card pad"><div class="hint" style="margin-bottom:8px">${esc(user?.email||'')}</div>${fld('Tu nombre visible',`<input data-myname value="${esc(S.myName||'')}" placeholder="Cómo te ven en las cuentas compartidas">`)}<button class="btn sec" style="width:100%;margin-bottom:8px" data-act="chpass">Cambiar contraseña</button><button class="btn sec" style="width:100%" data-act="logout">Cerrar sesión</button></div>`;
 }
 
 /* ---------- formularios ---------- */
@@ -658,7 +676,7 @@ function purchaseForm(p){
     <div class="f2">${fld('Fecha',`<div class="dwrap"><input type="date" name="date" value="${p.date||''}"><button type="button" class="dclr" id="dclr" aria-label="Sin fecha" title="Sin fecha">×</button></div>`)}${fld('Tarjeta',`<select name="card">${dest}</select>`)}</div>
     <div class="f2"><div class="fld"><label id="amtlbl">Monto</label><input name="total" inputmode="decimal" required value="${amt0?nf(amt0):''}" placeholder="0,00"><div class="hint" id="amthint"></div></div>${fld('Moneda',curSeg(p.cur))}</div>
     <div class="f2 cardonly"><div class="creditonly">${fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${p.cuotas}">`)}</div>${fld('Categoría',catSel(p.cat))}</div>
-    ${isNew&&SH.ledger&&shOther()?`<label class="chk cardonly"><input type="checkbox" name="toshared"> También en compartido (le toca 50% a ${esc(shOtherName())})</label>`:''}
+    ${isNew&&SH.all.some(L=>shOtherOf(L))?`<label class="chk cardonly"><input type="checkbox" name="toshared"> También en compartido, 50% ${SH.all.filter(L=>shOtherOf(L)).length>1?`<select name="toledger" style="margin-left:4px">${SH.all.filter(L=>shOtherOf(L)).map(L=>`<option value="${L.ledger.id}" ${L.ledger.id===SH.ledger?.id?'selected':''}>con ${esc(shOtherOf(L))}</option>`).join('')}</select>`:`con ${esc(shOtherOf(SH.all.find(L=>shOtherOf(L))))}<input type="hidden" name="toledger" value="${SH.all.find(L=>shOtherOf(L)).ledger.id}">`}</label>`:''}
     <label class="chk cardonly"><input type="checkbox" name="rec" ${p.rec&&!p.until?'checked':''}> Se repite todos los meses (débito automático / suscripción)</label>
     <div class="cardonly">${fld('<span id="firstlbl">Primera cuota</span>',`<input type="month" name="first" value="${p.first||(tab==='mes'?view:firstFor(p.card,p.date))}">`,'Por defecto, el mes que estás viendo. Cambiala si hace falta.')}</div>
     ${inMonth?`<div class="f2">${fld('Reintegro en '+mLabel(view),`<input name="ref" inputmode="decimal" value="${p.refunds?.[view]?nf(p.refunds[view]):''}" placeholder="0,00">`)}<div></div></div>`:''}
@@ -674,7 +692,7 @@ function purchaseForm(p){
     if(d.rec){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew)o.rec=false;else o.until=view}
     if(!isNew){o.refAll=!!d.refAll;if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
     if(isNew){o.refAll=d.cat==='GASTO AJENO';S.purchases.push(o);
-      if(d.toshared&&SH.ledger)sb.from('ledger_entries').insert({ledger_id:SH.ledger.id,paid_by:user.id,kind:'gasto',descr:o.desc,date:o.date||null,cuota:o.cur==='USD'?o.cuota*(rate(o.first)||0):o.cuota,cuotas:o.cuotas,first_month:o.first,share:.5,source_purchase:o.id}).then(({error})=>{if(error)alert('No se pudo cargar en compartido: '+error.message);else{shLoad().then(()=>toast('También cargado en compartido'))}})}
+      if(d.toshared&&d.toledger)sb.from('ledger_entries').insert({ledger_id:d.toledger,paid_by:user.id,kind:'gasto',descr:o.desc,date:o.date||null,cuota:o.cur==='USD'?o.cuota*(rate(o.first)||0):o.cuota,cuotas:o.cuotas,first_month:o.first,share:.5,source_purchase:o.id}).then(({error})=>{if(error)alert('No se pudo cargar en compartido: '+error.message);else{shLoad().then(()=>toast('También cargado en compartido'))}})}
   }, isNew?null:()=>{S.purchases=S.purchases.filter(x=>x!==p)});
   let prevCat=f.cat.value;f.cat.onchange=()=>{if(f.cat.value!=='__new'){prevCat=f.cat.value;return}const n=prompt('Nombre de la nueva categoría');const c=n&&addCat(n);if(!c){f.cat.value=prevCat;return}const o=document.createElement('option');o.textContent=c;f.cat.insertBefore(o,f.cat.lastElementChild);f.cat.value=c;prevCat=c;save()};
   const sync=()=>{const c=f.card.value,ah=c==='AHORRO',cr=isCredit(cardById(c));f.querySelectorAll('.cardonly').forEach(e=>e.style.display=ah?'none':'');f.querySelector('.creditonly').style.display=cr?'':'none';if(!cr)f.cuotas.value=1;$('#firstlbl').textContent=cr?'Primera cuota':'Mes';};
@@ -707,12 +725,14 @@ function simpleForm(title,fields,obj,onSave,onDel){
 /* ---------- eventos ---------- */
 document.addEventListener('click',e=>{
   const t=e.target.closest('[data-act],[data-tab]');if(!t)return;
-  if(t.dataset.tab){tab=t.dataset.tab;render();scrollTo(0,0);return}
+  if(t.dataset.tab){$('#moremenu')?.remove();tab=t.dataset.tab;render();scrollTo(0,0);return}
   const id=t.dataset.id,a=t.dataset.act;
   if(a==='prev'){view=addM(view,-1);render()}
   else if(a==='next'){view=addM(view,1);render()}
+  else if(a==='more'){if($('#moremenu')){$('#moremenu').remove();return}const m=document.createElement('div');m.id='moremenu';m.className='moremenu';m.innerHTML=[['viajes','✈','Vacaciones'],['ajustes','⚙','Ajustes']].map(([k,i,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}"><span>${i}</span>${n}</button>`).join('');document.body.appendChild(m);setTimeout(()=>document.addEventListener('click',function h(ev){if(!ev.target.closest('#moremenu')&&!ev.target.closest('.nmorebtn')){m.remove();document.removeEventListener('click',h)}}),0)}
   else if(a==='quick'){tab==='comp'&&SH.ledger?shEntryForm(null,'gasto'):purchaseForm()}
-  else if(a==='shcreate'){(async()=>{const n=prompt('Nombre de la cuenta compartida','Compartido con mi novia');if(n===null)return;const {error}=await sb.from('ledgers').insert({name:n.trim()||'Compartido'});if(error)return alert('No se pudo crear: '+error.message);SH.chan=null;await shLoad();render();shLedgerForm()})()}
+  else if(a==='shcreate')shCreate();
+  else if(a==='shsel'){shSelect(id);render()}
   else if(a==='shadd')shEntryForm(null,'gasto');
   else if(a==='shpay')shEntryForm(null,'pago');
   else if(a==='shentry')shEntryForm(SH.entries.find(e=>e.id===id));
@@ -758,6 +778,7 @@ document.addEventListener('change',e=>{
   const t=e.target;
   if(t.dataset.mf){if(t.dataset.mf==='saving')setSaving(view,num(t.value));else S.months[view][t.dataset.mf]=num(t.value);save();render()}
   else if(t.dataset.pj){const m=t.dataset.m,v=num(t.value);if(t.dataset.pj==='sv')setSaving(m,v);else ensureMonth(m).salary=v;save();render()}
+  else if('myname' in t.dataset){S.myName=t.value.trim();save();shLoad().then(()=>toast('Nombre actualizado'))}
   else if(t.dataset.ic){const x=S.months[view].incomes.find(y=>y.id===t.dataset.id);x[t.dataset.ic]=t.dataset.ic==='amount'?num(t.value):t.value;save();if(t.dataset.ic==='amount')render()}
   else if(t.dataset.tx){const x=S.months[view].taxes.find(y=>y.id===t.dataset.id);x[t.dataset.tx]=t.dataset.tx==='paid'?t.checked:t.dataset.tx==='amount'?num(t.value):t.value;save();if(t.dataset.tx!=='name')render()}
   else if(t.dataset.mode){S.theme.mode=t.dataset.mode;save();applyTheme()}
