@@ -249,8 +249,10 @@ function monday(iso){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()-((d
 const dm=d=>String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
 function firstFor(card,iso){const day=+iso.slice(8,10),m=iso.slice(0,7);return day>(S.close[card]||26)?addM(m,1):m}
 const sumBy=(a,k)=>a.reduce((s,x)=>s+(+x[k]||0),0);
-const savBal=()=>sumBy(S.deposits,'amount')-sumBy(S.savingsExp,'amount');
 const itemARS=i=>(+i.ars||0)+(+i.usd||0)*(+i.rate||0);
+const tripTot=t=>t.items.reduce((s,i)=>s+itemARS(i),0);
+const tripSav=()=>S.trips.filter(t=>t.fromSavings).reduce((s,t)=>s+tripTot(t),0);
+const savBal=()=>sumBy(S.deposits,'amount')-sumBy(S.savingsExp,'amount')-tripSav();
 
 /* ---------- vistas ---------- */
 function render(){
@@ -316,21 +318,22 @@ function vMes(){
 }
 
 function vAhorros(){
-  const d=sumBy(S.deposits,'amount'),g=sumBy(S.savingsExp,'amount');
-  return `<div class="card pad"><div class="mut">Saldo de ahorros</div><div class="big">${fmt(d-g)}</div>
-    <div class="kv"><span>Total ahorrado</span><span>${fmt(d)}</span></div><div class="kv"><span>Gastado desde ahorros</span><span>${fmt(g)}</span></div></div>
+  const d=sumBy(S.deposits,'amount'),g=sumBy(S.savingsExp,'amount'),v=tripSav(),ts=S.trips.filter(t=>t.fromSavings);
+  return `<div class="card pad hero"><div class="mut">Saldo de ahorros</div><div class="big">${fmt(d-g-v)}</div>
+    <div class="kv"><span>Total ahorrado</span><span>${fmt(d)}</span></div><div class="kv"><span>• Gastado desde ahorros</span><span>${fmt(g)}</span></div>${ts.length?`<div class="kv"><span>• Vacaciones pagadas con ahorros</span><span>${fmt(v)}</span></div>`:''}</div>
   <div class="grid4"><div><h2>Ahorros</h2><div class="card">
     ${[...S.deposits].reverse().map(x=>`<button class="li" data-act="editdep" data-id="${x.id}"><span>${mLabel(x.month)}${x.note?` <span class="mut">· ${esc(x.note)}</span>`:''}</span><b class="pos">${fmt(x.amount)}</b></button>`).join('')}
     <button class="lnk" data-act="adddep">+ Agregar ahorro</button></div></div>
   <div><h2>Gastos desde ahorros</h2><div class="card">
     ${[...S.savingsExp].reverse().map(x=>`<button class="li" data-act="editsx" data-id="${x.id}"><span>${esc(x.desc)}${x.date?` <span class="mut">· ${dmy(x.date)}</span>`:''}</span><b>${fmt(x.amount)}</b></button>`).join('')}
+    ${ts.map(t=>`<button class="li" data-tab="viajes"><span>✈ ${esc(t.name)} <span class="mut">· vacaciones</span></span><b>${fmt(tripTot(t))}</b></button>`).join('')}
     <button class="lnk" data-act="addsx">+ Agregar gasto</button></div></div></div>`;
 }
 
 function vViajes(){
   return S.trips.map(t=>{
     const ta=t.items.reduce((s,i)=>s+itemARS(i),0),tu=sumBy(t.items,'usd'),ar=sumBy(t.items,'ars');
-    return `<section class="card cc ${closed.has(t.id)?'closed':''}"><header data-act="toggle" data-id="${t.id}"><span class="chev">▼</span><h3>${esc(t.name)} <span class="mut" style="font-weight:400">· ${t.items.length} gastos</span></h3><b>${fmt(ta)}</b><button class="x" data-act="edittrip" data-id="${t.id}" aria-label="Editar viaje">✎</button></header>
+    return `<section class="card cc ${closed.has(t.id)?'closed':''}"><header data-act="toggle" data-id="${t.id}"><span class="chev">▼</span><h3>${esc(t.name)} <span class="mut" style="font-weight:400">· ${t.items.length} gastos${t.fromSavings?' · con ahorros':''}</span></h3><b>${fmt(ta)}</b><button class="x" data-act="edittrip" data-id="${t.id}" aria-label="Editar viaje">✎</button></header>
       <div class="rows"><table class="tbl">
       <thead><tr><th>Descripción</th><th>Gasto ($)</th><th>Gasto (U$D)</th><th>Total ($)</th></tr></thead><tbody>
       ${t.items.map(i=>`<tr class="c" data-act="edititem" data-trip="${t.id}" data-id="${i.id}"><td>${esc(i.desc)}${i.usd?`<div class="r-sub mob">${fmtU(i.usd)} ${i.rate?'@ '+fmt(i.rate):'· sin cotización'}</div>`:''}</td><td>${i.ars?fmt(i.ars):'—'}</td>
@@ -418,8 +421,8 @@ document.addEventListener('click',e=>{
   else if(a==='editdep'){const x=S.deposits.find(y=>y.id===id);simpleForm('Editar ahorro',[['month','Mes','month',x.month],['amount','Monto','num',nf(x.amount)],['note','Nota','',x.note]],x,d=>{Object.assign(x,{month:d.month,amount:num(d.amount),note:d.note})},()=>{S.deposits=S.deposits.filter(y=>y!==x)})}
   else if(a==='addsx')simpleForm('Gasto desde ahorros',[['desc','Descripción'],['date','Fecha','date',todayISO()],['amount','Monto','num']],null,d=>{S.savingsExp.push({id:uid(),desc:d.desc,date:d.date,amount:num(d.amount)})});
   else if(a==='editsx'){const x=S.savingsExp.find(y=>y.id===id);simpleForm('Editar gasto desde ahorros',[['desc','Descripción','',x.desc],['date','Fecha','date',x.date],['amount','Monto','num',nf(x.amount)]],x,d=>{Object.assign(x,{desc:d.desc,date:d.date,amount:num(d.amount)})},()=>{S.savingsExp=S.savingsExp.filter(y=>y!==x)})}
-  else if(a==='addtrip')simpleForm('Nuevo viaje',[['name','Nombre']],null,d=>{S.trips.push({id:uid(),name:d.name,items:[]})});
-  else if(a==='edittrip'){const x=S.trips.find(y=>y.id===id);simpleForm('Editar viaje',[['name','Nombre','',x.name]],x,d=>{x.name=d.name},()=>{S.trips=S.trips.filter(y=>y!==x)})}
+  else if(a==='addtrip')sheet(`<h3>Nuevo viaje</h3>${fld('Nombre','<input name="name" required>')}<label class="chk"><input type="checkbox" name="fs"> Pagado con ahorros (se resta del saldo de ahorros)</label>`,d=>{S.trips.push({id:uid(),name:d.name,items:[],fromSavings:!!d.fs})});
+  else if(a==='edittrip'){const x=S.trips.find(y=>y.id===id);sheet(`<h3>Editar viaje</h3>${fld('Nombre',`<input name="name" required value="${esc(x.name)}">`)}<label class="chk"><input type="checkbox" name="fs" ${x.fromSavings?'checked':''}> Pagado con ahorros (se resta del saldo de ahorros)</label>`,d=>{x.name=d.name;x.fromSavings=!!d.fs},()=>{S.trips=S.trips.filter(y=>y!==x)})}
   else if(a==='additem'||a==='edititem'){
     const tr=S.trips.find(y=>y.id===t.dataset.trip),it=a==='edititem'?tr.items.find(y=>y.id===id):null;
     const cur=it&&it.usd&&!it.ars?'USD':'ARS';
