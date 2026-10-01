@@ -364,9 +364,9 @@ function lines(card,m){
     let n=diffM(m,p.first)+1,cu=p.cuota;
     if(p.hist&&S.histEnd&&m<=S.histEnd){if(!(m in p.hist))return null;n=p.hist[m];cu=p.hc?.[m]??p.cuota}
     else if(p.rec){if(n<1||(p.until&&m>p.until))return null}else if(n<1||n>p.cuotas)return null;
-    const u=p.cur==='USD',rt=u?rate(m):1,uref=p.refAll?cu:(p.refunds?.[m]||0);
+    const u=p.cur==='USD',rt=u?rate(m):1,hasR=p.refunds&&(m in p.refunds),sh=!!p.shared&&!p.refAll&&!hasR,uref=p.refAll?cu:hasR?p.refunds[m]:sh?Math.round(cu*p.shared.s*100)/100:0;
     const val=cu*rt,ref=uref*rt;
-    return{p,n,val,ref,net:val-ref,u,uval:u?cu:0,uref:u?uref:0};
+    return{p,n,val,ref,net:val-ref,u,uval:u?cu:0,uref:u?uref:0,sh};
   }).filter(Boolean).sort((a,b)=>(a.p.date||'').localeCompare(b.p.date||'')||a.p.desc.localeCompare(b.p.desc));
 }
 function monday(iso){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
@@ -425,7 +425,7 @@ function vMes(){
       rows+=`<div class="row" role="button" tabindex="0" data-act="edit" data-id="${l.p.id}">
         <div style="min-width:0"><div class="r-desc">${esc(l.p.desc)}</div><div class="r-sub">${l.p.date?dmy(l.p.date)+' · ':''}${esc(l.p.cat)}${l.u?' · dólares':''}</div>${l.p.note?`<div class="r-note"><span>💬 ${esc(l.p.note)}</span><button class="nx" data-act="delnote" data-id="${l.p.id}" aria-label="Borrar comentario">×</button></div>`:''}</div>
         <span class="r-cu">${l.p.rec?'↻':l.p.cuotas>1?l.n+'/'+l.p.cuotas:'—'}</span>
-        <div class="r-amt">${l.u?fmtU(l.uval):fmt(l.val)}${l.ref||l.uref?`<small>↩ reint. ${l.u?'-'+fmtU(l.uref):fmt(-l.ref)}</small><small class="r-net">neto ${l.u?fmtU(l.uval-l.uref):fmt(l.net)}</small>`:''}</div>
+        <div class="r-amt">${l.u?fmtU(l.uval):fmt(l.val)}${l.ref||l.uref?`<small>${l.sh?`⇄ le toca a ${esc(l.p.shared.w||'la otra persona')} `:'↩ reint. '}${l.u?'-'+fmtU(l.uref):fmt(-l.ref)}</small><small class="r-net">neto ${l.u?fmtU(l.uval-l.uref):fmt(l.net)}</small>`:''}</div>
         <button class="dots ${l.p.note?'has':''}" data-act="note" data-id="${l.p.id}" aria-label="Comentario">⋯</button></div>`;
     }
     h+=`<section class="card cc ${opened.has(x.c.id)?'':'closed'}" style="--cc:${x.c.color}">
@@ -504,6 +504,12 @@ async function shLoad(){
       sb.from('ledger_entries').select('*').in('ledger_id',ids).order('first_month')]);
     SH.all=(lgs||[]).sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||'')).map(l=>({ledger:l,members:(ms||[]).filter(m=>m.ledger_id===l.id),entries:(es||[]).filter(e=>e.ledger_id===l.id)}));
     shSelect(S.shCur);SH.loaded=true;SH.err='';
+    let ch=false;const byE={};SH.all.forEach(L=>L.entries.forEach(e=>byE[e.id]=[L,e]));
+    for(const L of SH.all)for(const e of L.entries){if(!e.source_purchase||e.paid_by!==user.id)continue;const p=S.purchases.find(x=>x.id===e.source_purchase);if(p&&!p.shared){p.shared={l:L.ledger.id,e:e.id,s:+e.share,w:shOtherOf(L)||''};ch=true}}
+    for(const p of S.purchases){if(!p.shared||!p.shared.e)continue;const hit=byE[p.shared.e];
+      if(!hit){delete p.shared;ch=true}
+      else{const [L,e]=hit,w=shOtherOf(L)||'';if(p.shared.s!==+e.share||p.shared.w!==w){p.shared.s=+e.share;p.shared.w=w;ch=true}}}
+    if(ch){save();if(tab==='mes')render()}
     const myName=(S.myName||'').trim();
     if(myName)for(const L of SH.all){const me=L.members.find(m=>m.user_id===user.id);if(me&&me.name!==myName){me.name=myName;sb.from('ledger_members').update({name:myName}).eq('ledger_id',L.ledger.id).eq('user_id',user.id).then(()=>{})}}
     if(!SH.chan&&sb.channel){SH.chan=sb.channel('ledgers-'+user.id)
@@ -665,6 +671,17 @@ const normCat=n=>n.trim().replace(/\s+/g,' ').toUpperCase();
 function addCat(n){n=normCat(n);if(!n)return null;if(!S.cats.includes(n))S.cats.push(n);return n}
 const curSeg=v=>`<div class="seg"><label><input type="radio" name="cur" value="ARS" ${v!=='USD'?'checked':''}><span>ARS</span></label><label><input type="radio" name="cur" value="USD" ${v==='USD'?'checked':''}><span>USD</span></label></div>`;
 
+function syncShared(o,want,lid){
+  if(!sb||!user)return;
+  const row={descr:o.desc,date:o.date||null,cuota:o.cur==='USD'?Math.round(o.cuota*(rate(o.first)||0)*100)/100:o.cuota,cuotas:o.cuotas,first_month:o.first,updated_at:new Date().toISOString()};
+  if(want&&!o.shared&&lid){const L=SH.all.find(x=>x.ledger.id===lid);const w=L?shOtherOf(L):'';
+    o.shared={l:lid,e:null,s:.5,w};save();render();
+    sb.from('ledger_entries').insert({...row,ledger_id:lid,paid_by:user.id,kind:'gasto',share:.5,source_purchase:o.id}).select().then(({data,error})=>{
+      if(error){delete o.shared;save();render();return alert('No se pudo cargar en compartido: '+error.message)}
+      o.shared.e=data&&data[0]&&data[0].id;save();shLoad().then(()=>toast('También cargado en compartido'))})}
+  else if(want&&o.shared&&o.shared.e){sb.from('ledger_entries').update(row).eq('id',o.shared.e).then(()=>shLoad())}
+  else if(!want&&o.shared){const e=o.shared.e;delete o.shared;save();render();if(e)sb.from('ledger_entries').delete().eq('id',e).then(()=>{shLoad();toast('Quitado de la cuenta compartida')})}
+}
 function purchaseForm(p){
   const isNew=!p;
   p=p||{card:tab==='ahorros'?'AHORRO':'VP',date:todayISO(),desc:'',cuotas:1,cur:'ARS',cat:'COMPRAS VARIAS',refunds:{}};
@@ -676,7 +693,9 @@ function purchaseForm(p){
     <div class="f2">${fld('Fecha',`<div class="dwrap"><input type="date" name="date" value="${p.date||''}"><button type="button" class="dclr" id="dclr" aria-label="Sin fecha" title="Sin fecha">×</button></div>`)}${fld('Tarjeta',`<select name="card">${dest}</select>`)}</div>
     <div class="f2"><div class="fld"><label id="amtlbl">Monto</label><input name="total" inputmode="decimal" required value="${amt0?nf(amt0):''}" placeholder="0,00"><div class="hint" id="amthint"></div></div>${fld('Moneda',curSeg(p.cur))}</div>
     <div class="f2 cardonly"><div class="creditonly">${fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${p.cuotas}">`)}</div>${fld('Categoría',catSel(p.cat))}</div>
-    ${isNew&&SH.all.some(L=>shOtherOf(L))?`<label class="chk cardonly"><input type="checkbox" name="toshared"> También en compartido, 50% ${SH.all.filter(L=>shOtherOf(L)).length>1?`<select name="toledger" style="margin-left:4px">${SH.all.filter(L=>shOtherOf(L)).map(L=>`<option value="${L.ledger.id}" ${L.ledger.id===SH.ledger?.id?'selected':''}>con ${esc(shOtherOf(L))}</option>`).join('')}</select>`:`con ${esc(shOtherOf(SH.all.find(L=>shOtherOf(L))))}<input type="hidden" name="toledger" value="${SH.all.find(L=>shOtherOf(L)).ledger.id}">`}</label>`:''}
+    ${(()=>{const Ls=SH.all.filter(L=>shOtherOf(L));if(!Ls.length&&!p.shared)return '';const curL=p.shared?.l||SH.ledger?.id;
+      const sel=Ls.length>1&&!p.shared?`<select name="toledger" style="margin-left:4px">${Ls.map(L=>`<option value="${L.ledger.id}" ${L.ledger.id===curL?'selected':''}>con ${esc(shOtherOf(L))}</option>`).join('')}</select>`:`con ${esc(p.shared?.w||shOtherOf(Ls.find(L=>L.ledger.id===curL)||Ls[0])||'')}<input type="hidden" name="toledger" value="${p.shared?.l||(Ls.find(L=>L.ledger.id===curL)||Ls[0]).ledger.id}">`;
+      return `<label class="chk cardonly"><input type="checkbox" name="toshared" ${p.shared?'checked':''}> Compartido 50% ${sel}</label>${p.shared?'<div class="hint" style="margin:-6px 0 10px">La parte del otro figura como reintegro y está en la cuenta compartida. Si lo editás o destildás, se actualiza ahí también.</div>':''}`})()}
     <label class="chk cardonly"><input type="checkbox" name="rec" ${p.rec&&!p.until?'checked':''}> Se repite todos los meses (débito automático / suscripción)</label>
     <div class="cardonly">${fld('<span id="firstlbl">Primera cuota</span>',`<input type="month" name="first" value="${p.first||(tab==='mes'?view:firstFor(p.card,p.date))}">`,'Por defecto, el mes que estás viendo. Cambiala si hace falta.')}</div>
     ${inMonth?`<div class="f2">${fld('Reintegro en '+mLabel(view),`<input name="ref" inputmode="decimal" value="${p.refunds?.[view]?nf(p.refunds[view]):''}" placeholder="0,00">`)}<div></div></div>`:''}
@@ -691,9 +710,9 @@ function purchaseForm(p){
     const nt=(d.note||'').trim();if(nt)o.note=nt;else delete o.note;
     if(d.rec){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew)o.rec=false;else o.until=view}
     if(!isNew){o.refAll=!!d.refAll;if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
-    if(isNew){o.refAll=d.cat==='GASTO AJENO';S.purchases.push(o);
-      if(d.toshared&&d.toledger)sb.from('ledger_entries').insert({ledger_id:d.toledger,paid_by:user.id,kind:'gasto',descr:o.desc,date:o.date||null,cuota:o.cur==='USD'?o.cuota*(rate(o.first)||0):o.cuota,cuotas:o.cuotas,first_month:o.first,share:.5,source_purchase:o.id}).then(({error})=>{if(error)alert('No se pudo cargar en compartido: '+error.message);else{shLoad().then(()=>toast('También cargado en compartido'))}})}
-  }, isNew?null:()=>{S.purchases=S.purchases.filter(x=>x!==p)});
+    if(isNew){o.refAll=d.cat==='GASTO AJENO';S.purchases.push(o)}
+    syncShared(o,!!d.toshared,d.toledger);
+  }, isNew?null:()=>{const sh=p.shared;S.purchases=S.purchases.filter(x=>x!==p);if(sh&&confirm('También estaba en la cuenta compartida. ¿Lo borro de ahí?'))sb.from('ledger_entries').delete().eq('id',sh.e).then(()=>shLoad())});
   let prevCat=f.cat.value;f.cat.onchange=()=>{if(f.cat.value!=='__new'){prevCat=f.cat.value;return}const n=prompt('Nombre de la nueva categoría');const c=n&&addCat(n);if(!c){f.cat.value=prevCat;return}const o=document.createElement('option');o.textContent=c;f.cat.insertBefore(o,f.cat.lastElementChild);f.cat.value=c;prevCat=c;save()};
   const sync=()=>{const c=f.card.value,ah=c==='AHORRO',cr=isCredit(cardById(c));f.querySelectorAll('.cardonly').forEach(e=>e.style.display=ah?'none':'');f.querySelector('.creditonly').style.display=cr?'':'none';if(!cr)f.cuotas.value=1;$('#firstlbl').textContent=cr?'Primera cuota':'Mes';};
   const amtUI=()=>{const n=Math.max(1,parseInt(f.cuotas.value)||1),ah=f.card.value==='AHORRO',v=num(f.total.value),u=f.querySelector('[name=cur]:checked')?.value==='USD';
