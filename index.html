@@ -106,6 +106,20 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .login{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
 .login form{width:100%;max-width:360px}
 .login h1{font-size:26px;margin:0 0 4px}
+.ptbl td input{width:100%;min-width:90px;text-align:right;border:1px solid transparent;background:none;border-radius:7px;padding:5px 6px;font-variant-numeric:tabular-nums}
+.ptbl td input:focus{border-color:var(--line);background:var(--bg)}
+.ptbl tr.cur td{background:var(--soft)}
+.pscroll{overflow-x:auto}
+.ptbl{font-size:13px;min-width:640px}
+.ptbl th,.ptbl td{white-space:nowrap}
+@media(max-width:600px){.ptbl{min-width:0}.ptbl thead{display:none}.ptbl,.ptbl tbody{display:block}
+.ptbl tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2px 10px;padding:10px 12px;border-top:1px solid var(--line)}
+.ptbl tr:first-child{border-top:0}
+.ptbl td,.ptbl td:nth-child(2),.ptbl td:nth-child(3){display:flex;justify-content:space-between;align-items:center;border:0;padding:3px 0;font-size:12.5px;min-width:0;background:none!important}
+.ptbl tr.cur{background:var(--soft)}
+.ptbl td::before{content:attr(data-l);color:var(--muted);font-size:12px;margin-right:6px}
+.ptbl td:first-child{grid-column:1/-1;font-weight:700;font-size:15px}.ptbl td:first-child::before{content:none}
+.ptbl td input{min-width:0;width:auto;flex:1;max-width:105px;padding:3px 4px;border-color:var(--line);font-size:12.5px}}
 .banner{background:var(--soft);border:1px dashed var(--accent);border-radius:14px;padding:14px;margin-bottom:12px;font-size:14px}
 </style>
 </head>
@@ -123,6 +137,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 <nav class="nav" id="nav">
   <button data-tab="mes"><span>▦</span>Mes</button>
   <button data-tab="ahorros"><span>◎</span>Ahorros</button>
+  <button data-tab="proy"><span>↗</span>Proyección</button>
   <button data-tab="viajes"><span>✈</span>Vacaciones</button>
   <button data-tab="ajustes"><span>⚙</span>Ajustes</button>
 </nav>
@@ -147,7 +162,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const nf=n=>Math.abs(n).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmt=n=>(n<0?'-':'')+'$'+nf(n);
 const fmtU=n=>'U$D'+nf(n);
-const num=v=>{v=String(v??'').trim().replace(/[$\s]/g,'');if(v.includes(','))v=v.replace(/\./g,'').replace(',','.');return parseFloat(v)||0};
+const num=v=>{if(typeof v==='number')return v;v=String(v??'').trim().replace(/[$\s]/g,'');if(v.includes(','))v=v.replace(/\./g,'').replace(',','.');else if(/^-?\d{1,3}(\.\d{3})+$/.test(v))v=v.replace(/\./g,'');return parseFloat(v)||0};
 const ymOf=(y,m)=>y+'-'+String(m).padStart(2,'0');
 function addM(s,k){let[y,m]=s.split('-').map(Number);m+=k;y+=Math.floor((m-1)/12);m=((m-1)%12+12)%12+1;return ymOf(y,m)}
 function diffM(a,b){const[ay,am]=a.split('-').map(Number),[by,bm]=b.split('-').map(Number);return(ay-by)*12+am-bm}
@@ -215,6 +230,7 @@ async function boot(){
   applyTheme();render();
   try{await pull(!remoteAt);setSync('')}catch(e){setSync('sin conexión')}
   if(!S||!S.months)S=emptyState();
+  if(migrate())save();
   applyTheme();render();
 }
 async function start(){
@@ -230,11 +246,17 @@ const closed=new Set();
 function ensureMonth(m){
   if(S.months[m])return S.months[m];
   const prev=Object.keys(S.months).filter(k=>k<m).sort().pop();
-  const p=prev?S.months[prev]:{usd:0,salary:0,saving:0,taxes:[]};
-  S.months[m]={usd:p.usd,salary:p.salary,saving:p.saving,taxes:p.taxes.map(t=>({...t,id:uid(),paid:false}))};
+  const p=prev?S.months[prev]:{usd:0,salary:0,taxes:[]};
+  S.months[m]={usd:p.usd,salary:p.salary,taxes:p.taxes.map(t=>({...t,id:uid(),paid:false}))};
   save();return S.months[m];
 }
-const rate=m=>(S.months[m]||{}).usd||0;
+const lastMonth=m=>{const k=Object.keys(S.months).filter(x=>x<=m&&S.months[x]).sort().pop();return k?S.months[k]:{usd:0,salary:0,taxes:[]}};
+const rate=m=>(S.months[m]&&S.months[m].usd)||(lastMonth(m).usd||0);
+const plainDep=m=>S.deposits.find(x=>x.month===m&&!x.note);
+const savingOf=m=>{const d=plainDep(m);return d?+d.amount:0};
+function setSaving(m,v){let d=plainDep(m);if(!v){if(d)S.deposits=S.deposits.filter(x=>x!==d);return}if(d)d.amount=v;else{S.deposits.push({id:uid(),month:m,amount:v,note:''});S.deposits.sort((a,b)=>a.month.localeCompare(b.month))}}
+function migrate(){let ch=false;for(const[m,M]of Object.entries(S.months||{})){if('saving'in M){if(M.saving&&!plainDep(m))setSaving(m,M.saving);delete M.saving;ch=true}}return ch}
+function monthTotals(m){const M=S.months[m]||lastMonth(m);const tc=CARDS.reduce((s,c)=>s+lines(c.id,m).reduce((a,l)=>a+l.net,0),0);const tx=(M.taxes||[]).reduce((s,t)=>s+num(t.amount),0);const sal=num(M.salary),sv=savingOf(m);return{sal,tc,tx,sv,rest:sal-sv-tc-tx}}
 function lines(card,m){
   return S.purchases.filter(p=>p.card===card).map(p=>{
     let n=diffM(m,p.first)+1,cu=p.cuota;
@@ -261,20 +283,20 @@ function render(){
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
   $('#mnav').style.visibility=tab==='mes'?'visible':'hidden';
   $('#mlabel').textContent=mLabel(view);
-  $('#ttl').textContent={mes:'Gastos',ahorros:'Ahorros',viajes:'Vacaciones',ajustes:'Ajustes'}[tab];
-  $('#app').innerHTML={mes:vMes,ahorros:vAhorros,viajes:vViajes,ajustes:vAjustes}[tab]();
+  $('#ttl').textContent={mes:'Gastos',ahorros:'Ahorros',proy:'Proyección',viajes:'Vacaciones',ajustes:'Ajustes'}[tab];
+  $('#app').innerHTML={mes:vMes,ahorros:vAhorros,proy:vProy,viajes:vViajes,ajustes:vAjustes}[tab]();
 }
 
 function vMes(){
   const m=view,M=ensureMonth(m);
   const cs=CARDS.map(c=>{const L=lines(c.id,m),b=sumBy(L,'val'),r=sumBy(L,'ref');return{c,L,b,r,n:b-r}});
   const tc=cs.reduce((s,x)=>s+x.n,0),tx=M.taxes.reduce((s,t)=>s+num(t.amount),0);
-  const rest=num(M.salary)-num(M.saving)-tc-tx;
+  const sv=savingOf(m),rest=num(M.salary)-sv-tc-tx;
   const hasUSD=S.purchases.some(p=>p.cur==='USD');
   let h=(S.purchases.length?'':`<div class="banner">Todavía no hay datos. Andá a <b>Ajustes → Importar</b> y elegí el archivo <b>historial.json</b>.</div>`)+`<div class="sumwrap"><div class="card pad">
     <div class="sum">
       <div class="fld"><label>Sueldo</label><input inputmode="decimal" data-mf="salary" value="${M.salary?nf(M.salary):''}" placeholder="0,00"></div>
-      <div class="fld"><label>Ahorro esperado</label><input inputmode="decimal" data-mf="saving" value="${M.saving?nf(M.saving):''}" placeholder="0,00"></div>
+      <div class="fld"><label>Ahorro esperado</label><input inputmode="decimal" data-mf="saving" value="${sv?nf(sv):''}" placeholder="0,00"></div>
       <div class="fld"><label>Dólar del mes</label><input inputmode="decimal" data-mf="usd" value="${M.usd?nf(M.usd):''}" placeholder="0,00"></div>
       <div class="fld"><label>Ahorros disponibles</label><div style="padding:9px 0;font-weight:650">${fmt(savBal())}</div></div>
     </div>
@@ -282,7 +304,7 @@ function vMes(){
   </div>
   <div class="card pad hero">
     <div class="kv"><span>Sueldo</span><span>${fmt(num(M.salary))}</span></div>
-    <div class="kv"><span>• Ahorro esperado</span><span>${fmt(num(M.saving))}</span></div>
+    <div class="kv"><span>• Ahorro esperado</span><span>${fmt(sv)}</span></div>
     <div class="kv"><span>• Total T.C neto</span><span>${fmt(tc)}</span></div>
     <div class="kv"><span>• Impuestos y servicios</span><span>${fmt(tx)}</span></div>
     <div class="kv" style="align-items:baseline"><span><b>Te queda</b></span><span class="big ${rest<0?'neg':''}">${fmt(rest)}</span></div>
@@ -330,6 +352,16 @@ function vAhorros(){
     ${[...S.savingsExp].reverse().map(x=>`<button class="li" data-act="editsx" data-id="${x.id}"><span>${esc(x.desc)}${x.date?` <span class="mut">· ${dmy(x.date)}</span>`:''}</span><b>${fmt(x.amount)}</b></button>`).join('')}
     ${ts.map(t=>`<button class="li" data-tab="viajes"><span>✈ ${esc(t.name)} <span class="mut">· vacaciones</span></span><b>${fmt(tripSavAmt(t))}</b></button>`).join('')}
     <button class="lnk" data-act="addsx">+ Agregar gasto</button></div></div></div>`;
+}
+
+function vProy(){
+  let bal=savBal();const start=bal;let rows='',n=12;
+  for(let i=0;i<n;i++){const m=addM(curYM,i),t=monthTotals(m),extra=S.deposits.filter(x=>x.month===m&&x.note).reduce((s,x)=>s+ +x.amount,0);bal+=t.sv+extra;
+    rows+=`<tr class="${i===0?'cur':''}"><td>${mLabel(m)}</td><td data-l="Sueldo"><input inputmode="decimal" data-pj="sal" data-m="${m}" value="${t.sal?nf(t.sal):''}" placeholder="0,00"></td><td data-l="Tarjetas">${fmt(t.tc)}</td><td data-l="Servicios">${fmt(t.tx)}</td>
+    <td data-l="Ahorro"><input inputmode="decimal" data-pj="sv" data-m="${m}" value="${t.sv?nf(t.sv):''}" placeholder="0,00"></td><td data-l="Te sobra" class="${t.rest<0?'neg':'pos'}"><b>${fmt(t.rest)}</b></td><td data-l="Acum.">${fmt(bal)}${extra?`<div class="r-sub">+ ${fmt(extra)} extra</div>`:''}</td></tr>`}
+  return `<div class="card pad hero"><div class="mut">Ahorros hoy</div><div class="big">${fmt(start)}</div><div class="kv"><span>Proyectado en ${mLabel(addM(curYM,n-1))}</span><b>${fmt(bal)}</b></div></div>
+  <div class="hint" style="margin:0 2px 8px">Tarjetas = cuotas y débitos ya comprometidos. Impuestos y servicios se toman del último mes cargado. Editá sueldo y ahorro esperado directo en la tabla.</div>
+  <div class="card pscroll"><table class="tbl ptbl"><thead><tr><th>Mes</th><th>Sueldo</th><th>Tarjetas</th><th>Imp./serv.</th><th>Ahorro esp.</th><th>Te sobra</th><th>Ahorro acum.</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 function vViajes(){
@@ -444,11 +476,12 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('change',e=>{
   const t=e.target;
-  if(t.dataset.mf){S.months[view][t.dataset.mf]=num(t.value);save();render()}
+  if(t.dataset.mf){if(t.dataset.mf==='saving')setSaving(view,num(t.value));else S.months[view][t.dataset.mf]=num(t.value);save();render()}
+  else if(t.dataset.pj){const m=t.dataset.m,v=num(t.value);if(t.dataset.pj==='sv')setSaving(m,v);else ensureMonth(m).salary=v;save();render()}
   else if(t.dataset.tx){const x=S.months[view].taxes.find(y=>y.id===t.dataset.id);x[t.dataset.tx]=t.dataset.tx==='paid'?t.checked:t.dataset.tx==='amount'?num(t.value):t.value;save();if(t.dataset.tx!=='name')render()}
   else if(t.dataset.mode){S.theme.mode=t.dataset.mode;save();applyTheme()}
   else if(t.dataset.close){S.close[t.dataset.close]=parseInt(t.value)||26;save()}
-  else if(t.id==='imp'&&t.files[0]){t.files[0].text().then(s=>{try{const d=JSON.parse(s);if(!d.purchases||!d.months)throw 0;if(S.purchases.length&&!confirm('Esto reemplaza todos los datos actuales. ¿Seguir?'))return;S=d;S.theme=S.theme||{p:'rosa',mode:'auto'};save();applyTheme();render();alert('Importado: '+d.purchases.length+' gastos')}catch(err){alert('Archivo inválido')}})}
+  else if(t.id==='imp'&&t.files[0]){t.files[0].text().then(s=>{try{const d=JSON.parse(s);if(!d.purchases||!d.months)throw 0;if(S.purchases.length&&!confirm('Esto reemplaza todos los datos actuales. ¿Seguir?'))return;S=d;S.theme=S.theme||{p:'rosa',mode:'auto'};migrate();save();applyTheme();render();alert('Importado: '+d.purchases.length+' gastos')}catch(err){alert('Archivo inválido')}})}
 });
 start();
 </script>
