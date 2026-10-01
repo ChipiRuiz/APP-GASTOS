@@ -112,7 +112,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .pal{border:2px solid var(--line);border-radius:12px;background:var(--bg);padding:8px 4px;cursor:pointer;font-size:11px;text-align:center}
 .pal.on{border-color:var(--accent)}
 .pal i{display:block;width:26px;height:26px;border-radius:50%;margin:0 auto 4px}
-.hero{background:var(--soft)}
+.hero{background:var(--soft);border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
 .sync{font-size:11px;color:var(--muted);margin-left:8px;font-weight:400}
 .login{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
 .login form{width:100%;max-width:360px}
@@ -189,15 +189,15 @@ const curYM=todayISO().slice(0,7);
 function emptyState(){
   return {purchases:[],deposits:[],savingsExp:[],trips:[],months:{},
     cats:['GASTOS COMÚNES','COMPRAS VARIAS','IMPUESTO','TRANSPORTE','DEPORTE','SUSCRIPCIÓN','PADEL','GASTO AJENO'],
-    cards:JSON.parse(JSON.stringify(DEF_CARDS.filter(c=>!c.hidden))),theme:{p:'rosa',mode:'auto'}};
+    cards:JSON.parse(JSON.stringify(DEF_CARDS.filter(c=>!c.hidden))),theme:{p:'sakura2',mode:'dark'}};
 }
 const PAL={
  menta:{n:'Menta',l:{bg:'#f4f5f7',card:'#fff',ink:'#16181d',muted:'#6b7280',line:'#e5e7eb',accent:'#0f766e',soft:'#e6f4f1',week:'#f1f5f9',onacc:'#fff'},d:{bg:'#0f1115',card:'#181b21',ink:'#e8eaee',muted:'#9aa1ac',line:'#2a2f38',accent:'#2dd4bf',soft:'#12332f',week:'#20252d',onacc:'#06201d'}},
  lavanda:{n:'Lavanda',l:{bg:'#f6f4fb',card:'#fff',ink:'#1d1830',muted:'#6e6787',line:'#e7e3f1',accent:'#6d4fd8',soft:'#efeafd',week:'#f2eff9',onacc:'#fff'},d:{bg:'#120f1c',card:'#1b1729',ink:'#ece8f7',muted:'#a39cbc',line:'#2e2842',accent:'#a78bfa',soft:'#2a2145',week:'#221c33',onacc:'#160f2b'}},
  arena:{n:'Arena',l:{bg:'#f7f3ec',card:'#fffdf9',ink:'#2a2118',muted:'#7a6d5e',line:'#eae2d6',accent:'#c2410c',soft:'#fbeee4',week:'#f3ece1',onacc:'#fff'},d:{bg:'#17130e',card:'#211b14',ink:'#f1e9de',muted:'#b0a493',line:'#3a3025',accent:'#fb923c',soft:'#3a2717',week:'#2a2219',onacc:'#2a1406'}},
  oceano:{n:'Océano',l:{bg:'#f2f6fb',card:'#fff',ink:'#0f1b2d',muted:'#5f6f85',line:'#dfe7f1',accent:'#1d4ed8',soft:'#e7eefc',week:'#edf2f8',onacc:'#fff'},d:{bg:'#0b1220',card:'#121a2b',ink:'#e6edf7',muted:'#93a3ba',line:'#23304a',accent:'#60a5fa',soft:'#15284a',week:'#18223a',onacc:'#071a33'}},
- sakura:{n:'Sakura',l:{bg:'#fdf6f8',card:'#ffffff',ink:'#17121a',muted:'#7d6a72',line:'#f1e2e7',accent:'#c76a88',soft:'#fbe6ed',week:'#f9eef2',onacc:'#fff'},d:{bg:'#0a090b',card:'#141114',ink:'#fbf7f8',muted:'#a8979e',line:'#262025',accent:'#f5c6d3',soft:'#2a1c22',week:'#1b1619',onacc:'#2a121b'}},
- sakura2:{n:'Sakura+',l:{bg:'#fdf4f7',card:'#ffffff',ink:'#17121a',muted:'#7d6a72',line:'#f1dde4',accent:'#b8507a',soft:'#fadbe6',week:'#f8e9ef',onacc:'#fff'},d:{bg:'#0a090b',card:'#151115',ink:'#ffffff',muted:'#ad9aa2',line:'#2b2229',accent:'#f4a3bc',soft:'#33202a',week:'#1d1619',onacc:'#2a0d18'}},
+ sakura:{n:'Sakura',l:{bg:'#fdf6f8',card:'#ffffff',ink:'#17121a',muted:'#7d6a72',line:'#f1e2e7',accent:'#c76a88',soft:'#fbe6ed',week:'#f9eef2',onacc:'#fff'},d:{bg:'#0a0a0a',card:'#141414',ink:'#fbf7f8',muted:'#a6a0a2',line:'#262424',accent:'#f5c6d3',soft:'#1c1a1b',week:'#1a1919',onacc:'#2a121b'}},
+ sakura2:{n:'Sakura+',l:{bg:'#fdf4f7',card:'#ffffff',ink:'#17121a',muted:'#7d6a72',line:'#f1dde4',accent:'#b8507a',soft:'#fadbe6',week:'#f8e9ef',onacc:'#fff'},d:{bg:'#0a0a0a',card:'#141414',ink:'#ffffff',muted:'#a6a0a2',line:'#262424',accent:'#f4a3bc',soft:'#1c1a1b',week:'#1a1919',onacc:'#2a0d18'}},
  rosa:{n:'Rosa',l:{bg:'#fbf4f6',card:'#fff',ink:'#2b1820',muted:'#85697a',line:'#f0e1e7',accent:'#be185d',soft:'#fce7ef',week:'#f8edf1',onacc:'#fff'},d:{bg:'#1a0f14',card:'#241720',ink:'#f6e7ee',muted:'#bb9aab',line:'#3d2833',accent:'#f472b6',soft:'#42192f',week:'#2e1d27',onacc:'#3a0a22'}}};
 const mq=matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(){
