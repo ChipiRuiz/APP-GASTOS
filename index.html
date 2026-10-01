@@ -118,7 +118,10 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .sync{font-size:11px;color:var(--muted);margin-left:8px;font-weight:400}
 .login{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
 .login form{width:100%;max-width:360px}
-.login h1{font-size:26px;margin:0 0 4px}
+.login h1{font-size:26px;margin:0 0 4px;color:var(--accent)}
+.login .card{border:2px solid color-mix(in srgb,var(--accent) 75%,var(--line))}
+.alink{border:0;background:none;color:var(--accent);font-size:13px;padding:10px 0 0;cursor:pointer;width:100%;text-align:center}
+.okmsg{font-size:13px;color:var(--accent);margin-bottom:8px}
 .ptbl td input{width:100%;min-width:90px;text-align:right;border:1px solid transparent;background:none;border-radius:7px;padding:5px 6px;font-variant-numeric:tabular-nums}
 .ptbl td input:focus{border-color:var(--line);background:var(--bg)}
 .ptbl tr.cur td{background:var(--soft)}
@@ -214,8 +217,8 @@ const PAL={
  sakura2:{n:'Sakura+',l:{bg:'#fdf4f7',card:'#ffffff',ink:'#17121a',muted:'#7d6a72',line:'#f1dde4',accent:'#b8507a',soft:'#fadbe6',week:'#f8e9ef',onacc:'#fff'},d:{bg:'#0a0a0a',card:'#141414',ink:'#ffffff',muted:'#a6a0a2',line:'#262424',accent:'#f4a3bc',soft:'#1c1a1b',week:'#1a1919',onacc:'#2a0d18'}},
  rosa:{n:'Rosa',l:{bg:'#fbf4f6',card:'#fff',ink:'#2b1820',muted:'#85697a',line:'#f0e1e7',accent:'#be185d',soft:'#fce7ef',week:'#f8edf1',onacc:'#fff'},d:{bg:'#1a0f14',card:'#241720',ink:'#f6e7ee',muted:'#bb9aab',line:'#3d2833',accent:'#f472b6',soft:'#42192f',week:'#2e1d27',onacc:'#3a0a22'}}};
 const mq=matchMedia('(prefers-color-scheme: dark)');
-function applyTheme(){
-  const t=S.theme||{p:'rosa',mode:'auto'},dark=t.mode==='dark'||(t.mode==='auto'&&mq.matches);
+function applyTheme(o){
+  const t=o||S.theme||{p:'rosa',mode:'auto'},dark=t.mode==='dark'||(t.mode==='auto'&&mq.matches);
   window.__dark=dark;
   const v={...(PAL[t.p]||PAL.menta)[dark?'d':'l'],...(dark?{neg:'#fb7185',pos:'#86efac',shadow:'none'}:{neg:'#b91c1c',pos:'#15803d',shadow:'0 1px 2px rgba(0,0,0,.06)'})};
   for(const k in v)document.documentElement.style.setProperty('--'+k,v[k]);
@@ -246,15 +249,46 @@ document.addEventListener('visibilitychange',async()=>{
   if(pending){push();return}
   try{if(await pull()){applyTheme();render();setSync('actualizado')}}catch(e){}
 });
-function showLogin(msg){
-  $('#login').innerHTML=`<div class="login"><form class="card pad"><h1>Gastos</h1><div class="hint" style="margin-bottom:14px">Ingresá con tu cuenta.</div>
+const SAK={p:'sakura2',mode:'dark'};
+const appURL=()=>location.origin+location.pathname;
+function authScreen(html,onSubmit){
+  applyTheme(SAK);
+  $('#login').innerHTML=`<div class="login"><form class="card pad">${html}</form></div>`;
+  const f=$('#login form');f.onsubmit=async e=>{e.preventDefault();const b=f.querySelector('.btn');b.disabled=true;await onSubmit(f,b);};
+  f.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>({login:showLogin,forgot:showForgot})[x.dataset.go]());
+  setTimeout(()=>f.querySelector('input')?.focus(),50);return f;
+}
+function showLogin(msg,ok){
+  authScreen(`<h1>Gastos</h1><div class="hint" style="margin-bottom:14px">Ingresá con tu cuenta.</div>
     ${fld('Email','<input name="email" type="email" autocomplete="email" required>')}${fld('Contraseña','<input name="pass" type="password" autocomplete="current-password" required>')}
-    ${msg?`<div class="warn" style="margin-bottom:8px">${esc(msg)}</div>`:''}<div class="btns"><button class="btn">Entrar</button></div></form></div>`;
-  const f=$('#login form');
-  f.onsubmit=async e=>{e.preventDefault();f.querySelector('.btn').textContent='Entrando…';
+    ${msg?`<div class="${ok?'okmsg':'warn'}" style="margin-bottom:8px">${esc(msg)}</div>`:''}<div class="btns"><button class="btn">Entrar</button></div>
+    <button type="button" class="alink" data-go="forgot">¿Olvidaste tu contraseña?</button>`,
+  async(f,b)=>{b.textContent='Entrando…';
     const {data,error}=await sb.auth.signInWithPassword({email:f.email.value.trim(),password:f.pass.value});
     if(error)return showLogin('Email o contraseña incorrectos.');
-    user=data.user;$('#login').innerHTML='';await boot();};
+    user=data.user;$('#login').innerHTML='';await boot();});
+}
+function showForgot(msg){
+  authScreen(`<h1>Recuperar contraseña</h1><div class="hint" style="margin-bottom:14px">Te mandamos un mail con un link para elegir una contraseña nueva.</div>
+    ${fld('Email','<input name="email" type="email" autocomplete="email" required>')}
+    ${msg?`<div class="warn" style="margin-bottom:8px">${esc(msg)}</div>`:''}<div class="btns"><button class="btn">Enviar link</button></div>
+    <button type="button" class="alink" data-go="login">Volver a ingresar</button>`,
+  async(f,b)=>{b.textContent='Enviando…';
+    const {error}=await sb.auth.resetPasswordForEmail(f.email.value.trim(),{redirectTo:appURL()});
+    if(error)return showForgot(/rate|seconds|many/i.test(error.message)?'Se pidieron muchos mails seguidos. Esperá unos minutos y probá de nuevo.':'No se pudo enviar el mail. Revisá el email.');
+    showLogin('Si el email está registrado, te llegó un link. Revisá también spam.',true);});
+}
+function showNewPass(msg,fromSettings){
+  authScreen(`<h1>Nueva contraseña</h1><div class="hint" style="margin-bottom:14px">${fromSettings?'Elegí tu nueva contraseña.':'Elegí una contraseña nueva para tu cuenta.'}</div>
+    ${fld('Nueva contraseña','<input name="p1" type="password" autocomplete="new-password" minlength="6" required>')}${fld('Repetila','<input name="p2" type="password" autocomplete="new-password" minlength="6" required>')}
+    ${msg?`<div class="warn" style="margin-bottom:8px">${esc(msg)}</div>`:''}<div class="btns">${fromSettings?'<button type="button" class="btn sec" id="cancelpw">Cancelar</button>':''}<button class="btn">Guardar</button></div>`,
+  async(f,b)=>{if(f.p1.value!==f.p2.value)return showNewPass('Las contraseñas no coinciden.',fromSettings);
+    b.textContent='Guardando…';const {data,error}=await sb.auth.updateUser({password:f.p1.value});
+    if(error)return showNewPass(/least|short|6/i.test(error.message)?'Tiene que tener al menos 6 caracteres.':/different|same/i.test(error.message)?'Tiene que ser distinta a la anterior.':'No se pudo guardar. Probá de nuevo.',fromSettings);
+    history.replaceState(null,'',appURL());$('#login').innerHTML='';
+    if(fromSettings){applyTheme();alert('Contraseña actualizada.');return}
+    user=data.user;await boot();});
+  if(fromSettings)$('#cancelpw').onclick=()=>{$('#login').innerHTML='';applyTheme()};
 }
 async function boot(){
   try{const c=JSON.parse(localStorage.getItem(cacheKey()));if(c){S=c.S;remoteAt=c.remoteAt}}catch(e){}
@@ -265,9 +299,14 @@ async function boot(){
   applyTheme();render();
 }
 async function start(){
-  applyTheme();
+  applyTheme(SAK);
   if(!sb){$('#app').innerHTML='<div class="banner">No se pudo cargar la conexión. Revisá internet y recargá.</div>';return}
+  const recovering=/type=recovery/.test(location.hash);
+  if(/error_code=|error=/.test(location.hash)){history.replaceState(null,'',appURL());return showForgot('El link venció o ya se usó. Pedí uno nuevo.')}
+  let shown=false;
+  sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY'&&!shown){shown=true;showNewPass()}});
   const {data}=await sb.auth.getSession();
+  if(recovering||shown){if(!shown){shown=true;showNewPass()}return}
   if(data.session){user=data.session.user;await boot()}else showLogin();
 }
 let view=curYM, tab='mes';
@@ -448,7 +487,7 @@ function vAjustes(){
   <h2>Categorías</h2><div class="card pad"><div class="fld"><label>Una por línea</label><textarea id="cats" rows="8">${esc(S.cats.join('\n'))}</textarea></div><button class="btn sec" data-act="savecats">Guardar categorías</button></div>
   <h2>Datos</h2><div class="card pad"><div class="btns"><button class="btn sec" data-act="export">Exportar</button><label class="btn sec" style="text-align:center">Importar<input type="file" accept=".json" id="imp" hidden></label></div>
   <div class="hint" style="margin-top:8px">Importar reemplaza todos los datos de la app por los del archivo.</div></div>
-  <h2>Cuenta</h2><div class="card pad"><div class="hint" style="margin-bottom:8px">${esc(user?.email||'')}</div><button class="btn sec" style="width:100%" data-act="logout">Cerrar sesión</button></div>`;
+  <h2>Cuenta</h2><div class="card pad"><div class="hint" style="margin-bottom:8px">${esc(user?.email||'')}</div><button class="btn sec" style="width:100%;margin-bottom:8px" data-act="chpass">Cambiar contraseña</button><button class="btn sec" style="width:100%" data-act="logout">Cerrar sesión</button></div>`;
 }
 
 /* ---------- formularios ---------- */
@@ -551,6 +590,7 @@ document.addEventListener('click',e=>{
   else if(a==='pal'){S.theme.p=id;save();applyTheme();render()}
   else if(a==='savecats'){S.cats=$('#cats').value.split('\n').map(s=>s.trim()).filter(Boolean);save();alert('Guardado')}
   else if(a==='export'){const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download='gastos-'+todayISO()+'.json';l.click()}
+  else if(a==='chpass')showNewPass('',true);
   else if(a==='logout'){if(confirm('¿Cerrar sesión?')){sb.auth.signOut().then(()=>location.reload())}}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList?.contains('row'))e.target.click()});
