@@ -1,6 +1,6 @@
 {
- "name": "Gastos",
- "short_name": "Gastos",
+ "name": "Mis Gastos",
+ "short_name": "Mis Gastos",
  "start_url": "./",
  "scope": "./",
  "display": "standalone",
