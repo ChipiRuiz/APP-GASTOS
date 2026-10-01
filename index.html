@@ -153,6 +153,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .chip{display:inline-flex;align-items:center;gap:6px;background:var(--week);border:1px solid var(--line);border-radius:999px;padding:5px 4px 5px 10px;font-size:13px}
 .chip i{width:9px;height:9px;border-radius:3px}
 .chip button{border:0;background:none;color:var(--muted);font-size:15px;line-height:1;padding:0 6px;cursor:pointer;border-radius:999px}.chip button:hover{color:var(--neg)}
+.dinfo{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.45}.dinfo p{margin:0 0 6px}.dinfo b{color:var(--ink)}.dinfo code{font-size:11.5px;background:var(--week);padding:1px 5px;border-radius:5px}
 .banner{background:var(--soft);border:1px dashed var(--accent);border-radius:14px;padding:14px;margin-bottom:12px;font-size:14px}
 </style>
 </head>
@@ -339,7 +340,7 @@ function lines(card,m){
     if(p.hist&&S.histEnd&&m<=S.histEnd){if(!(m in p.hist))return null;n=p.hist[m];cu=p.hc?.[m]??p.cuota}
     else if(p.rec){if(n<1||(p.until&&m>p.until))return null}else if(n<1||n>p.cuotas)return null;
     const val=p.cur==='USD'?cu*rate(m):cu;
-    const ref=p.refAll?val:Math.min(val,p.refunds?.[m]||0);
+    const ref=p.refAll?val:(p.refunds?.[m]||0);
     return{p,n,val,ref,net:val-ref};
   }).filter(Boolean).sort((a,b)=>(a.p.date||'').localeCompare(b.p.date||'')||a.p.desc.localeCompare(b.p.desc));
 }
@@ -497,7 +498,9 @@ function vAjustes(){
   <h2>Categorías</h2><div class="card pad"><div class="chips">${S.cats.map((c,i)=>`<span class="chip"><i style="background:${catSlot(c)>=0?CATPAL[window.__dark?'d':'l'][catSlot(c)]:'var(--muted)'}"></i>${esc(c)}<button data-act="delcat" data-id="${i}" aria-label="Borrar ${esc(c)}">×</button></span>`).join('')}</div>
     <button class="lnk" style="padding:12px 0 0" data-act="addcat">+ Nueva categoría</button><div class="hint">Hasta 8 categorías tienen color propio en el gráfico; el resto se agrupa en "Otros". Al borrar una, su color pasa a la siguiente sin color.</div></div>
   <h2>Datos</h2><div class="card pad"><div class="btns"><button class="btn sec" data-act="export">Exportar</button><label class="btn sec" style="text-align:center">Importar<input type="file" accept=".json" id="imp" hidden></label></div>
-  <div class="hint" style="margin-top:8px">Importar reemplaza todos los datos de la app por los del archivo.</div></div>
+  <div class="dinfo"><p><b>Exportar</b> descarga un archivo <b>.json</b> <code style="white-space:nowrap">gastos-AAAA-MM-DD.json</code> con todos tus datos: tarjetas, gastos y cuotas, reintegros, comentarios, sueldo, ahorros, vacaciones, categorías y apariencia. Sirve como copia de seguridad.</p>
+    <p><b>Importar</b> acepta solo un <b>.json</b> exportado desde esta app (o el historial que armamos de la planilla). No acepta Excel ni CSV.</p>
+    <p><b>Ojo:</b> importar <b>reemplaza todo</b>; no suma ni mezcla. Exportá antes para no perder nada.</p></div></div>
   <h2>Cuenta</h2><div class="card pad"><div class="hint" style="margin-bottom:8px">${esc(user?.email||'')}</div><button class="btn sec" style="width:100%;margin-bottom:8px" data-act="chpass">Cambiar contraseña</button><button class="btn sec" style="width:100%" data-act="logout">Cerrar sesión</button></div>`;
 }
 
