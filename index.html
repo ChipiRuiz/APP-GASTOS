@@ -24,7 +24,7 @@ button,input,select{font:inherit;color:inherit}
 .mnav b{min-width:128px;text-align:center;font-weight:600}
 .ib{border:1px solid var(--line);background:var(--card);border-radius:10px;width:36px;height:36px;cursor:pointer}
 main{max-width:1180px;margin:0 auto;padding:12px 16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+.card{background:var(--card);border:2px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:14px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
 .pad{padding:14px}
 h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:18px 2px 8px;font-weight:600}
 .sum{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -112,7 +112,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .pal{border:2px solid var(--line);border-radius:12px;background:var(--bg);padding:8px 4px;cursor:pointer;font-size:11px;text-align:center}
 .pal.on{border-color:var(--accent)}
 .pal i{display:block;width:26px;height:26px;border-radius:50%;margin:0 auto 4px}
-.hero{background:var(--soft);border:2px solid color-mix(in srgb,var(--accent) 70%,var(--line))}
+.hero{background:var(--soft);border:2px solid color-mix(in srgb,var(--accent) 75%,var(--line))}
 .sync{font-size:11px;color:var(--muted);margin-left:8px;font-weight:400}
 .login{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
 .login form{width:100%;max-width:360px}
@@ -131,6 +131,18 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .ptbl td::before{content:attr(data-l);color:var(--muted);font-size:12px;margin-right:6px}
 .ptbl td:first-child{grid-column:1/-1;font-weight:700;font-size:15px}.ptbl td:first-child::before{content:none}
 .ptbl td input{min-width:0;width:auto;flex:1;max-width:105px;padding:3px 4px;border-color:var(--line);font-size:12.5px}}
+.donut{display:flex;gap:18px;align-items:center;flex-wrap:wrap;position:relative}
+.donut svg{width:190px;height:190px;flex:none;margin:0 auto;overflow:visible}
+.donut path{transition:opacity .15s;cursor:pointer;stroke:var(--card);stroke-width:2;stroke-linejoin:round}
+.donut.hl path:not(.on){opacity:.28}
+.dc1{font-size:11px;fill:var(--muted)}.dc2{font-size:15px;font-weight:700;fill:var(--ink)}.dc3{font-size:11px;fill:var(--muted)}
+.dleg{flex:1;min-width:180px;display:grid;gap:2px}
+.dleg button{display:grid;grid-template-columns:10px 1fr auto auto;gap:8px;align-items:center;border:0;background:none;padding:5px 6px;border-radius:8px;font-size:13px;text-align:left;cursor:pointer}
+.dleg button:hover,.dleg button.on{background:var(--week)}
+.dleg i{width:10px;height:10px;border-radius:3px}
+.dleg .pc{color:var(--muted);font-size:12px;min-width:38px;text-align:right}
+.dtip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 9px;border-radius:8px;white-space:nowrap;transform:translate(-50%,-115%);opacity:0;transition:opacity .1s;z-index:3}
+.dtip.on{opacity:1}
 .banner{background:var(--soft);border:1px dashed var(--accent);border-radius:14px;padding:14px;margin-bottom:12px;font-size:14px}
 </style>
 </head>
@@ -202,6 +214,7 @@ const PAL={
 const mq=matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(){
   const t=S.theme||{p:'rosa',mode:'auto'},dark=t.mode==='dark'||(t.mode==='auto'&&mq.matches);
+  window.__dark=dark;
   const v={...(PAL[t.p]||PAL.menta)[dark?'d':'l'],...(dark?{neg:'#fb7185',pos:'#86efac',shadow:'none'}:{neg:'#b91c1c',pos:'#15803d',shadow:'0 1px 2px rgba(0,0,0,.06)'})};
   for(const k in v)document.documentElement.style.setProperty('--'+k,v[k]);
   document.querySelector('meta[name=theme-color]').content=v.bg;
@@ -340,7 +353,7 @@ function vMes(){
       rows+=`<div class="row" role="button" tabindex="0" data-act="edit" data-id="${l.p.id}">
         <div style="min-width:0"><div class="r-desc">${esc(l.p.desc)}</div><div class="r-sub">${l.p.date?dmy(l.p.date)+' · ':''}${esc(l.p.cat)}${l.p.cur==='USD'?' · '+fmtU(l.p.cuota):''}</div>${l.p.note?`<div class="r-note"><span>💬 ${esc(l.p.note)}</span><button class="nx" data-act="delnote" data-id="${l.p.id}" aria-label="Borrar comentario">×</button></div>`:''}</div>
         <span class="r-cu">${l.p.rec?'↻':l.p.cuotas>1?l.n+'/'+l.p.cuotas:'—'}</span>
-        <div class="r-amt">${fmt(l.net)}${l.ref?`<small>reint. −${fmt(l.ref)}</small>`:''}</div>
+        <div class="r-amt">${fmt(l.net)}${l.ref?`<small>reint. ${fmt(-l.ref)}</small>`:''}</div>
         <button class="dots ${l.p.note?'has':''}" data-act="note" data-id="${l.p.id}" aria-label="Comentario">⋯</button></div>`;
     }
     h+=`<section class="card cc ${closed.has(x.c.id)?'closed':''}" style="--cc:${x.c.color}">
@@ -356,10 +369,38 @@ function vMes(){
     <button class="x" data-act="deltax" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('');
   h+=`<button class="lnk" data-act="addtax">+ Agregar</button></div></div>`;
   const cat={};cs.forEach(x=>x.L.forEach(l=>{cat[l.p.cat]=(cat[l.p.cat]||0)+l.net}));
-  const ce=Object.entries(cat).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]),mx=Math.max(1,...ce.map(e=>e[1]));
-  h+=`<div><h2>Por categoría</h2><div class="card pad">${ce.map(([k,v])=>`<div class="bar"><span>${esc(k)}</span><i style="width:${Math.max(2,v/mx*100)}%"></i><span>${fmt(v)}</span></div>`).join('')||'<div class="mut">Sin gastos.</div>'}</div></div></div>`;
+  h+=`<div><h2>Por categoría</h2><div class="card pad">${donutHTML(cat)}</div></div></div>`;
   return h;
 }
+
+const CATPAL={l:['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#4a3aa7','#e34948'],d:['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767']};
+let DON=[];
+function donutHTML(cat){
+  const dark=!!window.__dark;
+  const pal=CATPAL[dark?'d':'l'],other={k:'OTROS',v:0,c:'var(--muted)'};
+  let seg=[];
+  for(const[k,v]of Object.entries(cat)){if(v<=0)continue;const i=S.cats.indexOf(k);if(i>=0&&i<8)seg.push({k,v,c:pal[i],i});else other.v+=v}
+  seg.sort((a,b)=>a.i-b.i);if(other.v>0)seg.push(other);
+  const tot=seg.reduce((s,x)=>s+x.v,0);if(!tot)return '<div class="mut">Sin gastos.</div>';
+  const R=90,r0=58,cx=95,cy=95;let a0=-Math.PI/2;
+  const pt=(a,rr)=>[cx+rr*Math.cos(a),cy+rr*Math.sin(a)].map(n=>n.toFixed(2)).join(' ');
+  DON=seg.map(x=>({...x,p:x.v/tot}));
+  const paths=DON.map((x,j)=>{const a1=a0+x.p*Math.PI*2-(x.p===1?1e-4:0),lg=(a1-a0)>Math.PI?1:0;
+    const d=`M${pt(a0,R)} A${R} ${R} 0 ${lg} 1 ${pt(a1,R)} L${pt(a1,r0)} A${r0} ${r0} 0 ${lg} 0 ${pt(a0,r0)}Z`;a0=a1;
+    return `<path d="${d}" fill="${x.c}" data-dj="${j}"></path>`}).join('');
+  return `<div class="donut" id="donut"><svg viewBox="0 0 190 190" role="img" aria-label="Gastos por categoría">${paths}
+    <text x="95" y="80" text-anchor="middle" class="dc1" id="dc1">Total</text><text x="95" y="101" text-anchor="middle" class="dc2" id="dc2">${fmt(tot)}</text><text x="95" y="118" text-anchor="middle" class="dc3" id="dc3">${DON.length} categorías</text></svg>
+    <div class="dleg">${DON.map((x,j)=>`<button data-dj="${j}"><i style="background:${x.c}"></i><span>${esc(x.k)}</span><b>${fmt(x.v)}</b><span class="pc">${(x.p*100).toFixed(0)}%</span></button>`).join('')}</div><div class="dtip" id="dtip"></div></div>`;
+}
+function donutHL(j,ev){
+  const w=$('#donut');if(!w)return;const x=DON[j];
+  w.classList.toggle('hl',j!=null);w.querySelectorAll('[data-dj]').forEach(e=>e.classList.toggle('on',+e.dataset.dj===j));
+  $('#dc1').textContent=x?x.k:'Total';$('#dc2').textContent=fmt(x?x.v:DON.reduce((s,y)=>s+y.v,0));$('#dc3').textContent=x?(x.p*100).toFixed(1)+'% del mes':DON.length+' categorías';
+  const t=$('#dtip');if(x&&ev&&ev.target.tagName==='path'){const b=w.getBoundingClientRect();t.style.left=(ev.clientX-b.left)+'px';t.style.top=(ev.clientY-b.top)+'px';t.innerHTML=`<b>${esc(x.k)}</b> · ${fmt(x.v)} · ${(x.p*100).toFixed(1)}%`;t.classList.add('on')}else t.classList.remove('on');
+}
+document.addEventListener('pointermove',e=>{const d=e.target.closest&&e.target.closest('#donut [data-dj]');if(d)donutHL(+d.dataset.dj,e);else if($('#donut')?.classList.contains('hl')&&!e.target.closest?.('#donut'))donutHL(null)});
+document.addEventListener('pointerleave',()=>donutHL(null));
+document.addEventListener('click',e=>{const d=e.target.closest&&e.target.closest('#donut [data-dj]');if(d){const j=+d.dataset.dj;donutHL(d.classList.contains('on')&&e.pointerType!=='mouse'?null:j,e)}});
 
 function vAhorros(){
   const d=sumBy(depDone(),'amount'),pend=S.deposits.filter(x=>x.month>=curYM),g=sumBy(S.savingsExp,'amount'),v=tripSav(),ts=S.trips.filter(t=>t.fromSavings);
