@@ -538,7 +538,7 @@ function purchaseForm(p){
     <div class="f2"><div class="fld"><label id="amtlbl">Monto</label><input name="total" inputmode="decimal" required value="${amt0?nf(amt0):''}" placeholder="0,00"><div class="hint" id="amthint"></div></div>${fld('Moneda',curSeg(p.cur))}</div>
     <div class="f2 cardonly">${fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${p.cuotas}">`)}${fld('Categoría',catSel(p.cat))}</div>
     <label class="chk cardonly"><input type="checkbox" name="rec" ${p.rec&&!p.until?'checked':''}> Se repite todos los meses (débito automático / suscripción)</label>
-    <div class="cardonly">${fld('Primera cuota',`<input type="month" name="first" value="${p.first||firstFor(p.card,p.date)}">`,'Se calcula con el día de cierre; cambiala si hace falta.')}</div>
+    <div class="cardonly">${fld('Primera cuota',`<input type="month" name="first" value="${p.first||(tab==='mes'?view:firstFor(p.card,p.date))}">`,'Por defecto, el mes que estás viendo. Cambiala si hace falta.')}</div>
     ${inMonth?`<div class="f2">${fld('Reintegro en '+mLabel(view),`<input name="ref" inputmode="decimal" value="${p.refunds?.[view]?nf(p.refunds[view]):''}" placeholder="0,00">`)}<div></div></div>`:''}
     ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(p.note||'')}</textarea>`)}
     ${!isNew?`<label class="chk"><input type="checkbox" name="refAll" ${p.refAll?'checked':''}> Reintegro total en todas las cuotas</label>`:''}`,
@@ -554,7 +554,7 @@ function purchaseForm(p){
     if(isNew){o.refAll=d.cat==='GASTO AJENO';S.purchases.push(o)}
   }, isNew?null:()=>{S.purchases=S.purchases.filter(x=>x!==p)});
   let prevCat=f.cat.value;f.cat.onchange=()=>{if(f.cat.value!=='__new'){prevCat=f.cat.value;return}const n=prompt('Nombre de la nueva categoría');const c=n&&addCat(n);if(!c){f.cat.value=prevCat;return}const o=document.createElement('option');o.textContent=c;f.cat.insertBefore(o,f.cat.lastElementChild);f.cat.value=c;prevCat=c;save()};
-  const sync=()=>{const c=f.card.value,ah=c==='AHORRO';f.querySelectorAll('.cardonly').forEach(e=>e.style.display=ah?'none':'');if(!ah&&isNew)f.first.value=firstFor(c,f.date.value)};
+  const sync=()=>{const c=f.card.value,ah=c==='AHORRO';f.querySelectorAll('.cardonly').forEach(e=>e.style.display=ah?'none':'');};
   const amtUI=()=>{const n=Math.max(1,parseInt(f.cuotas.value)||1),ah=f.card.value==='AHORRO',v=num(f.total.value),u=f.querySelector('[name=cur]:checked')?.value==='USD';
     $('#amtlbl').textContent=!ah&&n>1?'Valor de cada cuota':'Monto';
     $('#amthint').textContent=!ah&&n>1&&v?`Total: ${u?fmtU(v*n):fmt(v*n)} en ${n} cuotas`:''};
