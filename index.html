@@ -543,7 +543,7 @@ function vComp(){
   h+=`<h2>Movimientos de ${mLabel(m)}</h2><div class="card">`;
   h+=rows.map(({e,n})=>{const v=shSigned(e);tot+=v;
     return `<div class="row" role="button" tabindex="0" data-act="shentry" data-id="${e.id}"><div style="min-width:0"><div class="r-desc">${e.kind==='pago'?'💸 ':''}${esc(e.descr||(e.kind==='pago'?'Pago':'Gasto'))}</div>
-      <div class="r-sub">${e.date?dmy(e.date)+' · ':''}${e.kind==='pago'?(e.paid_by===user?.id?'Pagaste vos':`Pagó ${esc(shName(e.paid_by))}`):`${e.paid_by===user?.id?'Pagaste vos':'Pagó '+esc(shName(e.paid_by))} · ${Math.round(e.share*100)}% del otro`}</div>${e.note?`<div class="r-note"><span>💬 ${esc(e.note)}</span></div>`:''}</div>
+      <div class="r-sub">${e.date?dmy(e.date)+' · ':''}${e.kind==='pago'?(e.paid_by===user?.id?'Pagaste vos':`Pagó ${esc(shName(e.paid_by))}`):`${e.paid_by===user?.id?'Pagaste vos':'Pagó '+esc(shName(e.paid_by))} · ${shareLabel(+e.share,+e.cuota)} del otro`}</div>${e.note?`<div class="r-note"><span>💬 ${esc(e.note)}</span></div>`:''}</div>
       <span class="r-cu">${e.cuotas>1?n+'/'+e.cuotas:'—'}</span>
       <div class="r-amt">${fmt(+e.cuota)}<small style="${v<0?'color:var(--neg)':''}">${v>=0?'te deben ':'debés '}${fmt(Math.abs(v))}</small></div><span></span></div>`}).join('')||'<div class="empty">Sin movimientos este mes.</div>';
   h+=`<footer class="shfoot"><span>Neto del mes</span><b class="${tot<0?'neg':'pos'}">${tot>=0?'+':'−'}${fmt(Math.abs(tot))}</b></footer></div>
@@ -560,11 +560,11 @@ function shEntryForm(e,kind){
     ${fld('Descripción',`<input name="descr" required value="${esc(e.descr||'')}">`)}
     <div class="f2">${fld('Pagó',`<select name="paid_by">${payOpts}</select>`)}${fld('Fecha',`<div class="dwrap"><input type="date" name="date" value="${e.date||''}"><button type="button" class="dclr" id="dclr2">×</button></div>`)}</div>
     <div class="f2">${fld(kind==='pago'?'Monto':'<span id="shamtl">Monto</span>',`<input name="cuota" inputmode="decimal" required value="${e.cuota?nf(+e.cuota):''}" placeholder="0,00">`,'<span id="shamth"></span>')}${kind==='pago'?'<div></div>':fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${e.cuotas}">`)}</div>
-    ${kind==='pago'?'':`<div class="f2">${fld('Le toca al otro',`<select name="share">${[[50,'50%'],[100,'100% (todo es del otro)'],[0,'0% (solo registro)']].map(([v,l])=>`<option value="${v}" ${v===pct?'selected':''}>${l}</option>`).join('')}${[0,50,100].includes(pct)?'':`<option value="${pct}" selected>${pct}%</option>`}<option value="otro">Otro %…</option></select>`)}${fld('<span id="shfl">Primera cuota</span>',`<input type="month" name="first_month" value="${e.first_month}">`)}</div>`}
+    ${kind==='pago'?'':splitUI('sh',+e.share,+e.cuota||0)+fld('<span id="shfl">Primera cuota</span>',`<input type="month" name="first_month" value="${e.first_month}">`)}
     ${kind==='pago'?fld('Mes',`<input type="month" name="first_month" value="${e.first_month}">`):''}
     ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(e.note||'')}</textarea>`)}`,
   async d=>{
-    const row={descr:d.descr.trim(),paid_by:d.paid_by,date:d.date||null,cuota:num(d.cuota),cuotas:kind==='pago'?1:Math.max(1,parseInt(d.cuotas)||1),first_month:d.first_month||view,share:kind==='pago'?1:Math.min(1,Math.max(0,(parseFloat(d.share)||0)/100)),note:(d.note||'').trim()||null,kind,updated_at:new Date().toISOString()};
+    const row={descr:d.descr.trim(),paid_by:d.paid_by,date:d.date||null,cuota:num(d.cuota),cuotas:kind==='pago'?1:Math.max(1,parseInt(d.cuotas)||1),first_month:d.first_month||view,share:kind==='pago'?1:splitValue(f,'sh',num(d.cuota)),note:(d.note||'').trim()||null,kind,updated_at:new Date().toISOString()};
     if(!row.cuota){alert('Falta el monto');return false}
     const q=isNew?sb.from('ledger_entries').insert({...row,ledger_id:SH.ledger.id}):sb.from('ledger_entries').update(row).eq('id',e.id);
     const {error}=await q;if(error){alert('No se pudo guardar: '+error.message);return false}
@@ -573,9 +573,9 @@ function shEntryForm(e,kind){
   isNew?null:async()=>{const {error}=await sb.from('ledger_entries').delete().eq('id',e.id);if(error){alert('No se pudo borrar');return false}
     const snap={...e};delete snap.id;await shLoad();render();
     toast('Eliminado',async()=>{await sb.from('ledger_entries').insert(snap);await shLoad();render()});return 'async'});
-  const sh=f.share;if(sh)sh.onchange=()=>{if(sh.value==='otro'){const v=prompt('¿Qué % le toca al otro? (0 a 100)');const n=Math.min(100,Math.max(0,parseFloat(v)||50));const op=document.createElement('option');op.value=n;op.textContent=n+'%';sh.insertBefore(op,sh.lastElementChild);sh.value=n}};
+  const shUI=splitWire(f,'sh',()=>num(f.cuota.value));
   const ui=()=>{if(kind==='pago')return;const n=Math.max(1,parseInt(f.cuotas.value)||1),v=num(f.cuota.value);$('#shamtl').textContent=n>1?'Valor de cada cuota':'Monto';$('#shamth').textContent=n>1&&v?`Total: ${fmt(v*n)} en ${n} cuotas`:'';$('#shfl').textContent=n>1?'Primera cuota':'Mes'};
-  if(f.cuotas)f.cuotas.oninput=ui;f.cuota.oninput=ui;ui();
+  if(f.cuotas)f.cuotas.oninput=ui;f.cuota.oninput=()=>{ui();shUI&&shUI()};ui();
   $('#dclr2').onclick=()=>{f.date.value=''};
 }
 function shLedgerForm(){
@@ -671,15 +671,31 @@ const normCat=n=>n.trim().replace(/\s+/g,' ').toUpperCase();
 function addCat(n){n=normCat(n);if(!n)return null;if(!S.cats.includes(n))S.cats.push(n);return n}
 const curSeg=v=>`<div class="seg"><label><input type="radio" name="cur" value="ARS" ${v!=='USD'?'checked':''}><span>ARS</span></label><label><input type="radio" name="cur" value="USD" ${v==='USD'?'checked':''}><span>USD</span></label></div>`;
 
-function syncShared(o,want,lid){
+const shareLabel=(sh,cu)=>{const p=Math.round(sh*1000)/10;return [0,50,100].includes(p)||Number.isInteger(p)?p+'%':fmt(sh*cu)};
+function splitUI(prefix,share,cuota,hint){
+  const pct=Math.round(share*1000)/10,mode=hint==='monto'||hint==='pct'?hint:pct===50?'50':pct===100?'100':pct===0&&prefix==='sh'?'0':(Number.isInteger(pct)?'pct':'monto');
+  const val=mode==='pct'?pct:mode==='monto'?nf(Math.round(share*cuota*100)/100):'';
+  return `<div class="f2"><div class="fld"><label>Le toca al otro</label><select name="${prefix}mode">${[['50','50%'],['100','100%'],...(prefix==='sh'?[['0','0% (registro)']]:[]),['pct','Otro %'],['monto','Monto exacto']].map(([v,l])=>`<option value="${v}" ${v===mode?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="fld ${prefix}valw"><label class="${prefix}vall">${mode==='monto'?'Monto por cuota':'%'}</label><input name="${prefix}val" inputmode="decimal" value="${val}" placeholder="${mode==='monto'?'0,00':'Ej: 30'}"><div class="hint ${prefix}valh"></div></div></div>`;
+}
+function splitWire(f,prefix,getCuota){
+  const md=f[prefix+'mode'],w=f.querySelector('.'+prefix+'valw');if(!md)return;
+  const ui=()=>{const m=md.value;w.style.visibility=m==='pct'||m==='monto'?'visible':'hidden';f.querySelector('.'+prefix+'vall').textContent=m==='monto'?'Monto por cuota':'%';f[prefix+'val'].placeholder=m==='monto'?'0,00':'Ej: 30';
+    const cu=getCuota(),sh=splitValue(f,prefix,cu);f.querySelector('.'+prefix+'valh').textContent=cu&&(m==='pct'||m==='monto')?(m==='monto'?`${Math.round(sh*1000)/10}% de la cuota`:`${fmt(sh*cu)} por cuota`):''};
+  md.onchange=ui;f[prefix+'val'].oninput=ui;ui();return ui;
+}
+function splitValue(f,prefix,cu){const m=f[prefix+'mode']?.value,v=num(f[prefix+'val']?.value);
+  if(m==='50')return .5;if(m==='100')return 1;if(m==='0')return 0;if(m==='pct')return Math.min(1,Math.max(0,v/100));if(m==='monto')return cu?Math.min(1,Math.max(0,v/cu)):0;return .5}
+function syncShared(o,want,lid,share){
+  share=share==null?(o.shared?.s??.5):share;
   if(!sb||!user)return;
   const row={descr:o.desc,date:o.date||null,cuota:o.cur==='USD'?Math.round(o.cuota*(rate(o.first)||0)*100)/100:o.cuota,cuotas:o.cuotas,first_month:o.first,updated_at:new Date().toISOString()};
   if(want&&!o.shared&&lid){const L=SH.all.find(x=>x.ledger.id===lid);const w=L?shOtherOf(L):'';
-    o.shared={l:lid,e:null,s:.5,w};save();render();
-    sb.from('ledger_entries').insert({...row,ledger_id:lid,paid_by:user.id,kind:'gasto',share:.5,source_purchase:o.id}).select().then(({data,error})=>{
+    o.shared={l:lid,e:null,s:share,w};save();render();
+    sb.from('ledger_entries').insert({...row,ledger_id:lid,paid_by:user.id,kind:'gasto',share,source_purchase:o.id}).select().then(({data,error})=>{
       if(error){delete o.shared;save();render();return alert('No se pudo cargar en compartido: '+error.message)}
       o.shared.e=data&&data[0]&&data[0].id;save();shLoad().then(()=>toast('También cargado en compartido'))})}
-  else if(want&&o.shared&&o.shared.e){sb.from('ledger_entries').update(row).eq('id',o.shared.e).then(()=>shLoad())}
+  else if(want&&o.shared&&o.shared.e){o.shared.s=share;sb.from('ledger_entries').update({...row,share}).eq('id',o.shared.e).then(()=>shLoad())}
   else if(!want&&o.shared){const e=o.shared.e;delete o.shared;save();render();if(e)sb.from('ledger_entries').delete().eq('id',e).then(()=>{shLoad();toast('Quitado de la cuenta compartida')})}
 }
 function purchaseForm(p){
@@ -695,7 +711,7 @@ function purchaseForm(p){
     <div class="f2 cardonly"><div class="creditonly">${fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${p.cuotas}">`)}</div>${fld('Categoría',catSel(p.cat))}</div>
     ${(()=>{const Ls=SH.all.filter(L=>shOtherOf(L));if(!Ls.length&&!p.shared)return '';const curL=p.shared?.l||SH.ledger?.id;
       const sel=Ls.length>1&&!p.shared?`<select name="toledger" style="margin-left:4px">${Ls.map(L=>`<option value="${L.ledger.id}" ${L.ledger.id===curL?'selected':''}>con ${esc(shOtherOf(L))}</option>`).join('')}</select>`:`con ${esc(p.shared?.w||shOtherOf(Ls.find(L=>L.ledger.id===curL)||Ls[0])||'')}<input type="hidden" name="toledger" value="${p.shared?.l||(Ls.find(L=>L.ledger.id===curL)||Ls[0]).ledger.id}">`;
-      return `<label class="chk cardonly"><input type="checkbox" name="toshared" ${p.shared?'checked':''}> Compartido 50% ${sel}</label>${p.shared?'<div class="hint" style="margin:-6px 0 10px">La parte del otro figura como reintegro y está en la cuenta compartida. Si lo editás o destildás, se actualiza ahí también.</div>':''}`})()}
+      return `<label class="chk cardonly"><input type="checkbox" name="toshared" ${p.shared?'checked':''}> Compartido ${sel}</label><div class="shopts">${splitUI('ps',p.shared?.s??.5,p.cuota||0,p.shared?.m)}</div>${p.shared?'<div class="hint" style="margin:-6px 0 10px">La parte del otro figura como reintegro y está en la cuenta compartida. Si lo editás o destildás, se actualiza ahí también.</div>':''}`})()}
     <label class="chk cardonly"><input type="checkbox" name="rec" ${p.rec&&!p.until?'checked':''}> Se repite todos los meses (débito automático / suscripción)</label>
     <div class="cardonly">${fld('<span id="firstlbl">Primera cuota</span>',`<input type="month" name="first" value="${p.first||(tab==='mes'?view:firstFor(p.card,p.date))}">`,'Por defecto, el mes que estás viendo. Cambiala si hace falta.')}</div>
     ${inMonth?`<div class="f2">${fld('Reintegro en '+mLabel(view),`<input name="ref" inputmode="decimal" value="${p.refunds?.[view]?nf(p.refunds[view]):''}" placeholder="0,00">`)}<div></div></div>`:''}
@@ -711,7 +727,7 @@ function purchaseForm(p){
     if(d.rec){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew)o.rec=false;else o.until=view}
     if(!isNew){o.refAll=!!d.refAll;if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
     if(isNew){o.refAll=d.cat==='GASTO AJENO';S.purchases.push(o)}
-    syncShared(o,!!d.toshared,d.toledger);
+    syncShared(o,!!d.toshared,d.toledger,d.toshared?splitValue(f,'ps',o.cuota):null);if(o.shared)o.shared.m=d.psmode;
   }, isNew?null:()=>{const sh=p.shared;S.purchases=S.purchases.filter(x=>x!==p);if(sh&&confirm('También estaba en la cuenta compartida. ¿Lo borro de ahí?'))sb.from('ledger_entries').delete().eq('id',sh.e).then(()=>shLoad())});
   let prevCat=f.cat.value;f.cat.onchange=()=>{if(f.cat.value!=='__new'){prevCat=f.cat.value;return}const n=prompt('Nombre de la nueva categoría');const c=n&&addCat(n);if(!c){f.cat.value=prevCat;return}const o=document.createElement('option');o.textContent=c;f.cat.insertBefore(o,f.cat.lastElementChild);f.cat.value=c;prevCat=c;save()};
   const sync=()=>{const c=f.card.value,ah=c==='AHORRO',cr=isCredit(cardById(c));f.querySelectorAll('.cardonly').forEach(e=>e.style.display=ah?'none':'');f.querySelector('.creditonly').style.display=cr?'':'none';if(!cr)f.cuotas.value=1;$('#firstlbl').textContent=cr?'Primera cuota':'Mes';};
@@ -720,7 +736,8 @@ function purchaseForm(p){
     $('#amthint').textContent=!ah&&n>1&&v?`Total: ${u?fmtU(v*n):fmt(v*n)} en ${n} cuotas`:''};
   f.cuotas.oninput=amtUI;f.total.oninput=amtUI;f.querySelectorAll('[name=cur]').forEach(x=>x.onchange=amtUI);
   const dsync=()=>{$('#dclr').style.visibility=f.date.value?'visible':'hidden'};$('#dclr').onclick=()=>{f.date.value='';dsync()};f.date.addEventListener('input',dsync);dsync();
-  f.card.onchange=()=>{sync();amtUI()};f.date.onchange=sync;sync();amtUI();
+  const psUI=splitWire(f,'ps',()=>num(f.total.value));const shBox=()=>{const o=f.querySelector('.shopts');if(o&&f.toshared)o.style.display=f.toshared.checked&&f.card.value!=='AHORRO'?'':'none'};if(f.toshared){f.toshared.addEventListener('change',shBox);f.total.addEventListener('input',()=>psUI&&psUI())}shBox();
+  f.card.onchange=()=>{sync();amtUI();shBox()};f.date.onchange=sync;sync();amtUI();
 }
 
 function cardForm(c){
