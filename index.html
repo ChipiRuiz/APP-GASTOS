@@ -171,6 +171,13 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .shchip{flex:none;border:2px solid var(--line);background:var(--card);border-radius:12px;padding:7px 12px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:1px;font-size:13px}
 .shchip span{font-size:11.5px;color:var(--muted)}.shchip.on{border-color:var(--accent)}.shchip.add{justify-content:center;color:var(--accent);font-weight:650;border-style:dashed}
 .shfoot{display:flex;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--line);background:var(--week);font-size:14px}
+@media(min-width:900px){.sumwrap{align-items:start}}
+.distr{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+.dlab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px}.dlab span:first-child{color:var(--ink);font-weight:600}
+.dbar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--week);gap:2px}.dbar i{display:block;height:100%;min-width:3px}
+.dbar .dover{background:repeating-linear-gradient(45deg,var(--neg) 0 4px,transparent 4px 8px)}
+.dleg2{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:11.5px;color:var(--muted)}.dleg2 i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}.dleg2 b{color:var(--ink);font-weight:600}
+.ending{margin-top:12px;padding:9px 11px;border-radius:10px;background:var(--week);font-size:12.5px}
 .banner{background:var(--soft);border:1px dashed var(--accent);border-radius:14px;padding:14px;margin-bottom:12px;font-size:14px}
 </style>
 </head>
@@ -405,13 +412,14 @@ function vMes(){
     </div>
     ${cs.some(x=>x.ub)?`<div class="sum" style="margin-top:10px"><div class="fld"><label>U$D del mes (neto)</label><div style="padding:9px 0;font-weight:650">${fmtU(cs.reduce((s,x)=>s+x.un,0))}</div></div><div class="fld"><label>U$D pagados en dólares</label><input inputmode="decimal" data-mf="usdPaid" value="${M.usdPaid?nf(M.usdPaid):''}" placeholder="0,00"></div></div><div class="hint">Lo que pagues en dólares no se suma al total en pesos; el resto se convierte con el dólar del mes.</div>`:''}
     ${cs.some(x=>x.ub)&&!M.usd?'<div class="warn">Hay compras en USD y falta el dólar del mes.</div>':''}
+    ${distrHTML(num(M.salary)+inc,[['Ahorro',sv,'#1baf7a'],['Tarjetas y cuentas',tc,'#3987e5'],['Servicios',tx,'#c98500'],['Compartidos',owe,'#9085e9']],rest)}
   </div>
   <div class="card pad hero">
     <div class="kv"><span>Sueldo</span><span>${fmt(num(M.salary))}</span></div>${inc?`<div class="kv"><span>+ Otros ingresos</span><span class="pos">${fmt(inc)}</span></div>`:''}
     <div class="kv"><span>• Ahorro esperado</span><span>${fmt(sv)}</span></div>
     <div class="kv"><span>• Tarjetas y cuentas</span><span>${fmt(tc)}</span></div>
     <div class="kv"><span>• Impuestos y servicios</span><span>${fmt(tx)}</span></div>${owe?`<div class="kv"><span>• Compartidos (tu parte)</span><span>${fmt(owe)}</span></div>`:''}
-    <div class="kv" style="align-items:baseline"><span><b>Te queda</b></span><span class="big ${rest<0?'neg':''}">${fmt(rest)}</span></div>
+    <div class="kv" style="align-items:baseline"><span><b>Te queda</b></span><span class="big ${rest<0?'neg':''}">${fmt(rest)}</span></div>${endingHTML(cs,m)}
   </div></div>
   <h2>Tarjetas y cuentas</h2><div class="grid4">`;
   for(const x of cs){
@@ -598,6 +606,20 @@ function shLedgerForm(){
     S.shCur=null;await shLoad();render();toast(owner?'Cuenta compartida eliminada':'Saliste de la cuenta compartida');
   });
   if(SH.ledger.created_by!==user.id){const b=f.querySelector('[data-x=del]');if(b)b.textContent='Salir'}
+}
+
+function distrHTML(total,parts,rest){
+  if(!total)return `<div class="distr"><div class="dlab">Distribución del sueldo</div><div class="hint">Cargá el sueldo para ver en qué se va.</div></div>`;
+  parts=parts.filter(p=>p[1]>0);const free=Math.max(0,rest),over=Math.max(0,-rest),base=Math.max(total,total+over);
+  const seg=[...parts,['Te queda',free,'var(--accent)']].filter(p=>p[1]>0);
+  return `<div class="distr"><div class="dlab"><span>Distribución del sueldo</span><span class="${over?'neg':'mut'}">${over?'te pasás '+fmt(over):Math.round((total-free)/total*100)+'% usado'}</span></div>
+    <div class="dbar">${seg.map(p=>`<i style="width:${p[1]/base*100}%;background:${p[2]}" title="${p[0]}: ${fmt(p[1])}"></i>`).join('')}${over?`<i class="dover" style="width:${over/base*100}%" title="Excedido: ${fmt(over)}"></i>`:''}</div>
+    <div class="dleg2">${seg.map(p=>`<span><i style="background:${p[2]}"></i>${p[0]} <b>${Math.round(p[1]/total*100)}%</b></span>`).join('')}</div></div>`;
+}
+function endingHTML(cs,m){
+  const L=cs.flatMap(x=>x.L).filter(l=>!l.p.rec&&l.p.cuotas>1&&l.n===l.p.cuotas);
+  if(!L.length)return '';const tot=L.reduce((s,l)=>s+l.net,0);
+  return `<div class="ending">🎉 Terminan <b>${L.length}</b> ${L.length===1?'cuota':'cuotas'} este mes: el mes que viene se liberan <b>${fmt(tot)}</b><div class="hint">${L.slice(0,4).map(l=>esc(l.p.desc)).join(' · ')}${L.length>4?' · …':''}</div></div>`;
 }
 
 function vAhorros(){
