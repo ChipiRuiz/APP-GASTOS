@@ -619,7 +619,8 @@ function distrHTML(total,parts,rest){
 function endingHTML(cs,m){
   const L=cs.flatMap(x=>x.L).filter(l=>!l.p.rec&&l.p.cuotas>1&&l.n===l.p.cuotas);
   if(!L.length)return '';const tot=L.reduce((s,l)=>s+l.net,0);
-  return `<div class="ending">🎉 ${L.length} ${L.length===1?'cuota termina':'cuotas terminan'} · liberás <b>${fmt(tot)}</b></div>`;
+  const nx=MESES[+addM(m,1).slice(5)-1].toLowerCase();
+  return `<div class="ending">¡Desde ${nx} tenés <b>+${fmt(tot)}</b> libres! Chau a ${L.length} ${L.length===1?'cuota':'cuotas'} 💪</div>`;
 }
 
 function vAhorros(){
