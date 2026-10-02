@@ -358,7 +358,7 @@ function migrate(){let ch=false;
 function cardTot(c,m){const L=lines(c.id,m),A=L.filter(l=>!l.u),U=L.filter(l=>l.u);const b=sumBy(A,'val'),r=sumBy(A,'ref'),ub=sumBy(U,'uval'),ur=sumBy(U,'uref');return{c,L,b,r,n:b-r,ub,ur,un:ub-ur}}
 function tcTotal(cs,M){const ars=cs.reduce((s,x)=>s+x.n,0),un=cs.reduce((s,x)=>s+x.un,0);return ars+Math.max(0,un-num(M.usdPaid||0))*(num(M.usd)||0)}
 const incOf=m=>((S.months[m]||{}).incomes||[]).reduce((s,x)=>s+num(x.amount),0);
-function monthTotals(m){const M=S.months[m]||lastMonth(m);const tc=tcTotal(cardsAll().map(c=>cardTot(c,m)),{usd:rate(m),usdPaid:(S.months[m]||{}).usdPaid||0});const tx=(M.taxes||[]).reduce((s,t)=>s+num(t.amount),0);const sal=num(M.salary),inc=incOf(m),sv=savingOf(m);return{sal,inc,tc,tx,sv,rest:sal+inc-sv-tc-tx}}
+function monthTotals(m){const M=S.months[m]||lastMonth(m);const tc=tcTotal(cardsAll().map(c=>cardTot(c,m)),{usd:rate(m),usdPaid:(S.months[m]||{}).usdPaid||0});const tx=(M.taxes||[]).reduce((s,t)=>s+num(t.amount),0);const sal=num(M.salary),inc=incOf(m),sv=savingOf(m),owe=shOweMonth(m);return{sal,inc,tc:tc+owe,tx,sv,owe,rest:sal+inc-sv-tc-tx-owe}}
 function lines(card,m){
   return S.purchases.filter(p=>p.card===card).map(p=>{
     let n=diffM(m,p.first)+1,cu=p.cuota;
@@ -395,7 +395,7 @@ function vMes(){
   const m=view,M=ensureMonth(m);
   const cs=cardsAll().map(c=>cardTot(c,m));
   const tc=tcTotal(cs,M),tx=M.taxes.reduce((s,t)=>s+num(t.amount),0);
-  const sv=savingOf(m),inc=incOf(m),rest=num(M.salary)+inc-sv-tc-tx;
+  const sv=savingOf(m),inc=incOf(m),owe=shOweMonth(m),rest=num(M.salary)+inc-sv-tc-tx-owe;
     let h=(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta o cuenta</b> para crear tus tarjetas, débito, transferencias o efectivo, y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+`<div class="sumwrap"><div class="card pad">
     <div class="sum">
       <div class="fld"><label>Sueldo</label><input inputmode="decimal" data-mf="salary" value="${M.salary?nf(M.salary):''}" placeholder="0,00"></div>
@@ -410,7 +410,7 @@ function vMes(){
     <div class="kv"><span>Sueldo</span><span>${fmt(num(M.salary))}</span></div>${inc?`<div class="kv"><span>+ Otros ingresos</span><span class="pos">${fmt(inc)}</span></div>`:''}
     <div class="kv"><span>• Ahorro esperado</span><span>${fmt(sv)}</span></div>
     <div class="kv"><span>• Tarjetas y cuentas</span><span>${fmt(tc)}</span></div>
-    <div class="kv"><span>• Impuestos y servicios</span><span>${fmt(tx)}</span></div>
+    <div class="kv"><span>• Impuestos y servicios</span><span>${fmt(tx)}</span></div>${owe?`<div class="kv"><span>• Compartidos (tu parte)</span><span>${fmt(owe)}</span></div>`:''}
     <div class="kv" style="align-items:baseline"><span><b>Te queda</b></span><span class="big ${rest<0?'neg':''}">${fmt(rest)}</span></div>
   </div></div>
   <h2>Tarjetas y cuentas</h2><div class="grid4">`;
@@ -490,6 +490,8 @@ const shOtherOf=L=>(L.members.find(m=>m.user_id!==user?.id)||{}).name;
 function shMonthsOf(e){const out=[];for(let i=0;i<e.cuotas;i++)out.push(addM(e.first_month,i));return out}
 function shSigned(e){const v=+e.cuota*(e.kind==='pago'?1:+e.share);return e.paid_by===user?.id?v:-v}
 function shBalance(upTo,entries=SH.entries){let b=0,fut=0;for(const e of entries)for(const m of shMonthsOf(e)){const v=shSigned(e);if(m<=upTo)b+=v;else fut+=v}return{b,fut}}
+function shMonthNet(m,entries=SH.entries){let t=0;for(const e of entries)if(shMonthsOf(e).includes(m))t+=shSigned(e);return t}
+function shOweMonth(m){let t=0;for(const L of SH.all)for(const e of L.entries)if(e.kind==='gasto'&&e.paid_by!==user?.id&&shMonthsOf(e).includes(m))t+=+e.cuota*+e.share;return Math.round(t*100)/100}
 function shSelect(id){const L=SH.all.find(x=>x.ledger.id===id)||SH.all[0];if(!L){SH.ledger=null;SH.members=[];SH.entries=[];return}
   SH.ledger=L.ledger;SH.members=L.members;SH.entries=L.entries;if(S.shCur!==L.ledger.id){S.shCur=L.ledger.id;cache()}}
 async function shLoad(){
@@ -532,11 +534,11 @@ function vComp(){
   if(!SH.ledger)return `<div class="card pad hero"><div class="big" style="font-size:20px">Cuentas compartidas</div>
     <p class="hint" style="font-size:13.5px;margin:8px 0 12px">Un lugar donde vos y otra persona cargan los gastos que comparten. Los dos ven lo mismo en tiempo real y la app calcula quién le debe a quién, incluidas las cuotas. Podés tener una cuenta con cada persona.</p>
     <button class="btn" style="width:100%" data-act="shcreate">Crear cuenta compartida</button></div>`;
-  const chips=`<div class="shchips">${SH.all.map(L=>{const {b}=shBalance(view,L.entries);return `<button class="shchip ${L.ledger.id===SH.ledger.id?'on':''}" data-act="shsel" data-id="${L.ledger.id}"><b>${esc(L.ledger.name)}</b><span>${esc(shOtherOf(L)||'sin invitar')} · ${b>0.005?'+':b<-0.005?'−':''}${fmt(Math.abs(b))}</span></button>`}).join('')}<button class="shchip add" data-act="shcreate">+ Nueva</button></div>`;
-  const o=shOther(),m=view,{b,fut}=shBalance(m);
+  const chips=`<div class="shchips">${SH.all.map(L=>{const b=shMonthNet(view,L.entries);return `<button class="shchip ${L.ledger.id===SH.ledger.id?'on':''}" data-act="shsel" data-id="${L.ledger.id}"><b>${esc(L.ledger.name)}</b><span>${esc(shOtherOf(L)||'sin invitar')} · ${b>0.005?'+':b<-0.005?'−':''}${fmt(Math.abs(b))}</span></button>`}).join('')}<button class="shchip add" data-act="shcreate">+ Nueva</button></div>`;
+  const o=shOther(),m=view,{b:acc,fut}=shBalance(m),b=shMonthNet(m);
   const who=b>0.005?`${esc(shOtherName())} te debe`:b<-0.005?`Le debés a ${esc(shOtherName())}`:'Están a mano';
-  let h=chips+`<div class="card pad hero"><div class="mut" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(SH.ledger.name)} · hasta ${mLabel(m)}</span><button class="x" style="margin:-6px -8px 0 0" data-act="shedit" aria-label="Editar cuenta">✎</button></div><div class="kv" style="border:0;align-items:baseline"><span><b>${who}</b></span><span class="big ${b<-0.005?'neg':''}">${fmt(Math.abs(b))}</span></div>
-    ${Math.abs(fut)>0.005?`<div class="kv"><span>Cuotas futuras</span><span>${fut>0?'+':'−'}${fmt(Math.abs(fut))} <span class="mut">${fut>0?'a tu favor':'en contra'}</span></span></div>`:''}
+  let h=chips+`<div class="card pad hero"><div class="mut" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(SH.ledger.name)} · ${mLabel(m)}</span><button class="x" style="margin:-6px -8px 0 0" data-act="shedit" aria-label="Editar cuenta">✎</button></div><div class="kv" style="border:0;align-items:baseline"><span><b>${who}</b><div class="hint">neto del mes</div></span><span class="big ${b<-0.005?'neg':''}">${fmt(Math.abs(b))}</span></div>
+    <div class="kv"><span class="mut">Acumulado hasta ${mLabel(m)}</span><span class="${acc<-0.005?'neg':''}">${acc>0.005?'te deben ':acc<-0.005?'debés ':''}${fmt(Math.abs(acc))}</span></div>
     ${!o?`<div class="warn" style="margin-top:8px">Todavía estás sola en esta cuenta. Invitá a la otra persona con ✎.</div>`:''}
     <div class="btns" style="margin-top:12px"><button class="btn" data-act="shadd">+ Gasto compartido</button><button class="btn sec" data-act="shpay">Registrar pago</button></div></div>`;
   const rows=SH.entries.flatMap(e=>{const ms=shMonthsOf(e),i=ms.indexOf(m);return i<0?[]:[{e,n:i+1}]}).sort((a,c)=>(a.e.date||'').localeCompare(c.e.date||''));
