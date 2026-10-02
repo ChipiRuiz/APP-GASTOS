@@ -619,7 +619,7 @@ function distrHTML(total,parts,rest){
 function endingHTML(cs,m){
   const L=cs.flatMap(x=>x.L).filter(l=>!l.p.rec&&l.p.cuotas>1&&l.n===l.p.cuotas);
   if(!L.length)return '';const tot=L.reduce((s,l)=>s+l.net,0);
-  return `<div class="ending">🎉 Terminan <b>${L.length}</b> ${L.length===1?'cuota':'cuotas'} este mes: el mes que viene se liberan <b>${fmt(tot)}</b><div class="hint">${L.slice(0,4).map(l=>esc(l.p.desc)).join(' · ')}${L.length>4?' · …':''}</div></div>`;
+  return `<div class="ending">🎉 ${L.length} ${L.length===1?'cuota termina':'cuotas terminan'} · liberás <b>${fmt(tot)}</b></div>`;
 }
 
 function vAhorros(){
