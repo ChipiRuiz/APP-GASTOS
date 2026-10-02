@@ -500,8 +500,9 @@ const shOtherOf=L=>(L.members.find(m=>m.user_id!==user?.id)||{}).name;
 function shMonthsOf(e){const out=[];for(let i=0;i<e.cuotas;i++)out.push(addM(e.first_month,i));return out}
 function shSigned(e){const v=+e.cuota*(e.kind==='pago'?1:+e.share);return e.paid_by===user?.id?v:-v}
 function shBalance(upTo,entries=SH.entries){let b=0,fut=0;for(const e of entries)for(const m of shMonthsOf(e)){const v=shSigned(e);if(m<=upTo)b+=v;else fut+=v}return{b,fut}}
-function shMonthNet(m,entries=SH.entries){let t=0;for(const e of entries)if(shMonthsOf(e).includes(m))t+=shSigned(e);return t}
-function shOweMonth(m){let t=0;for(const L of SH.all)for(const e of L.entries)if(e.kind==='gasto'&&e.paid_by!==user?.id&&shMonthsOf(e).includes(m))t+=+e.cuota*+e.share;return Math.round(t*100)/100}
+const isU=e=>e.cur==='USD';
+function shMonthNet(m,entries=SH.entries,cur='ARS'){let t=0;for(const e of entries)if((e.cur||'ARS')===cur&&shMonthsOf(e).includes(m))t+=shSigned(e);return t}
+function shOweMonth(m){let t=0;for(const L of SH.all)for(const e of L.entries)if(e.kind==='gasto'&&e.paid_by!==user?.id&&shMonthsOf(e).includes(m))t+=+e.cuota*+e.share*(isU(e)?rate(m):1);return Math.round(t*100)/100}
 function shSelect(id){const L=SH.all.find(x=>x.ledger.id===id)||SH.all[0];if(!L){SH.ledger=null;SH.members=[];SH.entries=[];return}
   SH.ledger=L.ledger;SH.members=L.members;SH.entries=L.entries;if(S.shCur!==L.ledger.id){S.shCur=L.ledger.id;cache()}}
 async function shLoad(){
@@ -544,21 +545,22 @@ function vComp(){
   if(!SH.ledger)return `<div class="card pad hero"><div class="big" style="font-size:20px">Cuentas compartidas</div>
     <p class="hint" style="font-size:13.5px;margin:8px 0 12px">Un lugar donde vos y otra persona cargan los gastos que comparten. Los dos ven lo mismo en tiempo real y la app calcula quién le debe a quién, incluidas las cuotas. Podés tener una cuenta con cada persona.</p>
     <button class="btn" style="width:100%" data-act="shcreate">Crear cuenta compartida</button></div>`;
-  const chips=`<div class="shchips">${SH.all.map(L=>{const b=shMonthNet(view,L.entries);return `<button class="shchip ${L.ledger.id===SH.ledger.id?'on':''}" data-act="shsel" data-id="${L.ledger.id}"><b>${esc(L.ledger.name)}</b><span>${esc(shOtherOf(L)||'sin invitar')} · ${b>0.005?'+':b<-0.005?'−':''}${fmt(Math.abs(b))}</span></button>`}).join('')}<button class="shchip add" data-act="shcreate">+ Nueva</button></div>`;
-  const o=shOther(),m=view,{b:acc,fut}=shBalance(m),b=shMonthNet(m);
+  const chips=`<div class="shchips">${SH.all.map(L=>{const b=shMonthNet(view,L.entries),bu=shMonthNet(view,L.entries,'USD');return `<button class="shchip ${L.ledger.id===SH.ledger.id?'on':''}" data-act="shsel" data-id="${L.ledger.id}"><b>${esc(L.ledger.name)}</b><span>${esc(shOtherOf(L)||'sin invitar')} · ${b>0.005?'+':b<-0.005?'−':''}${fmt(Math.abs(b))}${Math.abs(bu)>0.005?` · ${bu>0?'+':'−'}${fmtU(Math.abs(bu))}`:''}</span></button>`}).join('')}<button class="shchip add" data-act="shcreate">+ Nueva</button></div>`;
+  const o=shOther(),m=view,b=shMonthNet(m),bu=shMonthNet(m,SH.entries,'USD');
   const who=b>0.005?`${esc(shOtherName())} te debe`:b<-0.005?`Le debés a ${esc(shOtherName())}`:'Están a mano';
   let h=chips+`<div class="card pad hero"><div class="mut" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(SH.ledger.name)} · ${mLabel(m)}</span><button class="x" style="margin:-6px -8px 0 0" data-act="shedit" aria-label="Editar cuenta">✎</button></div><div class="kv" style="border:0;align-items:baseline"><span><b>${who}</b><div class="hint">neto del mes</div></span><span class="big ${b<-0.005?'neg':''}">${fmt(Math.abs(b))}</span></div>
+    ${Math.abs(bu)>0.005?`<div class="kv"><span><b>${bu>0?esc(shOtherName())+' te debe':'Le debés'}</b> <span class="mut">en dólares</span></span><span class="${bu<0?'neg':''}" style="font-size:20px;font-weight:700">${fmtU(Math.abs(bu))}</span></div>`:''}
     ${!o?`<div class="warn" style="margin-top:8px">Todavía estás sola en esta cuenta. Invitá a la otra persona con ✎.</div>`:''}
     <div class="btns" style="margin-top:12px"><button class="btn" data-act="shadd">+ Gasto compartido</button><button class="btn sec" data-act="shpay">Registrar pago</button></div></div>`;
   const rows=SH.entries.flatMap(e=>{const ms=shMonthsOf(e),i=ms.indexOf(m);return i<0?[]:[{e,n:i+1}]}).sort((a,c)=>(a.e.date||'').localeCompare(c.e.date||''));
-  let tot=0;
+  let tot=0,totU=0;
   h+=`<h2>Movimientos de ${mLabel(m)}</h2><div class="card">`;
-  h+=rows.map(({e,n})=>{const v=shSigned(e);tot+=v;
+  h+=rows.map(({e,n})=>{const v=shSigned(e),U=isU(e),F=U?fmtU:fmt;if(U)totU+=v;else tot+=v;
     return `<div class="row" role="button" tabindex="0" data-act="shentry" data-id="${e.id}"><div style="min-width:0"><div class="r-desc">${e.kind==='pago'?'💸 ':''}${esc(e.descr||(e.kind==='pago'?'Pago':'Gasto'))}</div>
       <div class="r-sub">${e.date?dmy(e.date)+' · ':''}${e.kind==='pago'?(e.paid_by===user?.id?'Pagaste vos':`Pagó ${esc(shName(e.paid_by))}`):`${e.paid_by===user?.id?'Pagaste vos':'Pagó '+esc(shName(e.paid_by))} · ${shareLabel(+e.share,+e.cuota)} del otro`}</div>${e.note?`<div class="r-note"><span>💬 ${esc(e.note)}</span></div>`:''}</div>
       <span class="r-cu">${e.cuotas>1?n+'/'+e.cuotas:'—'}</span>
-      <div class="r-amt">${fmt(+e.cuota)}<small style="${v<0?'color:var(--neg)':''}">${v>=0?'te deben ':'debés '}${fmt(Math.abs(v))}</small></div><span></span></div>`}).join('')||'<div class="empty">Sin movimientos este mes.</div>';
-  h+=`<footer class="shfoot"><span>Neto del mes</span><b class="${tot<0?'neg':'pos'}">${tot>=0?'+':'−'}${fmt(Math.abs(tot))}</b></footer></div>
+      <div class="r-amt">${F(+e.cuota)}<small style="${v<0?'color:var(--neg)':''}">${v>=0?'te deben ':'debés '}${F(Math.abs(v))}</small></div><span></span></div>`}).join('')||'<div class="empty">Sin movimientos este mes.</div>';
+  h+=`<footer class="shfoot"><span>Neto del mes</span><b class="${tot<0?'neg':'pos'}">${tot>=0?'+':'−'}${fmt(Math.abs(tot))}${Math.abs(totU)>0.005?` <span class="${totU<0?'neg':'pos'}">· ${totU>=0?'+':'−'}${fmtU(Math.abs(totU))}</span>`:''}</b></footer></div>
   <div class="hint" style="margin:6px 2px">Positivo: a tu favor. Negativo: le debés. Las cuotas se suman mes a mes.</div>`;
   return h;
 }
@@ -571,12 +573,13 @@ function shEntryForm(e,kind){
   const f=sheet(`<h3>${kind==='pago'?(isNew?'Registrar pago':'Editar pago'):(isNew?'Gasto compartido':'Editar gasto compartido')}</h3><div class="hint" style="margin:-6px 0 10px">${esc(SH.ledger.name)} · con ${esc(shOtherName())}</div>
     ${fld('Descripción',`<input name="descr" required value="${esc(e.descr||'')}">`)}
     <div class="f2">${fld('Pagó',`<select name="paid_by">${payOpts}</select>`)}${fld('Fecha',`<div class="dwrap"><input type="date" name="date" value="${e.date||''}"><button type="button" class="dclr" id="dclr2">×</button></div>`)}</div>
+    ${fld('Moneda',`<div class="seg"><label><input type="radio" name="cur" value="ARS" ${e.cur!=='USD'?'checked':''}><span>ARS</span></label><label><input type="radio" name="cur" value="USD" ${e.cur==='USD'?'checked':''}><span>USD</span></label></div>`)}
     <div class="f2">${fld(kind==='pago'?'Monto':'<span id="shamtl">Monto</span>',`<input name="cuota" inputmode="decimal" required value="${e.cuota?nf(+e.cuota):''}" placeholder="0,00">`,'<span id="shamth"></span>')}${kind==='pago'?'<div></div>':fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${e.cuotas}">`)}</div>
     ${kind==='pago'?'':splitUI('sh',+e.share,+e.cuota||0)+fld('<span id="shfl">Primera cuota</span>',`<input type="month" name="first_month" value="${e.first_month}">`)}
     ${kind==='pago'?fld('Mes',`<input type="month" name="first_month" value="${e.first_month}">`):''}
     ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(e.note||'')}</textarea>`)}`,
   async d=>{
-    const row={descr:d.descr.trim(),paid_by:d.paid_by,date:d.date||null,cuota:num(d.cuota),cuotas:kind==='pago'?1:Math.max(1,parseInt(d.cuotas)||1),first_month:d.first_month||view,share:kind==='pago'?1:splitValue(f,'sh',num(d.cuota)),note:(d.note||'').trim()||null,kind,updated_at:new Date().toISOString()};
+    const row={cur:d.cur==='USD'?'USD':'ARS',descr:d.descr.trim(),paid_by:d.paid_by,date:d.date||null,cuota:num(d.cuota),cuotas:kind==='pago'?1:Math.max(1,parseInt(d.cuotas)||1),first_month:d.first_month||view,share:kind==='pago'?1:splitValue(f,'sh',num(d.cuota)),note:(d.note||'').trim()||null,kind,updated_at:new Date().toISOString()};
     if(!row.cuota){alert('Falta el monto');return false}
     const q=isNew?sb.from('ledger_entries').insert({...row,ledger_id:SH.ledger.id}):sb.from('ledger_entries').update(row).eq('id',e.id);
     const {error}=await q;if(error){alert('No se pudo guardar: '+error.message);return false}
@@ -717,7 +720,7 @@ function syncShared(o,want,lid,share){
   const from=o.shared?.from||(o.first<view&&!o.rec?view:o.first),done=Math.max(0,diffM(from,o.first)),left=Math.max(1,o.cuotas-done);
   share=share==null?(o.shared?.s??.5):share;
   if(!sb||!user)return;
-  const row={descr:o.desc,date:o.date||null,cuota:o.cur==='USD'?Math.round(o.cuota*(rate(from)||0)*100)/100:o.cuota,cuotas:o.rec?1:left,first_month:from,updated_at:new Date().toISOString()};
+  const row={cur:o.cur==='USD'?'USD':'ARS',descr:o.desc,date:o.date||null,cuota:o.cuota,cuotas:o.rec?1:left,first_month:from,updated_at:new Date().toISOString()};
   if(want&&!o.shared&&lid){const L=SH.all.find(x=>x.ledger.id===lid);const w=L?shOtherOf(L):'';
     o.shared={l:lid,e:null,s:share,w,from};save();render();
     sb.from('ledger_entries').insert({...row,ledger_id:lid,paid_by:user.id,kind:'gasto',share,source_purchase:o.id}).select().then(({data,error})=>{
