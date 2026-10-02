@@ -380,6 +380,7 @@ const tripSavAmt=t=>t.savAmt?+t.savAmt:tripTot(t);
 const tripSav=()=>S.trips.filter(t=>t.fromSavings).reduce((s,t)=>s+tripSavAmt(t),0);
 const depDone=()=>S.deposits.filter(x=>x.month<curYM);
 const savBal=()=>sumBy(depDone(),'amount')-sumBy(S.savingsExp,'amount')-tripSav();
+const savAt=m=>sumBy(S.deposits.filter(x=>x.month<m),'amount')-sumBy(S.savingsExp.filter(x=>!x.date||x.date.slice(0,7)<=m),'amount')-tripSav();
 
 /* ---------- vistas ---------- */
 function render(){
@@ -400,7 +401,7 @@ function vMes(){
       <div class="fld"><label>Sueldo</label><input inputmode="decimal" data-mf="salary" value="${M.salary?nf(M.salary):''}" placeholder="0,00"></div>
       <div class="fld"><label>Ahorro esperado</label><input inputmode="decimal" data-mf="saving" value="${sv?nf(sv):''}" placeholder="0,00"></div>
       <div class="fld"><label>Dólar del mes</label><input inputmode="decimal" data-mf="usd" value="${M.usd?nf(M.usd):''}" placeholder="0,00"></div>
-      <div class="fld"><label>Ahorros disponibles</label><div style="padding:9px 0;font-weight:650">${fmt(savBal())}</div></div>
+      <div class="fld"><label>${m>curYM?'Ahorros proyectados':'Ahorros disponibles'}</label><div style="padding:9px 0;font-weight:650">${fmt(m===curYM?savBal():savAt(m))}</div></div>
     </div>
     ${cs.some(x=>x.ub)?`<div class="sum" style="margin-top:10px"><div class="fld"><label>U$D del mes (neto)</label><div style="padding:9px 0;font-weight:650">${fmtU(cs.reduce((s,x)=>s+x.un,0))}</div></div><div class="fld"><label>U$D pagados en dólares</label><input inputmode="decimal" data-mf="usdPaid" value="${M.usdPaid?nf(M.usdPaid):''}" placeholder="0,00"></div></div><div class="hint">Lo que pagues en dólares no se suma al total en pesos; el resto se convierte con el dólar del mes.</div>`:''}
     ${cs.some(x=>x.ub)&&!M.usd?'<div class="warn">Hay compras en USD y falta el dólar del mes.</div>':''}
