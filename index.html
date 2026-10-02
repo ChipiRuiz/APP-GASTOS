@@ -538,7 +538,6 @@ function vComp(){
   const o=shOther(),m=view,{b:acc,fut}=shBalance(m),b=shMonthNet(m);
   const who=b>0.005?`${esc(shOtherName())} te debe`:b<-0.005?`Le debés a ${esc(shOtherName())}`:'Están a mano';
   let h=chips+`<div class="card pad hero"><div class="mut" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(SH.ledger.name)} · ${mLabel(m)}</span><button class="x" style="margin:-6px -8px 0 0" data-act="shedit" aria-label="Editar cuenta">✎</button></div><div class="kv" style="border:0;align-items:baseline"><span><b>${who}</b><div class="hint">neto del mes</div></span><span class="big ${b<-0.005?'neg':''}">${fmt(Math.abs(b))}</span></div>
-    <div class="kv"><span class="mut">Acumulado hasta ${mLabel(m)}</span><span class="${acc<-0.005?'neg':''}">${acc>0.005?'te deben ':acc<-0.005?'debés ':''}${fmt(Math.abs(acc))}</span></div>
     ${!o?`<div class="warn" style="margin-top:8px">Todavía estás sola en esta cuenta. Invitá a la otra persona con ✎.</div>`:''}
     <div class="btns" style="margin-top:12px"><button class="btn" data-act="shadd">+ Gasto compartido</button><button class="btn sec" data-act="shpay">Registrar pago</button></div></div>`;
   const rows=SH.entries.flatMap(e=>{const ms=shMonthsOf(e),i=ms.indexOf(m);return i<0?[]:[{e,n:i+1}]}).sort((a,c)=>(a.e.date||'').localeCompare(c.e.date||''));
