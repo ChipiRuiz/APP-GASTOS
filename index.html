@@ -171,7 +171,9 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .shchip{flex:none;border:2px solid var(--line);background:var(--card);border-radius:12px;padding:7px 12px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:1px;font-size:13px}
 .shchip span{font-size:11.5px;color:var(--muted)}.shchip.on{border-color:var(--accent)}.shchip.add{justify-content:center;color:var(--accent);font-weight:650;border-style:dashed}
 .shfoot{display:flex;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--line);background:var(--week);font-size:14px}
-@media(min-width:900px){.sumwrap{align-items:start}}
+@media(min-width:900px){.sumwrap{align-items:stretch}.sumwrap>.card{display:flex;flex-direction:column;margin-bottom:12px}.sumcard .distr{margin-top:auto}.sumcard .sum+.distr,.sumcard .warn+.distr{margin-top:auto}}
+.sumcard{border:2px solid color-mix(in srgb,var(--accent) 75%,var(--line))}
+.sumcard .distr{padding-top:12px}
 .distr{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
 .dlab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px}.dlab span:first-child{color:var(--ink);font-weight:600}
 .dbar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--week);gap:2px}.dbar i{display:block;height:100%;min-width:3px}
@@ -403,7 +405,7 @@ function vMes(){
   const cs=cardsAll().map(c=>cardTot(c,m));
   const tc=tcTotal(cs,M),tx=M.taxes.reduce((s,t)=>s+num(t.amount),0);
   const sv=savingOf(m),inc=incOf(m),owe=shOweMonth(m),rest=num(M.salary)+inc-sv-tc-tx-owe;
-    let h=(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta o cuenta</b> para crear tus tarjetas, débito, transferencias o efectivo, y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+`<div class="sumwrap"><div class="card pad">
+    let h=(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta o cuenta</b> para crear tus tarjetas, débito, transferencias o efectivo, y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+`<div class="sumwrap"><div class="card pad sumcard">
     <div class="sum">
       <div class="fld"><label>Sueldo</label><input inputmode="decimal" data-mf="salary" value="${M.salary?nf(M.salary):''}" placeholder="0,00"></div>
       <div class="fld"><label>Ahorro esperado</label><input inputmode="decimal" data-mf="saving" value="${sv?nf(sv):''}" placeholder="0,00"></div>
