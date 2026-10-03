@@ -123,6 +123,8 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .pal{border:2px solid var(--line);border-radius:12px;background:var(--bg);padding:8px 4px;cursor:pointer;font-size:11px;text-align:center}
 .pal.on{border-color:var(--accent)}
 .pal i{display:block;width:26px;height:26px;border-radius:50%;margin:0 auto 4px}
+@media(max-width:700px){.simt{font-size:13px}}
+.simt{display:grid;grid-template-columns:1.2fr 1fr 1fr;margin-top:12px}.simt>div{padding:8px 4px;border-top:1px solid var(--line)}.simt>div:nth-child(3n+2),.simt>div:nth-child(3n){text-align:right}.simt .h{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-top:0}
 .hero{background:var(--soft);border:2px solid color-mix(in srgb,var(--accent) 75%,var(--line))}
 .sync{font-size:11px;white-space:nowrap;color:var(--muted);margin-left:8px;font-weight:400}
 .login{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -641,12 +643,34 @@ function vAhorros(){
     <button class="lnk" data-act="addsx">+ Agregar gasto</button></div></div></div>`;
 }
 
+let SIM={amt:'',n:'6',card:'',pct:'',cap:''};
+function simRes(){
+  const tot=num(SIM.amt),n=Math.max(1,parseInt(SIM.n)||1),pct=num(SIM.pct),cap=num(SIM.cap);
+  if(!tot)return `<div class="hint">Cargá el monto para ver cuánto te queda cada mes.</div>`;
+  let ref=tot*pct/100;const capped=cap>0&&ref>cap;if(capped)ref=cap;
+  const cu=tot/n,c=cardsAll().find(x=>x.id===SIM.card),first=c&&isCredit(c)&&new Date().getDate()>(c.close||26)?addM(curYM,1):curYM;
+  let rows='';for(let i=0;i<n;i++){const m=addM(first,i),r=monthTotals(m).rest,w=r-cu+(i===0?ref:0);
+    rows+=`<div>${mLabel(m)}${i===0&&ref?`<div class="r-sub pos">+ ${fmt(ref)} reintegro</div>`:''}</div><div class="mut">${fmt(r)}</div><div class="${w<0?'neg':'pos'}"><b>${fmt(w)}</b></div>`}
+  return `<div class="kv"><span>Total</span><b>${fmt(tot)}</b></div>${n>1?`<div class="kv"><span>Cuotas</span><b>${n} de ${fmt(cu)}</b></div>`:''}
+  ${ref?`<div class="kv"><span>Reintegro (${String(pct).replace('.',',')}%${cap>0?', tope '+fmt(cap):''})</span><b class="pos">-${fmt(ref)}</b></div>${capped?`<div class="hint" style="margin:0 0 6px">Llegás al tope: el ${String(pct).replace('.',',')}% sería ${fmt(tot*pct/100)}.</div>`:''}
+  <div class="kv"><span>Te cuesta en realidad</span><b>${fmt(tot-ref)}</b></div>`:''}
+  <div class="simt"><div class="h">Mes</div><div class="h">Te queda hoy</div><div class="h">Con la compra</div>${rows}</div>`;
+}
+function simUI(){
+  const cs=cardsAll().filter(c=>!c.hidden);if(!cs.some(c=>c.id===SIM.card))SIM.card=(cs.find(isCredit)||cs[0]||{}).id||'';
+  const f=(k,l,ph,mode='decimal')=>`<div class="fld"><label>${l}</label><input inputmode="${mode}" data-sim="${k}" value="${esc(SIM[k])}" placeholder="${ph}"></div>`;
+  return `<h2>Simulador de compra</h2><div class="card pad"><div class="sum">${f('amt','Monto total','0,00')}${f('n','Cuotas','1','numeric')}
+  <div class="fld"><label>Tarjeta</label><select data-sim="card">${cs.map(c=>`<option value="${c.id}" ${c.id===SIM.card?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div></div>
+  <div class="sum" style="margin-top:10px">${f('pct','Reintegro %','0')}${f('cap','Tope mensual (opcional)','Sin tope')}</div>
+  <div id="simres" style="margin-top:12px">${simRes()}</div><div class="hint">Solo simula: no carga nada.</div></div>`;
+}
 function vProy(){
   let bal=savBal();const start=bal;let rows='',n=12;
   for(let i=0;i<n;i++){const m=addM(curYM,i),t=monthTotals(m),extra=S.deposits.filter(x=>x.month===m&&x.note).reduce((s,x)=>s+ +x.amount,0);bal+=t.sv+extra;
     rows+=`<tr class="${i===0?'cur':''}"><td>${mLabel(m)}</td><td data-l="Sueldo"><input inputmode="decimal" data-pj="sal" data-m="${m}" value="${t.sal?nf(t.sal):''}" placeholder="0,00">${t.inc?`<div class="r-sub pos">+ ${fmt(t.inc)}</div>`:''}</td><td data-l="Gastos">${fmt(t.tc)}</td><td data-l="Servicios">${fmt(t.tx)}</td>
     <td data-l="Ahorro"><input inputmode="decimal" data-pj="sv" data-m="${m}" value="${t.sv?nf(t.sv):''}" placeholder="0,00"></td><td data-l="Te sobra" class="${t.rest<0?'neg':'pos'}"><b>${fmt(t.rest)}</b></td><td data-l="Acum.">${fmt(bal)}${extra?`<div class="r-sub">+ ${fmt(extra)} extra</div>`:''}</td></tr>`}
   return `<div class="card pad hero"><div class="mut">Ahorros hoy</div><div class="big">${fmt(start)}</div><div class="kv"><span>Proyectado en ${mLabel(addM(curYM,n-1))}</span><b>${fmt(bal)}</b></div></div>
+  ${simUI()}<h2>Proyección</h2>
   <div class="hint" style="margin:0 2px 8px">Gastos = tarjetas y cuentas (cuotas y débitos ya comprometidos). Otros ingresos cargados en el mes se suman al sueldo. Impuestos y servicios se toman del último mes cargado. Editá sueldo y ahorro esperado directo en la tabla.</div>
   <div class="card pscroll"><table class="tbl ptbl"><thead><tr><th>Mes</th><th>Sueldo</th><th>Gastos</th><th>Imp./serv.</th><th>Ahorro esp.</th><th>Te sobra</th><th>Ahorro acum.</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
@@ -842,6 +866,7 @@ document.addEventListener('click',e=>{
   else if(a==='logout'){if(confirm('¿Cerrar sesión?')){sb.auth.signOut().then(()=>location.reload())}}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList?.contains('row'))e.target.click()});
+document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.sim;if(k){SIM[k]=e.target.value;const r=$('#simres');if(r)r.innerHTML=simRes()}});
 document.addEventListener('change',e=>{
   const t=e.target;
   if(t.dataset.mf){if(t.dataset.mf==='saving')setSaving(view,num(t.value));else S.months[view][t.dataset.mf]=num(t.value);save();render()}
