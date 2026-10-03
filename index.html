@@ -338,7 +338,7 @@ async function boot(){
   if(!S||!S.months)S=emptyState();
   if(migrate())save();
   applyTheme();render();
-  shLoad().then(()=>{if(tab==='comp')render()});
+  shLoad().then(shRender);
 }
 async function start(){
   applyTheme(SAK);
@@ -393,8 +393,11 @@ const tripTot=t=>t.items.reduce((s,i)=>s+itemARS(i),0);
 const tripSavAmt=t=>t.savAmt?+t.savAmt:tripTot(t);
 const tripSav=()=>S.trips.filter(t=>t.fromSavings).reduce((s,t)=>s+tripSavAmt(t),0);
 const depDone=()=>S.deposits.filter(x=>x.month<curYM);
-const savBal=()=>sumBy(depDone(),'amount')-sumBy(S.savingsExp,'amount')-tripSav();
-const savAt=m=>sumBy(S.deposits.filter(x=>x.month<m),'amount')-sumBy(S.savingsExp.filter(x=>!x.date||x.date.slice(0,7)<=m),'amount')-tripSav();
+function loanIn(){const out=[];for(const L of SH.all||[])for(const x of L.loans||[]){if(x.kind!=='devolucion')continue;const P=(L.loans||[]).find(y=>y.id===x.loan_id);if(!P||P.lender!==user?.id)continue;
+  const d=x.date||todayISO(),m=d.slice(0,7);out.push({id:x.id,date:d,month:m,amount:+x.amount*(x.cur==='USD'?rate(m):1),usd:x.cur==='USD'?+x.amount:0,who:shOtherOf(L)||'',descr:P.descr||'Préstamo'})}return out.sort((a,b)=>a.date.localeCompare(b.date))}
+const loanInDone=()=>loanIn().filter(x=>x.date<=todayISO());
+const savBal=()=>sumBy(depDone(),'amount')+sumBy(loanInDone(),'amount')-sumBy(S.savingsExp,'amount')-tripSav();
+const savAt=m=>sumBy(S.deposits.filter(x=>x.month<m),'amount')+sumBy(loanIn().filter(x=>x.month<m),'amount')-sumBy(S.savingsExp.filter(x=>!x.date||x.date.slice(0,7)<=m),'amount')-tripSav();
 
 /* ---------- vistas ---------- */
 function render(){
@@ -539,7 +542,8 @@ async function shLoad(){
       .subscribe()}
   }catch(err){SH.err='No se pudo cargar lo compartido.';SH.loaded=true;console.warn(err)}
 }
-let shT=null;function shRefresh(){clearTimeout(shT);shT=setTimeout(async()=>{await shLoad();if(tab==='comp')render()},250)}
+let shT=null;function shRefresh(){clearTimeout(shT);shT=setTimeout(async()=>{await shLoad();shRender()},250)}
+function shRender(){const a=document.activeElement;if(a&&a.closest&&a.closest('#app')&&a.matches('input,textarea,select'))return;render()}
 async function shCreate(){
   const n=prompt('Nombre de la cuenta compartida (ej: Con mi novia, Viaje con amigos)');if(n===null)return;
   const {data,error}=await sb.from('ledgers').insert({name:n.trim()||'Compartido'}).select();
@@ -579,7 +583,7 @@ function vLoans(){
     return `<section class="card loan ${done?'done':''}"><div class="row" role="button" tabindex="0" data-act="lnedit" data-id="${L.id}"><div style="min-width:0"><div class="r-desc">${esc(L.descr||'Préstamo')}${done?' ✓':''}</div>
       <div class="r-sub">${mine?'Le prestaste a '+esc(shOtherName()):esc(shName(L.lender))+' te prestó'}${L.date?' · '+dmy(L.date):''}</div>${L.note?`<div class="r-note"><span>💬 ${esc(L.note)}</span></div>`:''}</div><span></span><div class="r-amt">${F(+L.amount)}</div><span></span></div>
       <div class="lnbody"><div class="lbar"><i style="width:${pc}%"></i></div>
-      <div class="kv" style="border:0"><span>Devuelto <b>${F(paid)}</b></span><span>${done?'<b class="pos">Saldado</b>':`Falta <b>${F(left)}</b>`}</span></div>
+      <div class="kv" style="border:0"><span>Devuelto <b>${F(paid)}</b>${mine&&paid?' <span class="mut" style="font-size:12px">· suma a tus ahorros</span>':''}</span><span>${done?'<b class="pos">Saldado</b>':`Falta <b>${F(left)}</b>`}</span></div>
       ${pays.map(x=>`<div class="lnpay" role="button" tabindex="0" data-act="lnpayedit" data-id="${x.id}"><span>${x.date?dmy(x.date):'Sin fecha'}${x.note?` <span class="mut">· ${esc(x.note)}</span>`:''}</span><b>${F(+x.amount)}</b></div>`).join('')}
       ${done?'':`<button class="lnk" data-act="lnpay" data-id="${L.id}">+ Registrar devolución</button>`}</div></section>`}).join('')||`<div class="card pad hint" style="margin:0">Si le prestás plata a ${esc(shOtherName())} (o te presta), cargalo acá y anotá cada devolución. No se mezcla con el saldo de gastos.</div>`;
   return h+`<button class="btn sec" style="width:100%;margin-top:8px" data-act="lnadd">+ Préstamo</button>`;
@@ -679,11 +683,12 @@ function endingHTML(cs,m){
 }
 
 function vAhorros(){
-  const d=sumBy(depDone(),'amount'),pend=S.deposits.filter(x=>x.month>=curYM),g=sumBy(S.savingsExp,'amount'),v=tripSav(),ts=S.trips.filter(t=>t.fromSavings);
-  return `<div class="card pad hero"><div class="mut">Saldo de ahorros</div><div class="big">${fmt(d-g-v)}</div>
-    <div class="kv"><span>Total ahorrado</span><span>${fmt(d)}</span></div>${pend.length?`<div class="kv mut"><span>Pendiente (mes en curso)</span><span>${fmt(sumBy(pend,'amount'))}</span></div>`:''}<div class="kv"><span>• Gastado desde ahorros</span><span>${fmt(g)}</span></div>${ts.length?`<div class="kv"><span>• Vacaciones pagadas con ahorros</span><span>${fmt(v)}</span></div>`:''}</div>
+  const li=loanInDone(),lt=sumBy(li,'amount'),d=sumBy(depDone(),'amount'),pend=S.deposits.filter(x=>x.month>=curYM),g=sumBy(S.savingsExp,'amount'),v=tripSav(),ts=S.trips.filter(t=>t.fromSavings);
+  return `<div class="card pad hero"><div class="mut">Saldo de ahorros</div><div class="big">${fmt(d+lt-g-v)}</div>
+    <div class="kv"><span>Total ahorrado</span><span>${fmt(d)}</span></div>${pend.length?`<div class="kv mut"><span>Pendiente (mes en curso)</span><span>${fmt(sumBy(pend,'amount'))}</span></div>`:''}${li.length?`<div class="kv"><span>+ Devoluciones de préstamos</span><span class="pos">${fmt(lt)}</span></div>`:''}<div class="kv"><span>• Gastado desde ahorros</span><span>${fmt(g)}</span></div>${ts.length?`<div class="kv"><span>• Vacaciones pagadas con ahorros</span><span>${fmt(v)}</span></div>`:''}</div>
   <div class="grid4"><div><h2>Ahorros</h2><div class="card">
     ${[...S.deposits].reverse().map(x=>`<button class="li" data-act="editdep" data-id="${x.id}"><span>${mLabel(x.month)}${x.note?` <span class="mut">· ${esc(x.note)}</span>`:''}${x.month>=curYM?' <span class="mut">· pendiente</span>':''}</span><b class="${x.month>=curYM?'mut':'pos'}">${fmt(x.amount)}</b></button>`).join('')}
+    ${[...li].reverse().map(x=>`<button class="li" data-tab="comp"><span>↩ Devolución <span class="mut">· ${esc(x.who)} · ${dmy(x.date)}${x.usd?' · '+fmtU(x.usd):''}</span></span><b class="pos">${fmt(x.amount)}</b></button>`).join('')}
     <button class="lnk" data-act="adddep">+ Agregar ahorro</button></div></div>
   <div><h2>Gastos desde ahorros</h2><div class="card">
     ${[...S.savingsExp].reverse().map(x=>`<button class="li" data-act="editsx" data-id="${x.id}"><span>${esc(x.desc)}${x.date?` <span class="mut">· ${dmy(x.date)}</span>`:''}</span><b>${fmt(x.amount)}</b></button>`).join('')}
