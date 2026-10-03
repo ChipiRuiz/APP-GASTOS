@@ -124,6 +124,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .pal.on{border-color:var(--accent)}
 .pal i{display:block;width:26px;height:26px;border-radius:50%;margin:0 auto 4px}
 @media(max-width:700px){.simt{font-size:13px}}
+.simdesk{display:none}@media(min-width:701px){.simdesk{display:block}}
 .simt{display:grid;grid-template-columns:1.2fr 1fr 1fr;margin-top:12px}.simt>div{padding:8px 4px;border-top:1px solid var(--line)}.simt>div:nth-child(3n+2),.simt>div:nth-child(3n){text-align:right}.simt .h{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-top:0}
 .hero{background:var(--soft);border:2px solid color-mix(in srgb,var(--accent) 75%,var(--line))}
 .sync{font-size:11px;white-space:nowrap;color:var(--muted);margin-left:8px;font-weight:400}
@@ -395,11 +396,11 @@ const savAt=m=>sumBy(S.deposits.filter(x=>x.month<m),'amount')-sumBy(S.savingsEx
 
 /* ---------- vistas ---------- */
 function render(){
-  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab||(b.classList.contains('nmorebtn')&&['viajes','ajustes'].includes(tab))));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab||(b.classList.contains('nmorebtn')&&['viajes','ajustes','sim'].includes(tab))));
   $('#mnav').style.visibility=tab==='mes'||tab==='comp'?'visible':'hidden';
   $('#mlabel').textContent=mLabel(view);
-  $('#ttl').textContent={mes:'Mis Gastos',ahorros:'Ahorros',proy:'Proyección',viajes:'Vacaciones',comp:'Compartido',ajustes:'Ajustes'}[tab];
-  $('#app').innerHTML={mes:vMes,ahorros:vAhorros,proy:vProy,viajes:vViajes,comp:vComp,ajustes:vAjustes}[tab]();
+  $('#ttl').textContent={mes:'Mis Gastos',ahorros:'Ahorros',proy:'Proyección',sim:'Simulador de compra',viajes:'Vacaciones',comp:'Compartido',ajustes:'Ajustes'}[tab];
+  $('#app').innerHTML={mes:vMes,ahorros:vAhorros,proy:vProy,sim:()=>simUI(true),viajes:vViajes,comp:vComp,ajustes:vAjustes}[tab]();
 }
 
 function vMes(){
@@ -656,10 +657,10 @@ function simRes(){
   <div class="kv"><span>Te cuesta en realidad</span><b>${fmt(tot-ref)}</b></div>`:''}
   <div class="simt"><div class="h">Mes</div><div class="h">Te queda hoy</div><div class="h">Con la compra</div>${rows}</div>`;
 }
-function simUI(){
+function simUI(solo){
   const cs=cardsAll().filter(c=>!c.hidden);if(!cs.some(c=>c.id===SIM.card))SIM.card=(cs.find(isCredit)||cs[0]||{}).id||'';
   const f=(k,l,ph,mode='decimal')=>`<div class="fld"><label>${l}</label><input inputmode="${mode}" data-sim="${k}" value="${esc(SIM[k])}" placeholder="${ph}"></div>`;
-  return `<h2>Simulador de compra</h2><div class="card pad"><div class="sum">${f('amt','Monto total','0,00')}${f('n','Cuotas','1','numeric')}
+  return `${solo?'':'<h2>Simulador de compra</h2>'}<div class="card pad"><div class="sum">${f('amt','Monto total','0,00')}${f('n','Cuotas','1','numeric')}
   <div class="fld"><label>Tarjeta</label><select data-sim="card">${cs.map(c=>`<option value="${c.id}" ${c.id===SIM.card?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div></div>
   <div class="sum" style="margin-top:10px">${f('pct','Reintegro %','0')}${f('cap','Tope mensual (opcional)','Sin tope')}</div>
   <div id="simres" style="margin-top:12px">${simRes()}</div><div class="hint">Solo simula: no carga nada.</div></div>`;
@@ -670,7 +671,7 @@ function vProy(){
     rows+=`<tr class="${i===0?'cur':''}"><td>${mLabel(m)}</td><td data-l="Sueldo"><input inputmode="decimal" data-pj="sal" data-m="${m}" value="${t.sal?nf(t.sal):''}" placeholder="0,00">${t.inc?`<div class="r-sub pos">+ ${fmt(t.inc)}</div>`:''}</td><td data-l="Gastos">${fmt(t.tc)}</td><td data-l="Servicios">${fmt(t.tx)}</td>
     <td data-l="Ahorro"><input inputmode="decimal" data-pj="sv" data-m="${m}" value="${t.sv?nf(t.sv):''}" placeholder="0,00"></td><td data-l="Te sobra" class="${t.rest<0?'neg':'pos'}"><b>${fmt(t.rest)}</b></td><td data-l="Acum.">${fmt(bal)}${extra?`<div class="r-sub">+ ${fmt(extra)} extra</div>`:''}</td></tr>`}
   return `<div class="card pad hero"><div class="mut">Ahorros hoy</div><div class="big">${fmt(start)}</div><div class="kv"><span>Proyectado en ${mLabel(addM(curYM,n-1))}</span><b>${fmt(bal)}</b></div></div>
-  ${simUI()}<h2>Proyección</h2>
+  <div class="simdesk">${simUI()}<h2>Proyección</h2></div>
   <div class="hint" style="margin:0 2px 8px">Gastos = tarjetas y cuentas (cuotas y débitos ya comprometidos). Otros ingresos cargados en el mes se suman al sueldo. Impuestos y servicios se toman del último mes cargado. Editá sueldo y ahorro esperado directo en la tabla.</div>
   <div class="card pscroll"><table class="tbl ptbl"><thead><tr><th>Mes</th><th>Sueldo</th><th>Gastos</th><th>Imp./serv.</th><th>Ahorro esp.</th><th>Te sobra</th><th>Ahorro acum.</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
@@ -821,7 +822,7 @@ document.addEventListener('click',e=>{
   const id=t.dataset.id,a=t.dataset.act;
   if(a==='prev'){view=addM(view,-1);render()}
   else if(a==='next'){view=addM(view,1);render()}
-  else if(a==='more'){if($('#moremenu')){$('#moremenu').remove();return}const m=document.createElement('div');m.id='moremenu';m.className='moremenu';m.innerHTML=[['viajes','✈','Vacaciones'],['ajustes','⚙','Ajustes']].map(([k,i,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}"><span>${i}</span>${n}</button>`).join('');document.body.appendChild(m);setTimeout(()=>document.addEventListener('click',function h(ev){if(!ev.target.closest('#moremenu')&&!ev.target.closest('.nmorebtn')){m.remove();document.removeEventListener('click',h)}}),0)}
+  else if(a==='more'){if($('#moremenu')){$('#moremenu').remove();return}const m=document.createElement('div');m.id='moremenu';m.className='moremenu';m.innerHTML=[['viajes','✈','Vacaciones'],['sim','%','Simulador'],['ajustes','⚙','Ajustes']].map(([k,i,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}"><span>${i}</span>${n}</button>`).join('');document.body.appendChild(m);setTimeout(()=>document.addEventListener('click',function h(ev){if(!ev.target.closest('#moremenu')&&!ev.target.closest('.nmorebtn')){m.remove();document.removeEventListener('click',h)}}),0)}
   else if(a==='quick'){tab==='comp'&&SH.ledger?shEntryForm(null,'gasto'):purchaseForm()}
   else if(a==='shcreate')shCreate();
   else if(a==='shsel'){shSelect(id);render()}
