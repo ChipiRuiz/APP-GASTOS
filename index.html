@@ -417,7 +417,7 @@ function vMes(){
     ${distrHTML(num(M.salary)+inc,[['Ahorro',sv,'#1baf7a'],['Tarjetas y cuentas',tc,'#3987e5'],['Servicios',tx,'#c98500'],['Compartidos',owe,'#9085e9']],rest)}
   </div>
   <div class="card pad hero">
-    <div class="kv"><span>Sueldo</span><span>${fmt(num(M.salary))}</span></div>${inc?`<div class="kv"><span>+ Otros ingresos</span><span class="pos">${fmt(inc)}</span></div>`:''}
+    <div class="kv"><span>Sueldo</span><span>${fmt(num(M.salary))}</span></div>${inc?`<div class="kv"><span>+ Otros ingresos</span><span class="${inc<0?'neg':'pos'}">${fmt(inc)}</span></div>`:''}
     <div class="kv"><span>• Ahorro esperado</span><span>${fmt(sv)}</span></div>
     <div class="kv"><span>• Tarjetas y cuentas</span><span>${fmt(tc)}</span></div>
     <div class="kv"><span>• Impuestos y servicios</span><span>${fmt(tx)}</span></div>${owe?`<div class="kv"><span>• Compartidos (tu parte)</span><span>${fmt(owe)}</span></div>`:''}
@@ -445,7 +445,7 @@ function vMes(){
       <footer><span>Bruto ${fmt(x.b)}</span><span class="pos">Reint. ${fmt(x.r)}</span><b>Neto ${fmt(x.n)}</b></footer>${x.ub?`<footer class="ufoot"><span>U$D bruto ${fmtU(x.ub)}</span><span class="pos">Reint. ${fmtU(x.ur)}</span><b>Neto ${fmtU(x.un)}</b></footer>`:''}</section>`;
   }
   h+=`</div><button class="addcard" data-act="addcard">+ Nueva tarjeta o cuenta</button>`;
-  h+=`<h2>Otros ingresos</h2><div class="card">${(M.incomes||[]).map(t=>`<div class="tax inc"><input type="text" data-ic="name" data-id="${t.id}" value="${esc(t.name)}" placeholder="Ej: Aguinaldo"><input type="text" class="amt" inputmode="decimal" data-ic="amount" data-id="${t.id}" value="${num(t.amount)?nf(num(t.amount)):''}" placeholder="0,00"><button class="x" data-act="delinc" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('')}<button class="lnk" data-act="addinc">+ Agregar ingreso</button></div>`;
+  h+=`<h2>Otros ingresos</h2><div class="card">${(M.incomes||[]).map(t=>`<div class="tax inc"><input type="text" data-ic="name" data-id="${t.id}" value="${esc(t.name)}" placeholder="Ej: Aguinaldo"><input type="text" class="amt" data-ic="amount" data-id="${t.id}" value="${num(t.amount)?(num(t.amount)<0?'-':'')+nf(num(t.amount)):''}" placeholder="0,00"><button class="x" data-act="delinc" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('')}<button class="lnk" data-act="addinc">+ Agregar ingreso</button></div>`;
   h+=`<div class="grid4"><div><h2>Impuestos y servicios</h2><div class="card">`;
   h+=M.taxes.map(t=>`<div class="tax"><button class="paid ${t.paid?'on':''}" data-act="paidtx" data-id="${t.id}" aria-pressed="${!!t.paid}">${t.paid?'✓ PAGADA':'NO PAGADA'}</button>
     <input type="text" data-tx="name" data-id="${t.id}" value="${esc(t.name)}">
