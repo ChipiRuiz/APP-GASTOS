@@ -125,6 +125,8 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .pal i{display:block;width:26px;height:26px;border-radius:50%;margin:0 auto 4px}
 @media(max-width:700px){.simt{font-size:13px}}
 .simdesk{display:none}@media(min-width:701px){.simdesk{display:block}}
+.lbar{height:8px;background:var(--line);border-radius:6px;overflow:hidden;margin:2px 14px 4px}.lbar i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.loan{margin-bottom:10px}.loan .kv{padding:6px 14px}.loan .lnk{padding:8px 14px 12px}.lnpay{display:flex;justify-content:space-between;gap:10px;padding:8px 14px;border-top:1px solid var(--line);font-size:14px;cursor:pointer}.loan.done .lbar i{background:var(--pos)}
 .simt{display:grid;grid-template-columns:1.2fr 1fr 1fr;margin-top:12px}.simt>div{padding:8px 4px;border-top:1px solid var(--line)}.simt>div:nth-child(3n+2),.simt>div:nth-child(3n){text-align:right}.simt .h{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-top:0}
 .hero{background:var(--soft);border:2px solid color-mix(in srgb,var(--accent) 75%,var(--line))}
 .sync{font-size:11px;white-space:nowrap;color:var(--muted);margin-left:8px;font-weight:400}
@@ -495,7 +497,7 @@ document.addEventListener('pointerleave',()=>donutHL(null));
 document.addEventListener('click',e=>{const d=e.target.closest&&e.target.closest('#donut [data-dj]');if(d){const j=+d.dataset.dj;donutHL(d.classList.contains('on')&&e.pointerType!=='mouse'?null:j,e)}});
 
 /* ---------- cuentas compartidas ---------- */
-const SH={loaded:false,all:[],ledger:null,members:[],entries:[],chan:null,err:''};
+const SH={loaded:false,all:[],ledger:null,members:[],entries:[],loans:[],chan:null,err:''};
 const shOther=()=>SH.members.find(m=>m.user_id!==user?.id);
 const shName=id=>id===user?.id?'Vos':((SH.members.find(m=>m.user_id===id)||{}).name||'La otra persona');
 const shOtherName=()=>shOther()?.name||'la otra persona';
@@ -506,8 +508,8 @@ function shBalance(upTo,entries=SH.entries){let b=0,fut=0;for(const e of entries
 const isU=e=>e.cur==='USD';
 function shMonthNet(m,entries=SH.entries,cur='ARS'){let t=0;for(const e of entries)if((e.cur||'ARS')===cur&&shMonthsOf(e).includes(m))t+=shSigned(e);return t}
 function shOweMonth(m){let t=0;for(const L of SH.all)for(const e of L.entries)if(e.kind==='gasto'&&e.paid_by!==user?.id&&shMonthsOf(e).includes(m))t+=+e.cuota*+e.share*(isU(e)?rate(m):1);return Math.round(t*100)/100}
-function shSelect(id){const L=SH.all.find(x=>x.ledger.id===id)||SH.all[0];if(!L){SH.ledger=null;SH.members=[];SH.entries=[];return}
-  SH.ledger=L.ledger;SH.members=L.members;SH.entries=L.entries;if(S.shCur!==L.ledger.id){S.shCur=L.ledger.id;cache()}}
+function shSelect(id){const L=SH.all.find(x=>x.ledger.id===id)||SH.all[0];if(!L){SH.ledger=null;SH.members=[];SH.entries=[];SH.loans=[];return}
+  SH.ledger=L.ledger;SH.members=L.members;SH.entries=L.entries;SH.loans=L.loans||[];if(S.shCur!==L.ledger.id){S.shCur=L.ledger.id;cache()}}
 async function shLoad(){
   if(!sb||!user)return;
   try{
@@ -515,11 +517,12 @@ async function shLoad(){
     if(e1)throw e1;
     const ids=[...new Set((mem||[]).map(m=>m.ledger_id))];
     if(!ids.length){SH.all=[];shSelect(null);SH.loaded=true;return}
-    const [{data:lgs},{data:ms},{data:es}]=await Promise.all([
+    const [{data:lgs},{data:ms},{data:es},{data:lns}]=await Promise.all([
       sb.from('ledgers').select('*').in('id',ids),
       sb.from('ledger_members').select('*').in('ledger_id',ids),
-      sb.from('ledger_entries').select('*').in('ledger_id',ids).order('first_month')]);
-    SH.all=(lgs||[]).sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||'')).map(l=>({ledger:l,members:(ms||[]).filter(m=>m.ledger_id===l.id),entries:(es||[]).filter(e=>e.ledger_id===l.id)}));
+      sb.from('ledger_entries').select('*').in('ledger_id',ids).order('first_month'),
+      sb.from('ledger_loans').select('*').in('ledger_id',ids).order('date')]);
+    SH.all=(lgs||[]).sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||'')).map(l=>({ledger:l,members:(ms||[]).filter(m=>m.ledger_id===l.id),entries:(es||[]).filter(e=>e.ledger_id===l.id),loans:(lns||[]).filter(e=>e.ledger_id===l.id)}));
     shSelect(S.shCur);SH.loaded=true;SH.err='';
     let ch=false;const byE={};SH.all.forEach(L=>L.entries.forEach(e=>byE[e.id]=[L,e]));
     for(const L of SH.all)for(const e of L.entries){if(!e.source_purchase||e.paid_by!==user.id)continue;const p=S.purchases.find(x=>x.id===e.source_purchase);if(p&&!p.shared){p.shared={l:L.ledger.id,e:e.id,s:+e.share,w:shOtherOf(L)||'',from:e.first_month};ch=true}}
@@ -532,6 +535,7 @@ async function shLoad(){
     if(!SH.chan&&sb.channel){SH.chan=sb.channel('ledgers-'+user.id)
       .on('postgres_changes',{event:'*',schema:'public',table:'ledger_entries'},()=>shRefresh())
       .on('postgres_changes',{event:'*',schema:'public',table:'ledger_members'},()=>shRefresh())
+      .on('postgres_changes',{event:'*',schema:'public',table:'ledger_loans'},()=>shRefresh())
       .subscribe()}
   }catch(err){SH.err='No se pudo cargar lo compartido.';SH.loaded=true;console.warn(err)}
 }
@@ -565,7 +569,50 @@ function vComp(){
       <div class="r-amt">${F(+e.cuota)}<small style="${v<0?'color:var(--neg)':''}">${v>=0?'te deben ':'debés '}${F(Math.abs(v))}</small></div><span></span></div>`}).join('')||'<div class="empty">Sin movimientos este mes.</div>';
   h+=`<footer class="shfoot"><span>Neto del mes</span><b class="${tot<0?'neg':'pos'}">${tot>=0?'+':'−'}${fmt(Math.abs(tot))}${Math.abs(totU)>0.005?` <span class="${totU<0?'neg':'pos'}">· ${totU>=0?'+':'−'}${fmtU(Math.abs(totU))}</span>`:''}</b></footer></div>
   <div class="hint" style="margin:6px 2px">Positivo: a tu favor. Negativo: le debés. Las cuotas se suman mes a mes.</div>`;
-  return h;
+  return h+vLoans();
+}
+function vLoans(){
+  const loans=SH.loans.filter(x=>x.kind==='prestamo');
+  let h=`<h2>Préstamos</h2>`;
+  h+=loans.map(L=>{const pays=SH.loans.filter(x=>x.loan_id===L.id).sort((a,b)=>(a.date||'').localeCompare(b.date||'')),F=L.cur==='USD'?fmtU:fmt;
+    const paid=pays.reduce((t,x)=>t+ +x.amount,0),left=Math.max(0,+L.amount-paid),pc=Math.min(100,paid/+L.amount*100),done=left<0.005,mine=L.lender===user?.id;
+    return `<section class="card loan ${done?'done':''}"><div class="row" role="button" tabindex="0" data-act="lnedit" data-id="${L.id}"><div style="min-width:0"><div class="r-desc">${esc(L.descr||'Préstamo')}${done?' ✓':''}</div>
+      <div class="r-sub">${mine?'Le prestaste a '+esc(shOtherName()):esc(shName(L.lender))+' te prestó'}${L.date?' · '+dmy(L.date):''}</div>${L.note?`<div class="r-note"><span>💬 ${esc(L.note)}</span></div>`:''}</div><span></span><div class="r-amt">${F(+L.amount)}</div><span></span></div>
+      <div class="lnbody"><div class="lbar"><i style="width:${pc}%"></i></div>
+      <div class="kv" style="border:0"><span>Devuelto <b>${F(paid)}</b></span><span>${done?'<b class="pos">Saldado</b>':`Falta <b>${F(left)}</b>`}</span></div>
+      ${pays.map(x=>`<div class="lnpay" role="button" tabindex="0" data-act="lnpayedit" data-id="${x.id}"><span>${x.date?dmy(x.date):'Sin fecha'}${x.note?` <span class="mut">· ${esc(x.note)}</span>`:''}</span><b>${F(+x.amount)}</b></div>`).join('')}
+      ${done?'':`<button class="lnk" data-act="lnpay" data-id="${L.id}">+ Registrar devolución</button>`}</div></section>`}).join('')||`<div class="card pad hint" style="margin:0">Si le prestás plata a ${esc(shOtherName())} (o te presta), cargalo acá y anotá cada devolución. No se mezcla con el saldo de gastos.</div>`;
+  return h+`<button class="btn sec" style="width:100%;margin-top:8px" data-act="lnadd">+ Préstamo</button>`;
+}
+async function lnSave(row,id){const q=id?sb.from('ledger_loans').update(row).eq('id',id):sb.from('ledger_loans').insert({...row,ledger_id:SH.ledger.id});
+  const {error}=await q;if(error){alert('No se pudo guardar: '+error.message);return false}await shLoad();render();toast('Guardado')}
+async function lnDel(x){const {error}=await sb.from('ledger_loans').delete().eq('id',x.id);if(error){alert('No se pudo borrar');return false}
+  const snaps=[x,...(x.kind==='prestamo'?SH.loans.filter(y=>y.loan_id===x.id):[])];await shLoad();render();
+  toast('Eliminado',async()=>{await sb.from('ledger_loans').insert(snaps[0]);if(snaps.length>1)await sb.from('ledger_loans').insert(snaps.slice(1));await shLoad();render()});return 'async'}
+function lnForm(L){
+  const isNew=!L;if(isNew&&!shOther()){alert('Primero invitá a la otra persona (✎ en esta cuenta).');return}
+  L=L||{lender:user.id,amount:'',cur:'ARS',date:todayISO(),descr:'',note:''};
+  const opts=SH.members.map(m=>`<option value="${m.user_id}" ${m.user_id===L.lender?'selected':''}>${m.user_id===user.id?'Yo':esc(m.name)}</option>`).join('');
+  sheet(`<h3>${isNew?'Nuevo préstamo':'Editar préstamo'}</h3><div class="hint" style="margin:-6px 0 10px">${esc(SH.ledger.name)} · con ${esc(shOtherName())}</div>
+    ${fld('Descripción',`<input name="descr" value="${esc(L.descr||'')}" placeholder="Ej: Préstamo depto">`)}
+    <div class="f2">${fld('Prestó',`<select name="lender">${opts}</select>`)}${fld('Fecha',`<input type="date" name="date" value="${L.date||''}">`)}</div>
+    ${fld('Moneda',`<div class="seg"><label><input type="radio" name="cur" value="ARS" ${L.cur!=='USD'?'checked':''}><span>ARS</span></label><label><input type="radio" name="cur" value="USD" ${L.cur==='USD'?'checked':''}><span>USD</span></label></div>`)}
+    ${fld('Monto',`<input name="amount" inputmode="decimal" required value="${L.amount?nf(+L.amount):''}" placeholder="0,00">`)}
+    ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(L.note||'')}</textarea>`)}`,
+  d=>{const v=num(d.amount);if(!(v>0)){alert('Falta el monto');return false}
+    return lnSave({kind:'prestamo',lender:d.lender,amount:v,cur:d.cur==='USD'?'USD':'ARS',date:d.date||null,descr:d.descr.trim()||null,note:(d.note||'').trim()||null},isNew?null:L.id)},
+  isNew?null:async()=>lnDel(L));
+}
+function lnPayForm(x,loanId){
+  const isNew=!x,L=SH.loans.find(y=>y.id===(x?x.loan_id:loanId));if(!L)return;const F=L.cur==='USD'?fmtU:fmt;
+  const left=+L.amount-SH.loans.filter(y=>y.loan_id===L.id&&(!x||y.id!==x.id)).reduce((t,y)=>t+ +y.amount,0);
+  x=x||{amount:'',date:todayISO(),note:''};
+  sheet(`<h3>${isNew?'Devolución':'Editar devolución'}</h3><div class="hint" style="margin:-6px 0 10px">${esc(L.descr||'Préstamo')} · falta ${F(Math.max(0,left))}</div>
+    <div class="f2">${fld('Monto',`<input name="amount" inputmode="decimal" required value="${x.amount?nf(+x.amount):''}" placeholder="0,00">`)}${fld('Fecha',`<input type="date" name="date" value="${x.date||''}">`)}</div>
+    ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(x.note||'')}</textarea>`)}`,
+  d=>{const v=num(d.amount);if(!(v>0)){alert('Falta el monto');return false}
+    return lnSave({kind:'devolucion',loan_id:L.id,amount:v,cur:L.cur,date:d.date||null,note:(d.note||'').trim()||null},isNew?null:x.id)},
+  isNew?null:async()=>lnDel(x));
 }
 function shEntryForm(e,kind){
   const isNew=!e;kind=e?.kind||kind||'gasto';const o=shOther();
@@ -828,6 +875,10 @@ document.addEventListener('click',e=>{
   else if(a==='shsel'){shSelect(id);render()}
   else if(a==='shadd')shEntryForm(null,'gasto');
   else if(a==='shpay')shEntryForm(null,'pago');
+  else if(a==='lnadd')lnForm();
+  else if(a==='lnedit')lnForm(SH.loans.find(x=>x.id===id));
+  else if(a==='lnpay')lnPayForm(null,id);
+  else if(a==='lnpayedit')lnPayForm(SH.loans.find(x=>x.id===id));
   else if(a==='shentry')shEntryForm(SH.entries.find(e=>e.id===id));
   else if(a==='shedit')shLedgerForm();
   else if(a==='shreload'){SH.loaded=false;render()}
