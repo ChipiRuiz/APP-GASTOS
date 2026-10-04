@@ -98,8 +98,8 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .nav button{flex:1;border:0;background:none;padding:10px 0 12px;font-size:12px;color:var(--muted);cursor:pointer}
 .nav button.on{color:var(--accent);font-weight:650}
 .nav span{display:block;font-size:19px;line-height:1.2}
-.nmorebtn{display:none}
-@media(max-width:700px){.nav .nmore{display:none}.nav .nmorebtn{display:block}}
+
+@media(max-width:700px){.nav .nmore{display:none}}
 .moremenu{position:fixed;right:10px;bottom:calc(66px + env(safe-area-inset-bottom));z-index:21;background:var(--card);border:2px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:14px;padding:6px;min-width:190px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 .moremenu button{display:flex;gap:12px;align-items:center;width:100%;border:0;background:none;padding:12px 12px;border-radius:9px;font-size:15px;cursor:pointer;text-align:left}
 .moremenu button:hover,.moremenu button.on{background:var(--week);color:var(--accent)}
@@ -125,7 +125,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .pal.on{border-color:var(--accent)}
 .pal i{display:block;width:26px;height:26px;border-radius:50%;margin:0 auto 4px}
 @media(max-width:700px){.simt{font-size:13px}}
-.simdesk{display:none}@media(min-width:701px){.simdesk{display:block}}
+
 .tgl{cursor:pointer;user-select:none}
 .lbar{height:8px;background:var(--line);border-radius:6px;overflow:hidden;margin:2px 14px 4px}.lbar i{display:block;height:100%;background:var(--accent);border-radius:6px}
 .loan{margin-bottom:10px}.loan .kv{padding:6px 14px}.loan .lnk{padding:8px 14px 12px}.lnbtns{display:flex;justify-content:space-between;flex-wrap:wrap}.lnpay{display:flex;justify-content:space-between;gap:10px;padding:8px 14px;border-top:1px solid var(--line);font-size:14px;cursor:pointer}.loan.done .lbar i{background:var(--pos)}
@@ -207,7 +207,6 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
   <button data-tab="proy"><span>↗</span>Proyección</button>
   <button data-tab="viajes" class="nmore"><span>✈</span>Vacaciones</button>
   <button data-tab="comp"><span>⇄</span>Compartido</button>
-  <button data-tab="ajustes" class="nmore"><span>⚙</span>Ajustes</button>
   <button class="nmorebtn" data-act="more"><span>⋯</span>Más</button>
 </nav>
 <div id="ov"></div>
@@ -409,7 +408,7 @@ const savAt=m=>sumBy(S.deposits.filter(x=>x.month<m),'amount')+yTot(m)-sumBy(S.s
 
 /* ---------- vistas ---------- */
 function render(){
-  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab||(b.classList.contains('nmorebtn')&&['viajes','ajustes','sim'].includes(tab))));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab||(b.classList.contains('nmorebtn')&&(['ajustes','sim'].includes(tab)||(tab==='viajes'&&innerWidth<=700)))));
   $('#mnav').style.visibility=tab==='mes'||tab==='comp'?'visible':'hidden';$('#mnav').style.display=tab==='mes'||tab==='comp'?'':'none';
   $('#mlabel').textContent=mLabel(view);
   $('#ttl').textContent={mes:'Mis Gastos',ahorros:'Ahorros',proy:'Proyección',sim:'Simulador de compra',viajes:'Vacaciones',comp:'Compartido',ajustes:'Ajustes'}[tab];
@@ -734,7 +733,7 @@ function vProy(){
     rows+=`<tr class="${i===0?'cur':''}"><td>${mLabel(m)}</td><td data-l="Sueldo"><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-pj="sal" data-m="${m}" value="${t.sal?nf(t.sal):''}" placeholder="0,00">${t.inc?`<div class="r-sub pos">+ ${fmt(t.inc)}</div>`:''}</td><td data-l="Gastos">${fmt(t.tc)}</td><td data-l="Servicios">${fmt(t.tx)}</td>
     <td data-l="Ahorro"><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-pj="sv" data-m="${m}" value="${t.sv?nf(t.sv):''}" placeholder="0,00"></td><td data-l="Te sobra" class="${t.rest<0?'neg':'pos'}"><b>${fmt(t.rest)}</b></td><td data-l="Acum.">${fmt(bal)}${extra?`<div class="r-sub">+ ${fmt(extra)} extra</div>`:''}</td></tr>`}
   return `<div class="card pad hero"><div class="mut">Ahorros hoy</div><div class="big">${fmt(start)}</div><div class="kv"><span>Proyectado en ${mLabel(addM(curYM,n-1))}</span><b>${fmt(bal)}</b></div></div>
-  <div class="simdesk">${simUI()}<h2>Proyección</h2></div>
+  
   <div class="hint" style="margin:0 2px 8px">Gastos = tarjetas y cuentas (cuotas y débitos ya comprometidos). Otros ingresos cargados en el mes se suman al sueldo. Impuestos y servicios se toman del último mes cargado. Editá sueldo y ahorro esperado directo en la tabla.</div>
   <div class="card pscroll"><table class="tbl ptbl"><thead><tr><th>Mes</th><th>Sueldo</th><th>Gastos</th><th>Imp./serv.</th><th>Ahorro esp.</th><th>Te sobra</th><th>Ahorro acum.</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
@@ -885,7 +884,7 @@ document.addEventListener('click',e=>{
   const id=t.dataset.id,a=t.dataset.act;
   if(a==='prev'){view=addM(view,-1);render()}
   else if(a==='next'){view=addM(view,1);render()}
-  else if(a==='more'){if($('#moremenu')){$('#moremenu').remove();return}const m=document.createElement('div');m.id='moremenu';m.className='moremenu';m.innerHTML=[['viajes','✈','Vacaciones'],['sim','%','Simulador'],['ajustes','⚙','Ajustes']].map(([k,i,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}"><span>${i}</span>${n}</button>`).join('');document.body.appendChild(m);setTimeout(()=>document.addEventListener('click',function h(ev){if(!ev.target.closest('#moremenu')&&!ev.target.closest('.nmorebtn')){m.remove();document.removeEventListener('click',h)}}),0)}
+  else if(a==='more'){if($('#moremenu')){$('#moremenu').remove();return}const m=document.createElement('div');m.id='moremenu';m.className='moremenu';m.innerHTML=[...(innerWidth<=700?[['viajes','✈','Vacaciones']]:[]),['sim','%','Simulador'],['ajustes','⚙','Ajustes']].map(([k,i,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}"><span>${i}</span>${n}</button>`).join('');document.body.appendChild(m);setTimeout(()=>document.addEventListener('click',function h(ev){if(!ev.target.closest('#moremenu')&&!ev.target.closest('.nmorebtn')){m.remove();document.removeEventListener('click',h)}}),0)}
   else if(a==='quick'){tab==='comp'&&SH.ledger?shEntryForm(null,'gasto'):purchaseForm()}
   else if(a==='shcreate')shCreate();
   else if(a==='shsel'){shSelect(id);render()}
