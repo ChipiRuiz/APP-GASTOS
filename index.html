@@ -125,10 +125,9 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .pal i{display:block;width:26px;height:26px;border-radius:50%;margin:0 auto 4px}
 @media(max-width:700px){.simt{font-size:13px}}
 .simdesk{display:none}@media(min-width:701px){.simdesk{display:block}}
-.tgl{cursor:pointer;user-select:none}body:has(#calcbar.on) .fab{display:none}
+.tgl{cursor:pointer;user-select:none}
 .lbar{height:8px;background:var(--line);border-radius:6px;overflow:hidden;margin:2px 14px 4px}.lbar i{display:block;height:100%;background:var(--accent);border-radius:6px}
 .loan{margin-bottom:10px}.loan .kv{padding:6px 14px}.loan .lnk{padding:8px 14px 12px}.lnbtns{display:flex;justify-content:space-between;flex-wrap:wrap}.lnpay{display:flex;justify-content:space-between;gap:10px;padding:8px 14px;border-top:1px solid var(--line);font-size:14px;cursor:pointer}.loan.done .lbar i{background:var(--pos)}
-#calcbar{position:fixed;left:0;right:0;bottom:0;z-index:200;display:none;gap:6px;padding:6px 8px;background:var(--card);border-top:1px solid var(--line)}#calcbar.on{display:flex}#calcbar button{flex:1;padding:9px 0;border-radius:8px;border:1px solid var(--line);background:var(--bg);font-size:18px;font-weight:600}#calcbar .eq{background:var(--accent);color:var(--card);border-color:var(--accent)}
 .simt{display:grid;grid-template-columns:1.2fr 1fr 1fr;margin-top:12px}.simt>div{padding:8px 4px;border-top:1px solid var(--line)}.simt>div:nth-child(3n+2),.simt>div:nth-child(3n){text-align:right}.simt .h{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-top:0}
 .hero{background:var(--soft);border:2px solid color-mix(in srgb,var(--accent) 75%,var(--line))}
 .sync{font-size:11px;white-space:nowrap;color:var(--muted);margin-left:8px;font-weight:400}
@@ -237,8 +236,9 @@ const nf=n=>Math.abs(n).toLocaleString('es-AR',{minimumFractionDigits:2,maximumF
 const fmt=n=>(n<0?'-':'')+'$'+nf(n);
 const fmtU=n=>'U$D'+nf(n);
 const num1=v=>{if(v.includes(','))v=v.replace(/\./g,'').replace(',','.');else if(/^-?\d{1,3}(\.\d{3})+$/.test(v))v=v.replace(/\./g,'');return parseFloat(v)||0};
-const isExpr=v=>/[+*\/x×÷()]/i.test(v)||/.-/.test(v);
-function calc(v){const t=v.replace(/[x×]/gi,'*').replace(/÷/g,'/').match(/\d[\d.,]*|[-+*\/()]/g);if(!t||t.join('')!==v.replace(/[x×]/gi,'*').replace(/÷/g,'/'))return null;let i=0;
+const normOps=v=>v.replace(/[−–—]/g,'-').replace(/[×xX·∙]/g,'*').replace(/[÷:]/g,'/');
+const isExpr=v=>/[+*\/()]/.test(normOps(v))||/.-/.test(normOps(v));
+function calc(v){v=normOps(v);const t=v.match(/\d[\d.,]*|[-+*\/()]/g);if(!t||t.join('')!==v)return null;let i=0;
   const P=()=>{let a=T();while(t[i]==='+'||t[i]==='-'){const o=t[i++],b=T();a=o==='+'?a+b:a-b}return a},
   T=()=>{let a=F();while(t[i]==='*'||t[i]==='/'){const o=t[i++],b=F();a=o==='*'?a*b:a/b}return a},
   F=()=>{const k=t[i++];if(k==='-')return -F();if(k==='+')return F();if(k==='('){const a=P();if(t[i++]!==')')throw 0;return a}if(k===undefined||!/\d/.test(k))throw 0;return num1(k)};
@@ -424,12 +424,12 @@ function vMes(){
   const sv=savingOf(m),inc=incOf(m),owe=shOweMonth(m),rest=num(M.salary)+inc-sv-tc-tx-owe;
     let h=(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta o cuenta</b> para crear tus tarjetas, débito, transferencias o efectivo, y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+`<div class="sumwrap"><div class="card pad sumcard">
     <div class="sum">
-      <div class="fld"><label>Sueldo</label><input inputmode="decimal" data-mf="salary" value="${M.salary?nf(M.salary):''}" placeholder="0,00"></div>
-      <div class="fld"><label>Ahorro esperado</label><input inputmode="decimal" data-mf="saving" value="${sv?nf(sv):''}" placeholder="0,00"></div>
-      <div class="fld"><label>Dólar del mes</label><input inputmode="decimal" data-mf="usd" value="${M.usd?nf(M.usd):''}" placeholder="0,00"></div>
+      <div class="fld"><label>Sueldo</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="salary" value="${M.salary?nf(M.salary):''}" placeholder="0,00"></div>
+      <div class="fld"><label>Ahorro esperado</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="saving" value="${sv?nf(sv):''}" placeholder="0,00"></div>
+      <div class="fld"><label>Dólar del mes</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="usd" value="${M.usd?nf(M.usd):''}" placeholder="0,00"></div>
       <div class="fld"><label>${m>curYM?'Ahorros proyectados':'Ahorros disponibles'}</label><div style="padding:9px 0;font-weight:650">${fmt(m===curYM?savBal():savAt(m))}</div></div>
     </div>
-    ${cs.some(x=>x.ub)?`<div class="sum" style="margin-top:10px"><div class="fld"><label>U$D del mes (neto)</label><div style="padding:9px 0;font-weight:650">${fmtU(cs.reduce((s,x)=>s+x.un,0))}</div></div><div class="fld"><label>U$D pagados en dólares</label><input inputmode="decimal" data-mf="usdPaid" value="${M.usdPaid?nf(M.usdPaid):''}" placeholder="0,00"></div></div><div class="hint">Lo que pagues en dólares no se suma al total en pesos; el resto se convierte con el dólar del mes.</div>`:''}
+    ${cs.some(x=>x.ub)?`<div class="sum" style="margin-top:10px"><div class="fld"><label>U$D del mes (neto)</label><div style="padding:9px 0;font-weight:650">${fmtU(cs.reduce((s,x)=>s+x.un,0))}</div></div><div class="fld"><label>U$D pagados en dólares</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="usdPaid" value="${M.usdPaid?nf(M.usdPaid):''}" placeholder="0,00"></div></div><div class="hint">Lo que pagues en dólares no se suma al total en pesos; el resto se convierte con el dólar del mes.</div>`:''}
     ${cs.some(x=>x.ub)&&!M.usd?'<div class="warn">Hay compras en USD y falta el dólar del mes.</div>':''}
     ${distrHTML(num(M.salary)+inc,[['Ahorro',sv,'#1baf7a'],['Tarjetas y cuentas',tc,'#3987e5'],['Servicios',tx,'#c98500'],['Compartidos',owe,'#9085e9']],rest)}
   </div>
@@ -462,11 +462,11 @@ function vMes(){
       <footer><span>Bruto ${fmt(x.b)}</span><span class="pos">Reint. ${fmt(x.r)}</span><b>Neto ${fmt(x.n)}</b></footer>${x.ub?`<footer class="ufoot"><span>U$D bruto ${fmtU(x.ub)}</span><span class="pos">Reint. ${fmtU(x.ur)}</span><b>Neto ${fmtU(x.un)}</b></footer>`:''}</section>`;
   }
   h+=`</div><button class="addcard" data-act="addcard">+ Nueva tarjeta o cuenta</button>`;
-  h+=`<h2>Otros ingresos</h2><div class="card">${(M.incomes||[]).map(t=>`<div class="tax inc"><input type="text" data-ic="name" data-id="${t.id}" value="${esc(t.name)}" placeholder="Ej: Aguinaldo"><input type="text" class="amt" data-ic="amount" data-id="${t.id}" value="${num(t.amount)?(num(t.amount)<0?'-':'')+nf(num(t.amount)):''}" placeholder="0,00"><button class="x" data-act="delinc" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('')}<button class="lnk" data-act="addinc">+ Agregar ingreso</button></div>`;
+  h+=`<h2>Otros ingresos</h2><div class="card">${(M.incomes||[]).map(t=>`<div class="tax inc"><input type="text" data-ic="name" data-id="${t.id}" value="${esc(t.name)}" placeholder="Ej: Aguinaldo"><input type="text" class="amt" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-ic="amount" data-id="${t.id}" value="${num(t.amount)?(num(t.amount)<0?'-':'')+nf(num(t.amount)):''}" placeholder="0,00"><button class="x" data-act="delinc" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('')}<button class="lnk" data-act="addinc">+ Agregar ingreso</button></div>`;
   h+=`<div class="grid4"><div><h2>Impuestos y servicios</h2><div class="card">`;
   h+=M.taxes.map(t=>`<div class="tax"><button class="paid ${t.paid?'on':''}" data-act="paidtx" data-id="${t.id}" aria-pressed="${!!t.paid}">${t.paid?'✓ PAGADA':'NO PAGADA'}</button>
     <input type="text" data-tx="name" data-id="${t.id}" value="${esc(t.name)}">
-    <input type="text" class="amt" inputmode="decimal" data-tx="amount" data-id="${t.id}" value="${num(t.amount)?nf(num(t.amount)):''}" placeholder="0,00">
+    <input type="text" class="amt" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-tx="amount" data-id="${t.id}" value="${num(t.amount)?nf(num(t.amount)):''}" placeholder="0,00">
     <button class="x" data-act="deltax" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('');
   h+=`<button class="lnk" data-act="addtax">+ Agregar</button></div></div>`;
   const cat={};cs.forEach(x=>x.L.forEach(l=>{cat[l.p.cat]=(cat[l.p.cat]||0)+l.net}));
@@ -613,7 +613,7 @@ function lnForm(L){
     ${fld('Descripción',`<input name="descr" value="${esc(L.descr||'')}" placeholder="Ej: Préstamo depto">`)}
     <div class="f2">${fld('Prestó',`<select name="lender">${opts}</select>`)}${fld('Fecha',`<input type="date" name="date" value="${L.date||''}">`)}</div>
     ${fld('Moneda',`<div class="seg"><label><input type="radio" name="cur" value="ARS" ${L.cur!=='USD'?'checked':''}><span>ARS</span></label><label><input type="radio" name="cur" value="USD" ${L.cur==='USD'?'checked':''}><span>USD</span></label></div>`)}
-    ${fld('Monto',`<input name="amount" inputmode="decimal" required value="${L.amount?nf(+L.amount):''}" placeholder="0,00">`)}
+    ${fld('Monto',`<input name="amount" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required value="${L.amount?nf(+L.amount):''}" placeholder="0,00">`)}
     ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(L.note||'')}</textarea>`)}`,
   d=>{const v=num(d.amount);if(!(v>0)){alert('Falta el monto');return false}
     return lnSave({kind:'prestamo',lender:d.lender,amount:v,cur:d.cur==='USD'?'USD':'ARS',date:d.date||null,descr:d.descr.trim()||null,note:(d.note||'').trim()||null},isNew?null:L.id)},
@@ -624,7 +624,7 @@ function lnPayForm(x,loanId,kind){
   const left=lnTotal(L)-SH.loans.filter(y=>y.loan_id===L.id&&y.kind==='devolucion').reduce((t,y)=>t+ +y.amount,0);
   x=x||{amount:'',date:todayISO(),note:''};
   sheet(`<h3>${ad?(isNew?'Prestar más':'Editar préstamo adicional'):(isNew?'Devolución':'Editar devolución')}</h3><div class="hint" style="margin:-6px 0 10px">${esc(L.descr||'Préstamo')} · falta ${F(Math.max(0,left))}</div>
-    <div class="f2">${fld('Monto',`<input name="amount" inputmode="decimal" required value="${x.amount?nf(+x.amount):''}" placeholder="0,00">`)}${fld('Fecha',`<input type="date" name="date" value="${x.date||''}">`)}</div>
+    <div class="f2">${fld('Monto',`<input name="amount" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required value="${x.amount?nf(+x.amount):''}" placeholder="0,00">`)}${fld('Fecha',`<input type="date" name="date" value="${x.date||''}">`)}</div>
     ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(x.note||'')}</textarea>`)}`,
   d=>{const v=num(d.amount);if(!(v>0)){alert('Falta el monto');return false}
     return lnSave({kind,loan_id:L.id,amount:v,cur:L.cur,date:d.date||null,note:(d.note||'').trim()||null},isNew?null:x.id)},
@@ -640,7 +640,7 @@ function shEntryForm(e,kind){
     ${fld('Descripción',`<input name="descr" required value="${esc(e.descr||'')}">`)}
     <div class="f2">${fld('Pagó',`<select name="paid_by">${payOpts}</select>`)}${fld('Fecha',`<div class="dwrap"><input type="date" name="date" value="${e.date||''}"><button type="button" class="dclr" id="dclr2">×</button></div>`)}</div>
     ${fld('Moneda',`<div class="seg"><label><input type="radio" name="cur" value="ARS" ${e.cur!=='USD'?'checked':''}><span>ARS</span></label><label><input type="radio" name="cur" value="USD" ${e.cur==='USD'?'checked':''}><span>USD</span></label></div>`)}
-    <div class="f2">${fld(kind==='pago'?'Monto':'<span id="shamtl">Monto</span>',`<input name="cuota" inputmode="decimal" required value="${e.cuota?nf(+e.cuota):''}" placeholder="0,00">`,'<span id="shamth"></span>')}${kind==='pago'?'<div></div>':fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${e.cuotas}">`)}</div>
+    <div class="f2">${fld(kind==='pago'?'Monto':'<span id="shamtl">Monto</span>',`<input name="cuota" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required value="${e.cuota?nf(+e.cuota):''}" placeholder="0,00">`,'<span id="shamth"></span>')}${kind==='pago'?'<div></div>':fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${e.cuotas}">`)}</div>
     ${kind==='pago'?'':splitUI('sh',+e.share,+e.cuota||0)+fld('<span id="shfl">Primera cuota</span>',`<input type="month" name="first_month" value="${e.first_month}">`)}
     ${kind==='pago'?fld('Mes',`<input type="month" name="first_month" value="${e.first_month}">`):''}
     ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(e.note||'')}</textarea>`)}`,
@@ -723,7 +723,7 @@ function simRes(){
 }
 function simUI(solo){
   const cs=cardsAll().filter(c=>!c.hidden);if(!cs.some(c=>c.id===SIM.card))SIM.card=(cs.find(isCredit)||cs[0]||{}).id||'';
-  const f=(k,l,ph,mode='decimal')=>`<div class="fld"><label>${l}</label><input inputmode="${mode}" data-sim="${k}" value="${esc(SIM[k])}" placeholder="${ph}"></div>`;
+  const f=(k,l,ph,mode='decimal')=>`<div class="fld"><label>${l}</label><input ${mode==='decimal'?'inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"':'inputmode="'+mode+'"'} data-sim="${k}" value="${esc(SIM[k])}" placeholder="${ph}"></div>`;
   return `${solo?'':'<h2>Simulador de compra</h2>'}<div class="card pad"><div class="sum">${f('amt','Monto total','0,00')}${f('n','Cuotas','1','numeric')}
   <div class="fld"><label>Tarjeta</label><select data-sim="card">${cs.map(c=>`<option value="${c.id}" ${c.id===SIM.card?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div></div>
   <div class="sum" style="margin-top:10px">${f('pct','Reintegro %','0')}${f('cap','Tope mensual (opcional)','Sin tope')}</div>
@@ -732,8 +732,8 @@ function simUI(solo){
 function vProy(){
   let bal=savBal();const start=bal;let rows='',n=12;
   for(let i=0;i<n;i++){const m=addM(curYM,i),t=monthTotals(m),extra=S.deposits.filter(x=>x.month===m&&x.note).reduce((s,x)=>s+ +x.amount,0);bal+=t.sv+extra;
-    rows+=`<tr class="${i===0?'cur':''}"><td>${mLabel(m)}</td><td data-l="Sueldo"><input inputmode="decimal" data-pj="sal" data-m="${m}" value="${t.sal?nf(t.sal):''}" placeholder="0,00">${t.inc?`<div class="r-sub pos">+ ${fmt(t.inc)}</div>`:''}</td><td data-l="Gastos">${fmt(t.tc)}</td><td data-l="Servicios">${fmt(t.tx)}</td>
-    <td data-l="Ahorro"><input inputmode="decimal" data-pj="sv" data-m="${m}" value="${t.sv?nf(t.sv):''}" placeholder="0,00"></td><td data-l="Te sobra" class="${t.rest<0?'neg':'pos'}"><b>${fmt(t.rest)}</b></td><td data-l="Acum.">${fmt(bal)}${extra?`<div class="r-sub">+ ${fmt(extra)} extra</div>`:''}</td></tr>`}
+    rows+=`<tr class="${i===0?'cur':''}"><td>${mLabel(m)}</td><td data-l="Sueldo"><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-pj="sal" data-m="${m}" value="${t.sal?nf(t.sal):''}" placeholder="0,00">${t.inc?`<div class="r-sub pos">+ ${fmt(t.inc)}</div>`:''}</td><td data-l="Gastos">${fmt(t.tc)}</td><td data-l="Servicios">${fmt(t.tx)}</td>
+    <td data-l="Ahorro"><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-pj="sv" data-m="${m}" value="${t.sv?nf(t.sv):''}" placeholder="0,00"></td><td data-l="Te sobra" class="${t.rest<0?'neg':'pos'}"><b>${fmt(t.rest)}</b></td><td data-l="Acum.">${fmt(bal)}${extra?`<div class="r-sub">+ ${fmt(extra)} extra</div>`:''}</td></tr>`}
   return `<div class="card pad hero"><div class="mut">Ahorros hoy</div><div class="big">${fmt(start)}</div><div class="kv"><span>Proyectado en ${mLabel(addM(curYM,n-1))}</span><b>${fmt(bal)}</b></div></div>
   <div class="simdesk">${simUI()}<h2>Proyección</h2></div>
   <div class="hint" style="margin:0 2px 8px">Gastos = tarjetas y cuentas (cuotas y débitos ya comprometidos). Otros ingresos cargados en el mes se suman al sueldo. Impuestos y servicios se toman del último mes cargado. Editá sueldo y ahorro esperado directo en la tabla.</div>
@@ -795,7 +795,7 @@ function splitUI(prefix,share,cuota,hint){
   const pct=Math.round(share*1000)/10,mode=hint==='monto'||hint==='pct'?hint:pct===50?'50':pct===100?'100':pct===0&&prefix==='sh'?'0':(Number.isInteger(pct)?'pct':'monto');
   const val=mode==='pct'?pct:mode==='monto'?nf(Math.round(share*cuota*100)/100):'';
   return `<div class="f2"><div class="fld"><label>Le toca al otro</label><select name="${prefix}mode">${[['50','50%'],['100','100%'],...(prefix==='sh'?[['0','0% (registro)']]:[]),['pct','Otro %'],['monto','Monto exacto']].map(([v,l])=>`<option value="${v}" ${v===mode?'selected':''}>${l}</option>`).join('')}</select></div>
-    <div class="fld ${prefix}valw"><label class="${prefix}vall">${mode==='monto'?'Monto por cuota':'%'}</label><input name="${prefix}val" inputmode="decimal" value="${val}" placeholder="${mode==='monto'?'0,00':'Ej: 30'}"><div class="hint ${prefix}valh"></div></div></div>`;
+    <div class="fld ${prefix}valw"><label class="${prefix}vall">${mode==='monto'?'Monto por cuota':'%'}</label><input name="${prefix}val" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${val}" placeholder="${mode==='monto'?'0,00':'Ej: 30'}"><div class="hint ${prefix}valh"></div></div></div>`;
 }
 function splitWire(f,prefix,getCuota){
   const md=f[prefix+'mode'],w=f.querySelector('.'+prefix+'valw');if(!md)return;
@@ -827,14 +827,14 @@ function purchaseForm(p){
   const f=sheet(`<h3>${isNew?'Nuevo gasto':'Editar gasto'}</h3>
     ${fld('Descripción',`<input name="desc" required value="${esc(p.desc)}">`)}
     <div class="f2">${fld('Fecha',`<div class="dwrap"><input type="date" name="date" value="${p.date||''}"><button type="button" class="dclr" id="dclr" aria-label="Sin fecha" title="Sin fecha">×</button></div>`)}${fld('Tarjeta',`<select name="card">${dest}</select>`)}</div>
-    <div class="f2"><div class="fld"><label id="amtlbl">Monto</label><input name="total" inputmode="decimal" required value="${amt0?nf(amt0):''}" placeholder="0,00"><div class="hint" id="amthint"></div></div>${fld('Moneda',curSeg(p.cur))}</div>
+    <div class="f2"><div class="fld"><label id="amtlbl">Monto</label><input name="total" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required value="${amt0?nf(amt0):''}" placeholder="0,00"><div class="hint" id="amthint"></div></div>${fld('Moneda',curSeg(p.cur))}</div>
     <div class="f2 cardonly"><div class="creditonly">${fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${p.cuotas}">`)}</div>${fld('Categoría',catSel(p.cat))}</div>
     ${(()=>{const Ls=SH.all.filter(L=>shOtherOf(L));if(!Ls.length&&!p.shared)return '';const curL=p.shared?.l||SH.ledger?.id;
       const sel=Ls.length>1&&!p.shared?`<select name="toledger" style="margin-left:4px">${Ls.map(L=>`<option value="${L.ledger.id}" ${L.ledger.id===curL?'selected':''}>con ${esc(shOtherOf(L))}</option>`).join('')}</select>`:`con ${esc(p.shared?.w||shOtherOf(Ls.find(L=>L.ledger.id===curL)||Ls[0])||'')}<input type="hidden" name="toledger" value="${p.shared?.l||(Ls.find(L=>L.ledger.id===curL)||Ls[0]).ledger.id}">`;
       return `<label class="chk cardonly"><input type="checkbox" name="toshared" ${p.shared?'checked':''}> Compartido ${sel}</label><div class="shopts">${splitUI('ps',p.shared?.s??.5,p.cuota||0,p.shared?.m)}</div>${p.shared?'<div class="hint" style="margin:-6px 0 10px">La parte del otro figura como reintegro y está en la cuenta compartida. Si lo editás o destildás, se actualiza ahí también.</div>':''}`})()}
     <label class="chk cardonly"><input type="checkbox" name="rec" ${p.rec&&!p.until?'checked':''}> Se repite todos los meses (débito automático / suscripción)</label>
     <div class="cardonly">${fld('<span id="firstlbl">Primera cuota</span>',`<input type="month" name="first" value="${p.first||(tab==='mes'?view:firstFor(p.card,p.date))}">`,'Por defecto, el mes que estás viendo. Cambiala si hace falta.')}</div>
-    ${inMonth||isNew?`<div class="f2 cardonly">${fld(`<span id="reflbl">Reintegro en ${mLabel(isNew?(p.first||view):view)}</span>`,`<input name="ref" inputmode="decimal" value="${!isNew&&p.refunds?.[view]?nf(p.refunds[view]):''}" placeholder="0,00">`,'Devolución o descuento de esa cuota. Opcional.')}<div></div></div>`:''}
+    ${inMonth||isNew?`<div class="f2 cardonly">${fld(`<span id="reflbl">Reintegro en ${mLabel(isNew?(p.first||view):view)}</span>`,`<input name="ref" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${!isNew&&p.refunds?.[view]?nf(p.refunds[view]):''}" placeholder="0,00">`,'Devolución o descuento de esa cuota. Opcional.')}<div></div></div>`:''}
     ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(p.note||'')}</textarea>`)}
     <label class="chk cardonly"><input type="checkbox" name="refAll" ${p.refAll?'checked':''}> Reintegro total en todas las cuotas (ej: gasto ajeno)</label>`,
   d=>{
@@ -876,7 +876,7 @@ function cardForm(c){
 }
 
 function simpleForm(title,fields,obj,onSave,onDel){
-  sheet(`<h3>${title}</h3>`+fields.map(([n,l,t,v])=>fld(l,`<input name="${n}" ${t==='num'?'inputmode="decimal"':t?`type="${t}"`:''} value="${esc(v??'')}" ${n==='amount'||n==='desc'||n==='name'?'required':''}>`)).join(''),onSave,onDel);
+  sheet(`<h3>${title}</h3>`+fields.map(([n,l,t,v])=>fld(l,`<input name="${n}" ${t==='num'?'inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"':t?`type="${t}"`:''} value="${esc(v??'')}" ${n==='amount'||n==='desc'||n==='name'?'required':''}>`)).join(''),onSave,onDel);
 }
 
 /* ---------- eventos ---------- */
@@ -916,14 +916,14 @@ document.addEventListener('click',e=>{
   else if(a==='addsx')simpleForm('Gasto desde ahorros',[['desc','Descripción'],['date','Fecha','date',todayISO()],['amount','Monto','num']],null,d=>{S.savingsExp.push({id:uid(),desc:d.desc,date:d.date,amount:num(d.amount)})});
   else if(a==='editsx'){const x=S.savingsExp.find(y=>y.id===id);simpleForm('Editar gasto desde ahorros',[['desc','Descripción','',x.desc],['date','Fecha','date',x.date],['amount','Monto','num',nf(x.amount)]],x,d=>{Object.assign(x,{desc:d.desc,date:d.date,amount:num(d.amount)})},()=>{S.savingsExp=S.savingsExp.filter(y=>y!==x)})}
   else if(a==='addtrip')sheet(`<h3>Nuevo viaje</h3>${fld('Nombre','<input name="name" required>')}<label class="chk"><input type="checkbox" name="fs"> Pagado con ahorros (se resta del saldo de ahorros)</label>`,d=>{S.trips.push({id:uid(),name:d.name,items:[],fromSavings:!!d.fs})});
-  else if(a==='edittrip'){const x=S.trips.find(y=>y.id===id);const f=sheet(`<h3>Editar viaje</h3>${fld('Nombre',`<input name="name" required value="${esc(x.name)}">`)}<label class="chk"><input type="checkbox" name="fs" ${x.fromSavings?'checked':''}> Pagado con ahorros (se resta del saldo de ahorros)</label><div class="savonly">${fld('Monto restado de ahorros',`<input name="sa" inputmode="decimal" value="${x.savAmt?nf(x.savAmt):''}" placeholder="${nf(tripTot(x))}">`,'Vacío = total del viaje.')}</div>`,d=>{x.name=d.name;x.fromSavings=!!d.fs;const v=num(d.sa);if(x.fromSavings&&v)x.savAmt=v;else delete x.savAmt},()=>{S.trips=S.trips.filter(y=>y!==x)});const sy=()=>f.querySelector('.savonly').style.display=f.fs.checked?'':'none';f.fs.onchange=sy;sy()}
+  else if(a==='edittrip'){const x=S.trips.find(y=>y.id===id);const f=sheet(`<h3>Editar viaje</h3>${fld('Nombre',`<input name="name" required value="${esc(x.name)}">`)}<label class="chk"><input type="checkbox" name="fs" ${x.fromSavings?'checked':''}> Pagado con ahorros (se resta del saldo de ahorros)</label><div class="savonly">${fld('Monto restado de ahorros',`<input name="sa" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x.savAmt?nf(x.savAmt):''}" placeholder="${nf(tripTot(x))}">`,'Vacío = total del viaje.')}</div>`,d=>{x.name=d.name;x.fromSavings=!!d.fs;const v=num(d.sa);if(x.fromSavings&&v)x.savAmt=v;else delete x.savAmt},()=>{S.trips=S.trips.filter(y=>y!==x)});const sy=()=>f.querySelector('.savonly').style.display=f.fs.checked?'':'none';f.fs.onchange=sy;sy()}
   else if(a==='additem'||a==='edititem'){
     const tr=S.trips.find(y=>y.id===t.dataset.trip),it=a==='edititem'?tr.items.find(y=>y.id===id):null;
     const cur=it&&it.usd&&!it.ars?'USD':'ARS';
     const f=sheet(`<h3>${it?'Editar':'Nuevo'} gasto · ${esc(tr.name)}</h3>
       ${fld('Descripción',`<input name="desc" required value="${esc(it?.desc||'')}">`)}
-      <div class="f2">${fld('Monto',`<input name="amt" inputmode="decimal" required value="${it?nf(cur==='USD'?it.usd:it.ars):''}" placeholder="0,00">`)}${fld('Moneda',curSeg(cur))}</div>
-      <div class="usdonly">${fld('Cotización (queda fija)',`<input name="rate" inputmode="decimal" value="${nf(it?.rate||rate(curYM)||0)}">`,'Este valor no cambia aunque cambies el dólar del mes.')}</div>`,
+      <div class="f2">${fld('Monto',`<input name="amt" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required value="${it?nf(cur==='USD'?it.usd:it.ars):''}" placeholder="0,00">`)}${fld('Moneda',curSeg(cur))}</div>
+      <div class="usdonly">${fld('Cotización (queda fija)',`<input name="rate" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${nf(it?.rate||rate(curYM)||0)}">`,'Este valor no cambia aunque cambies el dólar del mes.')}</div>`,
       d=>{const v=num(d.amt),o=it||{id:uid()};Object.assign(o,{desc:d.desc,ars:d.cur==='USD'?0:v,usd:d.cur==='USD'?v:0,rate:d.cur==='USD'?num(d.rate):0});if(!it)tr.items.push(o)},
       it?()=>{tr.items=tr.items.filter(y=>y!==it)}:null);
     const sync=()=>f.querySelector('.usdonly').style.display=f.cur.value==='USD'?'':'none';
@@ -938,17 +938,9 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList?.contains('row'))e.target.click()});
 document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.sim;if(k){SIM[k]=e.target.value;const r=$('#simres');if(r)r.innerHTML=simRes()}});
-const isMoney=t=>t&&t.matches&&t.matches('input[inputmode=decimal],input.amt');
+const isMoney=t=>t&&t.matches&&t.matches('input[data-money],input.amt');
 document.addEventListener('change',e=>{const t=e.target;if(!isMoney(t))return;const v=t.value.trim().replace(/[$\s]/g,'');if(!isExpr(v))return;const r=calc(v);if(r!==null)t.value=(r<0?'-':'')+nf(r)},true);
-(function(){const bar=document.createElement('div');bar.id='calcbar';bar.innerHTML=['+','-','×','÷','(',')'].map(c=>`<button type="button" tabindex="-1">${c}</button>`).join('')+'<button type="button" tabindex="-1" class="eq">=</button>';
-  let cur=null;const place=()=>{const vv=window.visualViewport;bar.style.bottom=(vv?Math.max(0,window.innerHeight-vv.height-vv.offsetTop):0)+'px'};
-  bar.addEventListener('pointerdown',e=>{e.preventDefault();const b=e.target.closest('button');if(!b||!cur)return;
-    if(b.classList.contains('eq')){const v=cur.value.trim().replace(/[$\s]/g,''),r=isExpr(v)?calc(v):null;if(r!==null)cur.value=(r<0?'-':'')+nf(r)}
-    else{const c=b.textContent==='×'?'*':b.textContent==='÷'?'/':b.textContent,st=cur.selectionStart??cur.value.length,en=cur.selectionEnd??st;cur.setRangeText(c,st,en,'end')}
-    cur.dispatchEvent(new Event('input',{bubbles:true}))});
-  document.addEventListener('focusin',e=>{if(isMoney(e.target)&&(matchMedia('(pointer:coarse)').matches||(navigator.maxTouchPoints>0&&innerWidth<900))){cur=e.target;if(!bar.isConnected)document.body.appendChild(bar);bar.classList.add('on');place()}});
-  document.addEventListener('focusout',e=>{if(e.target===cur)setTimeout(()=>{if(!isMoney(document.activeElement)){bar.classList.remove('on');cur=null}},60)});
-  window.visualViewport&&visualViewport.addEventListener('resize',place);window.visualViewport&&visualViewport.addEventListener('scroll',place)})();
+
 document.addEventListener('change',e=>{
   const t=e.target;
   if(t.dataset.mf){if(t.dataset.mf==='saving')setSaving(view,num(t.value));else S.months[view][t.dataset.mf]=num(t.value);save();render()}
