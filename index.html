@@ -77,6 +77,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .tax input[type=text]{border:1px solid transparent;background:none;border-radius:7px;padding:6px;width:100%}
 .tax input[type=text]:focus{border-color:var(--line);background:var(--bg)}
 .tax input.amt{text-align:right}
+.txn{min-width:0;display:flex;flex-direction:column}.txcat{border:0;background:none;color:var(--muted);font-size:12px;padding:0 2px;width:100%;text-overflow:ellipsis;cursor:pointer}.txcat option{background:var(--card);color:var(--ink)}
 .x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px 8px}
 .lnk{border:0;background:none;color:var(--accent);font-weight:600;cursor:pointer;padding:10px 14px}
 .bar{display:grid;grid-template-columns:130px 1fr auto;gap:8px;align-items:center;font-size:13px;padding:5px 0}
@@ -463,11 +464,11 @@ function vMes(){
   h+=`<h2>Otros ingresos</h2><div class="card">${(M.incomes||[]).map(t=>`<div class="tax inc"><input type="text" data-ic="name" data-id="${t.id}" value="${esc(t.name)}" placeholder="Ej: Aguinaldo"><input type="text" class="amt" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-ic="amount" data-id="${t.id}" value="${num(t.amount)?(num(t.amount)<0?'-':'')+nf(num(t.amount)):''}" placeholder="0,00"><button class="x" data-act="delinc" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('')}<button class="lnk" data-act="addinc">+ Agregar ingreso</button></div>`;
   h+=`<div class="grid4"><div><h2>Impuestos y servicios</h2><div class="card">`;
   h+=M.taxes.map(t=>`<div class="tax"><button class="paid ${t.paid?'on':''}" data-act="paidtx" data-id="${t.id}" aria-pressed="${!!t.paid}">${t.paid?'✓ PAGADA':'NO PAGADA'}</button>
-    <input type="text" data-tx="name" data-id="${t.id}" value="${esc(t.name)}">
+    <div class="txn"><input type="text" data-tx="name" data-id="${t.id}" value="${esc(t.name)}"><select class="txcat" data-tx="cat" data-id="${t.id}" aria-label="Categoría"><option value="">Sin categoría</option>${S.cats.map(c=>`<option ${t.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
     <input type="text" class="amt" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-tx="amount" data-id="${t.id}" value="${num(t.amount)?nf(num(t.amount)):''}" placeholder="0,00">
     <button class="x" data-act="deltax" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('');
   h+=`<button class="lnk" data-act="addtax">+ Agregar</button></div></div>`;
-  const cat={};cs.forEach(x=>x.L.forEach(l=>{cat[l.p.cat]=(cat[l.p.cat]||0)+l.net}));
+  const cat={};cs.forEach(x=>x.L.forEach(l=>{cat[l.p.cat]=(cat[l.p.cat]||0)+l.net}));M.taxes.forEach(t=>{if(t.cat&&num(t.amount))cat[t.cat]=(cat[t.cat]||0)+num(t.amount)});
   h+=`<div><h2>Por categoría</h2><div class="card pad">${donutHTML(cat)}</div></div></div>`;
   return h;
 }
@@ -952,7 +953,7 @@ document.addEventListener('change',e=>{
   else if(t.dataset.pj){const m=t.dataset.m,v=num(t.value);if(t.dataset.pj==='sv')setSaving(m,v);else ensureMonth(m).salary=v;save();render()}
   else if('myname' in t.dataset){S.myName=t.value.trim();save();shLoad().then(()=>toast('Nombre actualizado'))}
   else if(t.dataset.ic){const x=S.months[view].incomes.find(y=>y.id===t.dataset.id);x[t.dataset.ic]=t.dataset.ic==='amount'?num(t.value):t.value;save();if(t.dataset.ic==='amount')render()}
-  else if(t.dataset.tx){const x=S.months[view].taxes.find(y=>y.id===t.dataset.id);x[t.dataset.tx]=t.dataset.tx==='paid'?t.checked:t.dataset.tx==='amount'?num(t.value):t.value;save();if(t.dataset.tx!=='name')render()}
+  else if(t.dataset.tx){const x=S.months[view].taxes.find(y=>y.id===t.dataset.id);x[t.dataset.tx]=t.dataset.tx==='paid'?t.checked:t.dataset.tx==='amount'?num(t.value):t.value;if(t.dataset.tx==='cat'){const nm=(x.name||'').trim().toLowerCase();if(nm)for(const[k,M2]of Object.entries(S.months))if(k>view)(M2.taxes||[]).forEach(y=>{if((y.name||'').trim().toLowerCase()===nm&&!y.cat)y.cat=t.value})}save();if(t.dataset.tx!=='name')render()}
   else if(t.dataset.mode){S.theme.mode=t.dataset.mode;save();applyTheme()}
   else if(t.id==='imp'&&t.files[0]){t.files[0].text().then(s=>{try{const d=JSON.parse(s);if(!d.purchases||!d.months)throw 0;if(S.purchases.length&&!confirm('Esto reemplaza todos los datos actuales. ¿Seguir?'))return;S=d;S.theme=S.theme||{p:'rosa',mode:'auto'};migrate();save();applyTheme();render();alert('Importado: '+d.purchases.length+' gastos')}catch(err){alert('Archivo inválido')}})}
 });
