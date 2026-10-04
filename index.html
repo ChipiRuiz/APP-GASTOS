@@ -571,7 +571,7 @@ function vComp(){
   let h=chips+`<div class="card pad hero"><div class="mut" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(SH.ledger.name)} · ${mLabel(m)}</span><button class="x" style="margin:-6px -8px 0 0" data-act="shedit" aria-label="Editar cuenta">✎</button></div><div class="kv" style="border:0;align-items:baseline"><span><b>${who}</b><div class="hint">neto del mes</div></span><span class="big ${b<-0.005?'neg':''}">${fmt(Math.abs(b))}</span></div>
     ${Math.abs(bu)>0.005?`<div class="kv"><span><b>${bu>0?esc(shOtherName())+' te debe':'Le debés'}</b> <span class="mut">en dólares</span></span><span class="${bu<0?'neg':''}" style="font-size:20px;font-weight:700">${fmtU(Math.abs(bu))}</span></div>`:''}
     ${!o?`<div class="warn" style="margin-top:8px">Todavía estás sola en esta cuenta. Invitá a la otra persona con ✎.</div>`:''}
-    <div class="btns" style="margin-top:12px"><button class="btn" data-act="shadd">+ Gasto compartido</button><button class="btn sec" data-act="shpay">Registrar pago</button></div></div>`;
+    <button class="btn" style="width:100%;margin-top:12px" data-act="shpay">Registrar pago</button></div>`;
   const rows=SH.entries.flatMap(e=>{const ms=shMonthsOf(e),i=ms.indexOf(m);return i<0?[]:[{e,n:i+1}]}).sort((a,c)=>(a.e.date||'').localeCompare(c.e.date||''));
   let tot=0,totU=0;
   const op=!!S.shMovOpen;
@@ -595,7 +595,7 @@ function vLoans(){
     return `<section class="card loan ${done?'done':''}"><div class="row" role="button" tabindex="0" data-act="lnedit" data-id="${L.id}"><div style="min-width:0"><div class="r-desc">${esc(L.descr||'Préstamo')}${done?' ✓':''}</div>
       <div class="r-sub">${mine?'Le prestaste a '+esc(shOtherName()):esc(shName(L.lender))+' te prestó'}${L.date?' · '+dmy(L.date):''}</div>${L.note?`<div class="r-note"><span>💬 ${esc(L.note)}</span></div>`:''}</div><span></span><div class="r-amt">${F(tot)}${tot!==+L.amount?`<small>${F(+L.amount)} inicial</small>`:''}</div><span></span></div>
       <div class="lnbody"><div class="lbar"><i style="width:${pc}%"></i></div>
-      <div class="kv" style="border:0"><span>Devuelto <b>${F(paid)}</b>${mine&&paid?' <span class="mut" style="font-size:12px">· suma a tus ahorros</span>':''}</span><span>${done?'<b class="pos">Saldado</b>':`Falta <b>${F(left)}</b>`}</span></div>
+      <div class="kv" style="border:0"><span>Devuelto <b>${F(paid)}</b></span><span>${done?'<b class="pos">Saldado</b>':`Falta <b>${F(left)}</b>`}</span></div>
       ${movs.map(x=>{const ad=x.kind==='adicional';return `<div class="lnpay" role="button" tabindex="0" data-act="lnpayedit" data-id="${x.id}"><span>${x.date?dmy(x.date):'Sin fecha'} <span class="mut">· ${ad?(mine?'Prestaste más':'Te prestó más'):'Devolución'}${x.note?' · '+esc(x.note):''}</span></span><b class="${ad?'neg':''}">${ad?'+ ':''}${F(+x.amount)}</b></div>`}).join('')}
       <div class="lnbtns">${done?'':`<button class="lnk" data-act="lnpay" data-id="${L.id}">+ Registrar devolución</button>`}<button class="lnk" data-act="lnmore" data-id="${L.id}">+ Prestar más</button></div></div></section>`}).join('')||`<div class="card pad hint" style="margin:0">Si le prestás plata a ${esc(shOtherName())} (o te presta), cargalo acá y anotá cada devolución. No se mezcla con el saldo de gastos.</div>`;
   return h+`<button class="btn sec" style="width:100%;margin-top:8px" data-act="lnadd">+ Préstamo</button>`;
