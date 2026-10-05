@@ -127,6 +127,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 @media(max-width:700px){.simt{font-size:13px}}
 
 .tgl{cursor:pointer;user-select:none}
+.acwrap{position:relative}.acl{display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:5;background:var(--card);border:1.5px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:10px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.35)}.acl button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;border:0;background:none;padding:8px 11px;text-align:left;cursor:pointer;border-top:1px solid var(--line)}.acl button:first-child{border-top:0}.acl button span{font-size:12px;color:var(--muted)}.acl button:hover,.acl button.on{background:color-mix(in srgb,var(--accent) 14%,transparent)}#achint{color:var(--accent)}
 .lbar{height:8px;background:var(--line);border-radius:6px;overflow:hidden;margin:2px 14px 4px}.lbar i{display:block;height:100%;background:var(--accent);border-radius:6px}
 .loan{margin-bottom:10px}.loan .kv{padding:6px 14px}.loan .lnk{padding:8px 14px 12px}.lnbtns{display:flex;justify-content:space-between;flex-wrap:wrap}.lnpay{display:flex;justify-content:space-between;gap:10px;padding:8px 14px;border-top:1px solid var(--line);font-size:14px;cursor:pointer}.loan.done .lbar i{background:var(--pos)}
 .simt{display:grid;grid-template-columns:1.2fr 1fr 1fr;margin-top:12px}.simt>div{padding:8px 4px;border-top:1px solid var(--line)}.simt>div:nth-child(3n+2),.simt>div:nth-child(3n){text-align:right}.simt .h{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-top:0}
@@ -823,7 +824,7 @@ function purchaseForm(p){
   const dest=cardsAll().filter(c=>!c.hidden||c.id===p.card).map(c=>`<option value="${c.id}" ${p.card===c.id?'selected':''}>${esc(c.name)}${isCredit(c)?'':' · '+ATYPES[c.type]}</option>`).join('')+(isNew?`<option value="AHORRO" ${p.card==='AHORRO'?'selected':''}>Desde ahorros</option>`:'');
   const inMonth=!isNew&&diffM(view,p.first)>=0&&(p.rec?(!p.until||view<=p.until):diffM(view,p.first)<p.cuotas);
   const f=sheet(`<h3>${isNew?'Nuevo gasto':'Editar gasto'}</h3>
-    ${fld('Descripción',`<input name="desc" required value="${esc(p.desc)}">`)}
+    ${fld('Descripción',`<div class="acwrap"><input name="desc" required value="${esc(p.desc)}" autocomplete="off"><div class="acl" id="acl"></div></div><div class="hint" id="achint"></div>`)}
     <div class="f2">${fld('Fecha',`<div class="dwrap"><input type="date" name="date" value="${p.date||''}"><button type="button" class="dclr" id="dclr" aria-label="Sin fecha" title="Sin fecha">×</button></div>`)}${fld('Tarjeta',`<select name="card">${dest}</select>`)}</div>
     <div class="f2"><div class="fld"><label id="amtlbl">Monto</label><input name="total" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required value="${amt0?nf(amt0):''}" placeholder="0,00"><div class="hint" id="amthint"></div></div>${fld('Moneda',curSeg(p.cur))}</div>
     <div class="f2 cardonly"><div class="creditonly">${fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${p.cuotas}">`)}</div>${fld('Categoría',catSel(p.cat))}</div>
@@ -857,6 +858,27 @@ function purchaseForm(p){
   if(isNew&&f.first)f.first.addEventListener('change',()=>{const l=$('#reflbl');if(l)l.textContent='Reintegro en '+mLabel(f.first.value||view)});
   const psUI=splitWire(f,'ps',()=>num(f.total.value));const shBox=()=>{const o=f.querySelector('.shopts');if(o&&f.toshared)o.style.display=f.toshared.checked&&f.card.value!=='AHORRO'?'':'none'};if(f.toshared){f.toshared.addEventListener('change',shBox);f.total.addEventListener('input',()=>psUI&&psUI())}shBox();
   f.card.onchange=()=>{sync();amtUI();shBox()};f.date.onchange=sync;sync();amtUI();
+  if(isNew)acWire(f,()=>{sync();amtUI();shBox()},psUI);
+}
+function acHist(){const seen=new Map();for(let i=S.purchases.length-1;i>=0;i--){const p=S.purchases[i],k=(p.desc||'').trim().toUpperCase();if(!k)continue;const old=seen.get(k);if(!old||(p.date||'')>(old.date||''))seen.set(k,p)}return [...seen.values()].sort((a,b)=>(b.date||'').localeCompare(a.date||''))}
+function acWire(f,resync,psUI){
+  const H=acHist(),box=$('#acl'),hint=$('#achint');let items=[],sel=-1;
+  const apply=p=>{f.desc.value=p.desc;const c=cardById(p.card);if(c&&!c.hidden){f.card.value=p.card}
+    if([...f.cat.options].some(o=>o.value===p.cat||o.textContent===p.cat))f.cat.value=p.cat;
+    const cr=f.querySelector(`[name=cur][value="${p.cur||'ARS'}"]`);if(cr)cr.checked=true;
+    if(f.toshared){f.toshared.checked=!!p.shared;f.toshared.dispatchEvent(new Event('change'));
+      if(p.shared&&f.psmode){const s=+p.shared.s;f.psmode.value=s===.5?'50':s===1?'100':'pct';if(f.psmode.value==='pct')f.psval.value=String(Math.round(s*1000)/10).replace('.',',');f.psmode.onchange&&f.psmode.onchange()}}
+    resync();hint.textContent=`Como la última vez: ${cardById(p.card)?.name||p.card} · ${p.cat}${p.shared?' · compartido':''}`;close()};
+  const close=()=>{box.innerHTML='';box.style.display='none';items=[];sel=-1};
+  const show=()=>{const q=f.desc.value.trim().toUpperCase();hint.textContent='';if(q.length<2){close();return}
+    items=H.filter(p=>p.desc.toUpperCase().includes(q)).sort((a,b)=>(b.desc.toUpperCase().startsWith(q))-(a.desc.toUpperCase().startsWith(q))).slice(0,6);
+    if(!items.length||(items.length===1&&items[0].desc.toUpperCase()===q&&hint.textContent)){close();return}
+    box.innerHTML=items.map((p,i)=>`<button type="button" data-i="${i}" class="${i===sel?'on':''}"><b>${esc(p.desc)}</b><span>${esc(cardById(p.card)?.name||p.card)} · ${esc(p.cat||'')}${p.shared?' · ⇄':''}</span></button>`).join('');box.style.display='block'};
+  f.desc.addEventListener('input',()=>{sel=-1;show()});
+  f.desc.addEventListener('keydown',e=>{if(!items.length)return;if(e.key==='ArrowDown'){sel=(sel+1)%items.length;show();e.preventDefault()}else if(e.key==='ArrowUp'){sel=(sel-1+items.length)%items.length;show();e.preventDefault()}else if(e.key==='Enter'&&sel>=0){apply(items[sel]);e.preventDefault()}else if(e.key==='Escape')close()});
+  box.addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();apply(items[+b.dataset.i])});
+  f.desc.addEventListener('blur',()=>setTimeout(()=>{if(!box.matches(':hover'))close()},150));
+  f.desc.addEventListener('change',()=>{const q=f.desc.value.trim().toUpperCase(),m=H.find(p=>p.desc.trim().toUpperCase()===q);if(m&&!hint.textContent)apply(m)});
 }
 
 function cardForm(c){
