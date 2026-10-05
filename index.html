@@ -395,8 +395,11 @@ function lines(card,m){
 }
 function monday(iso){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
 const dm=d=>String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
-function closeDate(c,m){if(!isCredit(c))return '';const[y,mo]=m.split('-').map(Number),last=new Date(y,mo,0).getDate();return String(Math.min(c.close||26,last)).padStart(2,'0')+'/'+String(mo).padStart(2,'0')}
-function firstFor(card,iso){const day=+iso.slice(8,10),m=iso.slice(0,7),c=cardById(card);if(c&&!isCredit(c))return m;return day>((c||{}).close||26)?addM(m,1):m}
+function closeISO(c,m){c=c||{};const[y,mo]=m.split('-').map(Number),last=new Date(y,mo,0).getDate();let d;
+  if(c.closeRule==='jue30'){d=new Date(y,mo-1,Math.min(30,last));let k=(4-d.getDay()+7)%7;if(k>3)k-=7;d.setDate(d.getDate()+k)}else d=new Date(y,mo-1,Math.min(c.close||26,last));
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function closeDate(c,m){if(!isCredit(c))return '';const x=closeISO(c,m);return x.slice(8,10)+'/'+x.slice(5,7)}
+function firstFor(card,iso){const m=iso.slice(0,7),c=cardById(card);if(c&&!isCredit(c))return m;if(iso<=closeISO(c,addM(m,-1)))return addM(m,-1);return iso>closeISO(c,m)?addM(m,1):m}
 const sumBy=(a,k)=>a.reduce((s,x)=>s+(+x[k]||0),0);
 const itemARS=i=>(+i.ars||0)+(+i.usd||0)*(+i.rate||0);
 const tripTot=t=>t.items.reduce((s,i)=>s+itemARS(i),0);
@@ -712,7 +715,7 @@ function simRes(){
   const tot=num(SIM.amt),n=Math.max(1,parseInt(SIM.n)||1),pct=num(SIM.pct),cap=num(SIM.cap);
   if(!tot)return `<div class="hint">Cargá el monto para ver cuánto te queda cada mes.</div>`;
   let ref=tot*pct/100;const capped=cap>0&&ref>cap;if(capped)ref=cap;
-  const cu=tot/n,c=cardsAll().find(x=>x.id===SIM.card),first=c&&isCredit(c)&&new Date().getDate()>(c.close||26)?addM(curYM,1):curYM;
+  const cu=tot/n,c=cardsAll().find(x=>x.id===SIM.card),first=c?firstFor(c.id,todayISO()):curYM;
   let rows='';for(let i=0;i<n;i++){const m=addM(first,i),r=monthTotals(m).rest,w=r-cu+(i===0?ref:0);
     rows+=`<div>${mLabel(m)}${i===0&&ref?`<div class="r-sub pos">+ ${fmt(ref)} reintegro</div>`:''}</div><div class="mut">${fmt(r)}</div><div class="${w<0?'neg':'pos'}"><b>${fmt(w)}</b></div>`}
   return `<div class="kv"><span>Total</span><b>${fmt(tot)}</b></div>${n>1?`<div class="kv"><span>Cuotas</span><b>${n} de ${fmt(cu)}</b></div>`:''}
@@ -887,12 +890,14 @@ function cardForm(c){
   const f=sheet(`<h3>${isNew?'Nueva tarjeta o cuenta':'Editar '+(isCredit(c)?'tarjeta':'cuenta')}</h3>
     ${fld('Tipo',`<select name="type">${Object.entries(ATYPES).map(([k,v])=>`<option value="${k}" ${k===ty?'selected':''}>${v}</option>`).join('')}</select>`)}
     ${fld('Nombre',`<input name="name" required value="${esc(c?.name||'')}" placeholder="Ej: VISA BBVA, DÉBITO GALICIA, EFECTIVO">`)}
-    <div class="creditonly">${fld('Día de cierre',`<input name="close" inputmode="numeric" value="${c?.close||26}">`,'Si comprás después de este día, la primera cuota cae el mes siguiente.')}</div>
+    <div class="creditonly"><div class="f2">${fld('Cierre',`<select name="closerule"><option value="jue30" ${c?.closeRule==='jue30'?'selected':''}>Jueves más cercano al 30</option><option value="fijo" ${c?.closeRule!=='jue30'?'selected':''}>Día fijo</option></select>`)}<div class="fld" id="closedayw"><label>Día</label><input name="close" inputmode="numeric" value="${c?.close||26}"></div></div><div class="hint" id="closehint" style="margin:-4px 0 10px"></div></div>
     ${fld('Color',`<div class="swatches">${CCOL.map(x=>`<label><input type="radio" name="color" value="${x}" ${x===col?'checked':''}><i style="background:${x}"></i></label>`).join('')}</div>`)}
     ${!isNew?`<label class="chk"><input type="checkbox" name="hidden" ${c.hidden?'checked':''}> Ocultar cuando no tenga gastos en el mes</label>`:''}`,
-  d=>{const o=c||{id:'c'+uid()};Object.assign(o,{type:d.type,name:d.name.trim().toUpperCase(),close:Math.min(31,Math.max(1,parseInt(d.close)||26)),color:d.color||col});if(!isNew){if(d.hidden)o.hidden=true;else delete o.hidden}if(isNew)S.cards.push(o)},
+  d=>{const o=c||{id:'c'+uid()};Object.assign(o,{type:d.type,name:d.name.trim().toUpperCase(),close:Math.min(31,Math.max(1,parseInt(d.close)||26)),color:d.color||col});if(d.closerule==='jue30')o.closeRule='jue30';else delete o.closeRule;if(!isNew){if(d.hidden)o.hidden=true;else delete o.hidden}if(isNew)S.cards.push(o)},
   isNew?null:()=>{if(n&&!confirm(`Tiene ${n} gastos cargados (incluido el historial). Se van a borrar todos. ¿Seguro?`))return false;S.purchases=S.purchases.filter(p=>p.card!==c.id);S.cards=S.cards.filter(x=>x!==c)});
   const ts=()=>f.querySelector('.creditonly').style.display=f.type.value==='credito'?'':'none';f.type.onchange=ts;ts();
+  const cr=()=>{const j=f.closerule.value==='jue30';$('#closedayw').style.visibility=j?'hidden':'visible';const t={closeRule:j?'jue30':'',close:parseInt(f.close.value)||26};const ms=[0,1,2].map(i=>addM(curYM,i));$('#closehint').textContent='Próximos cierres: '+ms.map(m=>{const x=closeISO(t,m);return x.slice(8,10)+'/'+x.slice(5,7)}).join(' · ')};
+  f.closerule.onchange=cr;f.close.oninput=cr;cr();
 }
 
 function simpleForm(title,fields,obj,onSave,onDel){
