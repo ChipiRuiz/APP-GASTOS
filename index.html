@@ -398,6 +398,8 @@ const dm=d=>String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padSt
 function closeISO(c,m){c=c||{};const[y,mo]=m.split('-').map(Number),last=new Date(y,mo,0).getDate();let d;
   if(c.closeRule==='jue30'){const w=c.closeDow??4;d=new Date(y,mo-1,Math.min(30,last));let k=(w-d.getDay()+7)%7;if(k>3)k-=7;d.setDate(d.getDate()+k-7*(c.closeWk||0))}else d=new Date(y,mo-1,Math.min(c.close||26,last));
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function isoOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function periodOf(c,m){if(c&&!isCredit(c)){const[y,mo]=m.split('-').map(Number);return[m+'-01',isoOf(new Date(y,mo,0))]}const d=new Date(closeISO(c,addM(m,-1))+'T12:00:00');d.setDate(d.getDate()+1);return[isoOf(d),closeISO(c,m)]}
 function closeDate(c,m){if(!isCredit(c))return '';const x=closeISO(c,m);return x.slice(8,10)+'/'+x.slice(5,7)}
 function firstFor(card,iso){const m=iso.slice(0,7),c=cardById(card);if(c&&!isCredit(c))return m;if(iso<=closeISO(c,addM(m,-1)))return addM(m,-1);return iso>closeISO(c,m)?addM(m,1):m}
 const sumBy=(a,k)=>a.reduce((s,x)=>s+(+x[k]||0),0);
@@ -445,13 +447,13 @@ function vMes(){
   <h2>Tarjetas y cuentas</h2><div class="grid4">`;
   for(const x of cs){
     if(x.c.hidden&&!x.L.length)continue;
-    let rows='',wk='';
+    let rows='',wk='';const per=periodOf(x.c,m);
     const inst=x.L.filter(l=>!l.p.rec&&l.p.cuotas>1),recs=x.L.filter(l=>l.p.rec),single=x.L.filter(l=>!l.p.rec&&l.p.cuotas<=1);
     const groups=[];if(inst.length)groups.push(['En cuotas',inst]);if(recs.length)groups.push(['Débitos automáticos',recs]);
     for(const l of [...inst,...recs,...single]){
       const g=groups.find(g=>g[1][0]===l);if(g)rows+=`<div class="wk cu">${g[0]}</div>`;
       if(!l.p.rec&&l.p.cuotas<=1){if(!l.p.date){if(wk!=='none'){wk='none';rows+=`<div class="wk">Sin fecha</div>`}}else{const mo=monday(l.p.date),k=mo.toISOString().slice(0,10);
-      if(k!==wk){wk=k;const su=new Date(mo);su.setDate(su.getDate()+6);rows+=`<div class="wk">Semana ${dm(mo)} al ${dm(su)}</div>`}}}
+      if(k!==wk){wk=k;const su=new Date(mo);su.setDate(su.getDate()+6);let a=isoOf(mo),b=isoOf(su);if(l.p.date>=per[0]&&a<per[0])a=per[0];if(l.p.date<=per[1]&&b>per[1])b=per[1];rows+=`<div class="wk">Semana ${dmy(a).slice(0,5)} al ${dmy(b).slice(0,5)}</div>`}}}
       rows+=`<div class="row" role="button" tabindex="0" data-act="edit" data-id="${l.p.id}">
         <div style="min-width:0"><div class="r-desc">${esc(l.p.desc)}</div><div class="r-sub">${l.p.date?dmy(l.p.date)+' · ':''}${esc(l.p.cat)}${l.u?' · dólares':''}</div>${l.p.note?`<div class="r-note"><span>💬 ${esc(l.p.note)}</span><button class="nx" data-act="delnote" data-id="${l.p.id}" aria-label="Borrar comentario">×</button></div>`:''}</div>
         <span class="r-cu">${l.p.rec?'↻':l.p.cuotas>1?l.n+'/'+l.p.cuotas:'—'}</span>
