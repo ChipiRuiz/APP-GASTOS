@@ -588,6 +588,11 @@ function vComp(){
   if(!op)rows.forEach(({e})=>{const v=shSigned(e);if(isU(e))totU+=v;else tot+=v});
   h+=`<footer class="shfoot"><span>Neto del mes</span><b class="${tot<0?'neg':'pos'}">${tot>=0?'+':'−'}${fmt(Math.abs(tot))}${Math.abs(totU)>0.005?` <span class="${totU<0?'neg':'pos'}">· ${totU>=0?'+':'−'}${fmtU(Math.abs(totU))}</span>`:''}</b></footer></div>
   <div class="hint" style="margin:6px 2px">Positivo: a tu favor. Negativo: le debés. Las cuotas se suman mes a mes.</div>`;
+  const nx=SH.entries.filter(e=>e.first_month>m).sort((a,c)=>a.first_month.localeCompare(c.first_month)||(a.date||'').localeCompare(c.date||''));
+  if(nx.length)h+=`<h2>Cargados para meses siguientes <span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">· ${nx.length}</span></h2><div class="card">`+nx.map(e=>{const F=isU(e)?fmtU:fmt;
+    return `<div class="row" role="button" tabindex="0" data-act="shentry" data-id="${e.id}"><div style="min-width:0"><div class="r-desc">${e.kind==='pago'?'💸 ':''}${esc(e.descr||(e.kind==='pago'?'Pago':'Gasto'))}</div>
+      <div class="r-sub">Empieza en ${mLabel(e.first_month)}${e.date?' · '+dmy(e.date):''} · ${e.paid_by===user?.id?'Pagaste vos':'Pagó '+esc(shName(e.paid_by))}</div></div>
+      <span class="r-cu">${e.cuotas>1?e.cuotas+' cuotas':'—'}</span><div class="r-amt">${F(+e.cuota)}</div><span></span></div>`}).join('')+`</div>`;
   return h+vLoans();
 }
 const lnTotal=L=>+L.amount+SH.loans.filter(x=>x.loan_id===L.id&&x.kind==='adicional').reduce((t,x)=>t+ +x.amount,0);
