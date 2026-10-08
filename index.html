@@ -426,7 +426,7 @@ function vMes(){
   const cs=cardsAll().map(c=>cardTot(c,m));
   const tc=tcTotal(cs,M),tx=M.taxes.reduce((s,t)=>s+num(t.amount),0);
   const sv=savingOf(m),inc=incOf(m),owe=shOweMonth(m),rest=num(M.salary)+inc-sv-tc-tx-owe;
-    let h=(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta o cuenta</b> para crear tus tarjetas, débito, transferencias o efectivo, y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+`<div class="sumwrap"><div class="card pad sumcard">
+    let h=(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta o cuenta</b> para crear tus tarjetas, débito, transferencias o efectivo, y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+(()=>{const pd=shPending();if(!pd.length)return '';return `<div class="card pad" style="margin-bottom:12px"><div style="font-weight:650;margin-bottom:4px">Cargados a tu nombre en compartido</div><div class="hint" style="margin-bottom:6px">Los cargó ${esc(shName(pd[0].e.created_by))} diciendo que pagaste vos. Si salieron de una tarjeta tuya, agregalos y quedan vinculados (no se duplican).</div>`+pd.map(({e})=>`<div class="kv"><span style="min-width:0">${esc(e.descr||'Gasto')} <span class="mut">· ${(isU(e)?fmtU:fmt)(+e.cuota)}${e.cuotas>1?' x'+e.cuotas:''} · ${mLabel(e.first_month)}</span></span><span style="white-space:nowrap"><button class="lnk" data-act="shtocard" data-id="${e.id}">A mi tarjeta</button> <button class="lnk" data-act="shign" data-id="${e.id}">Ignorar</button></span></div>`).join('')+`</div>`})()+`<div class="sumwrap"><div class="card pad sumcard">
     <div class="sum">
       <div class="fld"><label>Sueldo</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="salary" value="${M.salary?nf(M.salary):''}" placeholder="0,00"></div>
       <div class="fld"><label>Ahorro esperado</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="saving" value="${sv?nf(sv):''}" placeholder="0,00"></div>
@@ -523,6 +523,7 @@ function shSigned(e){const v=+e.cuota*(e.kind==='pago'?1:+e.share);return e.paid
 function shBalance(upTo,entries=SH.entries){let b=0,fut=0;for(const e of entries)for(const m of shMonthsOf(e)){const v=shSigned(e);if(m<=upTo)b+=v;else fut+=v}return{b,fut}}
 const isU=e=>e.cur==='USD';
 function shMonthNet(m,entries=SH.entries,cur='ARS'){let t=0;for(const e of entries)if((e.cur||'ARS')===cur&&shMonthsOf(e).includes(m))t+=shSigned(e);return t}
+const shPending=()=>SH.all.flatMap(L=>L.entries.filter(e=>e.kind==='gasto'&&e.paid_by===user?.id&&e.created_by&&e.created_by!==user?.id&&!e.source_purchase&&!(S.shIgn||[]).includes(e.id)).map(e=>({L,e})));
 function shOweMonth(m){let t=0;for(const L of SH.all)for(const e of L.entries)if(e.kind==='gasto'&&e.paid_by!==user?.id&&shMonthsOf(e).includes(m))t+=+e.cuota*+e.share*(isU(e)?rate(m):1);return Math.round(t*100)/100}
 function shSelect(id){const L=SH.all.find(x=>x.ledger.id===id)||SH.all[0];if(!L){SH.ledger=null;SH.members=[];SH.entries=[];SH.loans=[];return}
   SH.ledger=L.ledger;SH.members=L.members;SH.entries=L.entries;SH.loans=L.loans||[];if(S.shCur!==L.ledger.id){S.shCur=L.ledger.id;cache()}}
@@ -814,14 +815,14 @@ function splitWire(f,prefix,getCuota){
 }
 function splitValue(f,prefix,cu){const m=f[prefix+'mode']?.value,v=num(f[prefix+'val']?.value);
   if(m==='50')return .5;if(m==='100')return 1;if(m==='0')return 0;if(m==='pct')return Math.min(1,Math.max(0,v/100));if(m==='monto')return cu?Math.min(1,Math.max(0,v/cu)):0;return .5}
-function syncShared(o,want,lid,share,isNew){
+function syncShared(o,want,lid,share,isNew,linkId){
   const from=o.shared?.from||(!isNew&&!o.rec&&o.first<view&&diffM(view,o.first)<o.cuotas?view:o.first),done=Math.max(0,diffM(from,o.first)),left=Math.max(1,o.cuotas-done);
   share=share==null?(o.shared?.s??.5):share;
   if(!sb||!user)return;
   const row={cur:o.cur==='USD'?'USD':'ARS',descr:o.desc,date:o.date||null,cuota:o.cuota,cuotas:o.rec?1:left,first_month:from,updated_at:new Date().toISOString()};
   if(want&&!o.shared&&lid){const L=SH.all.find(x=>x.ledger.id===lid);const w=L?shOtherOf(L):'';
     o.shared={l:lid,e:null,s:share,w,from};save();render();
-    const dup=L&&L.entries.find(e=>e.kind==='gasto'&&e.paid_by===user.id&&!e.source_purchase&&(e.cur||'ARS')===row.cur&&e.first_month===from&&Math.abs(+e.cuota-o.cuota)<0.01);
+    const dup=L&&(linkId?L.entries.find(e=>e.id===linkId):null)||L&&L.entries.find(e=>e.kind==='gasto'&&e.paid_by===user.id&&!e.source_purchase&&(e.cur||'ARS')===row.cur&&e.first_month===from&&Math.abs(+e.cuota-o.cuota)<0.01);
     if(dup){o.shared.e=dup.id;save();sb.from('ledger_entries').update({...row,share,source_purchase:o.id}).eq('id',dup.id).then(({error})=>{
       if(error){delete o.shared;save();render();return alert('No se pudo vincular con compartido: '+error.message)}
       shLoad().then(()=>toast('Ya estaba en compartido: quedó vinculado'))});return}
@@ -831,9 +832,10 @@ function syncShared(o,want,lid,share,isNew){
   else if(want&&o.shared&&o.shared.e){o.shared.s=share;sb.from('ledger_entries').update({...row,share}).eq('id',o.shared.e).then(()=>shLoad())}
   else if(!want&&o.shared){const e=o.shared.e;delete o.shared;save();render();if(e)sb.from('ledger_entries').delete().eq('id',e).then(()=>{shLoad();toast('Quitado de la cuenta compartida')})}
 }
-function purchaseForm(p){
+function purchaseForm(p,link){
   const isNew=!p;
   p=p||{card:tab==='ahorros'?'AHORRO':'VP',date:todayISO(),desc:'',cuotas:1,cur:'ARS',cat:'COMPRAS VARIAS',refunds:{}};
+  if(link){const e=link.e;Object.assign(p,{card:(cardsAll().find(c=>isCredit(c)&&!c.hidden)||{}).id||p.card,date:e.date||p.date,desc:e.descr||'',cuotas:e.cuotas,cuota:+e.cuota,cur:e.cur==='USD'?'USD':'ARS',shared:{l:link.L.ledger.id,s:+e.share,w:shOtherOf(link.L)||''}})}
   const amt0=p.cuota||'';
   const dest=cardsAll().filter(c=>!c.hidden||c.id===p.card).map(c=>`<option value="${c.id}" ${p.card===c.id?'selected':''}>${esc(c.name)}${isCredit(c)?'':' · '+ATYPES[c.type]}</option>`).join('')+(isNew?`<option value="AHORRO" ${p.card==='AHORRO'?'selected':''}>Desde ahorros</option>`:'');
   const inMonth=!isNew&&diffM(view,p.first)>=0&&(p.rec?(!p.until||view<=p.until):diffM(view,p.first)<p.cuotas);
@@ -860,7 +862,7 @@ function purchaseForm(p){
     if(d.rec){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew||cu>1||o.first>=view){delete o.rec;delete o.until}else o.until=view}
     if(!isNew){o.refAll=!!d.refAll;if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
     if(isNew){o.refAll=!!d.refAll||d.cat==='GASTO AJENO';const r=num(d.ref);if(r&&!o.refAll)o.refunds[o.first]=r;S.purchases.push(o)}
-    syncShared(o,!!d.toshared,d.toledger,d.toshared?splitValue(f,'ps',o.cuota):null,isNew);if(o.shared)o.shared.m=d.psmode;
+    syncShared(o,!!d.toshared,d.toledger,d.toshared?splitValue(f,'ps',o.cuota):null,isNew,link?.e.id);if(o.shared)o.shared.m=d.psmode;
   }, isNew?null:()=>{const sh=p.shared;S.purchases=S.purchases.filter(x=>x!==p);if(sh&&confirm('También estaba en la cuenta compartida. ¿Lo borro de ahí?'))sb.from('ledger_entries').delete().eq('id',sh.e).then(()=>shLoad())});
   let prevCat=f.cat.value;f.cat.onchange=()=>{if(f.cat.value!=='__new'){prevCat=f.cat.value;return}const n=prompt('Nombre de la nueva categoría');const c=n&&addCat(n);if(!c){f.cat.value=prevCat;return}const o=document.createElement('option');o.textContent=c;f.cat.insertBefore(o,f.cat.lastElementChild);f.cat.value=c;prevCat=c;save()};
   const sync=()=>{const c=f.card.value,ah=c==='AHORRO',cr=isCredit(cardById(c));f.querySelectorAll('.cardonly').forEach(e=>e.style.display=ah?'none':'');f.querySelector('.creditonly').style.display=cr?'':'none';if(!cr)f.cuotas.value=1;$('#firstlbl').textContent=cr?'Primera cuota':'Mes';};
@@ -928,6 +930,8 @@ document.addEventListener('click',e=>{
   else if(a==='more'){if($('#moremenu')){$('#moremenu').remove();return}const m=document.createElement('div');m.id='moremenu';m.className='moremenu';m.innerHTML=[...(innerWidth<=700?[['viajes','✈','Vacaciones']]:[]),['sim','%','Simulador'],['ajustes','⚙','Ajustes']].map(([k,i,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}"><span>${i}</span>${n}</button>`).join('');document.body.appendChild(m);setTimeout(()=>document.addEventListener('click',function h(ev){if(!ev.target.closest('#moremenu')&&!ev.target.closest('.nmorebtn')){m.remove();document.removeEventListener('click',h)}}),0)}
   else if(a==='quick'){tab==='comp'&&SH.ledger?shEntryForm(null,'gasto'):purchaseForm()}
   else if(a==='shcreate')shCreate();
+  else if(a==='shtocard'){const x=shPending().find(y=>y.e.id===id);if(x)purchaseForm(null,x)}
+  else if(a==='shign'){(S.shIgn=S.shIgn||[]).push(id);save();render()}
   else if(a==='shsel'){shSelect(id);render()}
   else if(a==='shadd')shEntryForm(null,'gasto');
   else if(a==='shpay')shEntryForm(null,'pago');
