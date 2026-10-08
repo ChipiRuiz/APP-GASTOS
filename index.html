@@ -814,8 +814,8 @@ function splitWire(f,prefix,getCuota){
 }
 function splitValue(f,prefix,cu){const m=f[prefix+'mode']?.value,v=num(f[prefix+'val']?.value);
   if(m==='50')return .5;if(m==='100')return 1;if(m==='0')return 0;if(m==='pct')return Math.min(1,Math.max(0,v/100));if(m==='monto')return cu?Math.min(1,Math.max(0,v/cu)):0;return .5}
-function syncShared(o,want,lid,share){
-  const from=o.shared?.from||(o.first<view&&!o.rec?view:o.first),done=Math.max(0,diffM(from,o.first)),left=Math.max(1,o.cuotas-done);
+function syncShared(o,want,lid,share,isNew){
+  const from=o.shared?.from||(!isNew&&!o.rec&&o.first<view&&diffM(view,o.first)<o.cuotas?view:o.first),done=Math.max(0,diffM(from,o.first)),left=Math.max(1,o.cuotas-done);
   share=share==null?(o.shared?.s??.5):share;
   if(!sb||!user)return;
   const row={cur:o.cur==='USD'?'USD':'ARS',descr:o.desc,date:o.date||null,cuota:o.cuota,cuotas:o.rec?1:left,first_month:from,updated_at:new Date().toISOString()};
@@ -856,7 +856,7 @@ function purchaseForm(p){
     if(d.rec){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew||cu>1||o.first>=view){delete o.rec;delete o.until}else o.until=view}
     if(!isNew){o.refAll=!!d.refAll;if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
     if(isNew){o.refAll=!!d.refAll||d.cat==='GASTO AJENO';const r=num(d.ref);if(r&&!o.refAll)o.refunds[o.first]=r;S.purchases.push(o)}
-    syncShared(o,!!d.toshared,d.toledger,d.toshared?splitValue(f,'ps',o.cuota):null);if(o.shared)o.shared.m=d.psmode;
+    syncShared(o,!!d.toshared,d.toledger,d.toshared?splitValue(f,'ps',o.cuota):null,isNew);if(o.shared)o.shared.m=d.psmode;
   }, isNew?null:()=>{const sh=p.shared;S.purchases=S.purchases.filter(x=>x!==p);if(sh&&confirm('También estaba en la cuenta compartida. ¿Lo borro de ahí?'))sb.from('ledger_entries').delete().eq('id',sh.e).then(()=>shLoad())});
   let prevCat=f.cat.value;f.cat.onchange=()=>{if(f.cat.value!=='__new'){prevCat=f.cat.value;return}const n=prompt('Nombre de la nueva categoría');const c=n&&addCat(n);if(!c){f.cat.value=prevCat;return}const o=document.createElement('option');o.textContent=c;f.cat.insertBefore(o,f.cat.lastElementChild);f.cat.value=c;prevCat=c;save()};
   const sync=()=>{const c=f.card.value,ah=c==='AHORRO',cr=isCredit(cardById(c));f.querySelectorAll('.cardonly').forEach(e=>e.style.display=ah?'none':'');f.querySelector('.creditonly').style.display=cr?'':'none';if(!cr)f.cuotas.value=1;$('#firstlbl').textContent=cr?'Primera cuota':'Mes';};
