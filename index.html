@@ -822,7 +822,7 @@ function syncShared(o,want,lid,share,isNew,linkId){
   const row={cur:o.cur==='USD'?'USD':'ARS',descr:o.desc,date:o.date||null,cuota:o.cuota,cuotas:o.rec?1:left,first_month:from,updated_at:new Date().toISOString()};
   if(want&&!o.shared&&lid){const L=SH.all.find(x=>x.ledger.id===lid);const w=L?shOtherOf(L):'';
     o.shared={l:lid,e:null,s:share,w,from};save();render();
-    const dup=L&&(linkId?L.entries.find(e=>e.id===linkId):null)||L&&L.entries.find(e=>e.kind==='gasto'&&e.paid_by===user.id&&!e.source_purchase&&(e.cur||'ARS')===row.cur&&e.first_month===from&&Math.abs(+e.cuota-o.cuota)<0.01);
+    const dup=L&&(linkId?L.entries.find(e=>e.id===linkId):null)||L&&L.entries.find(e=>e.kind==='gasto'&&e.paid_by===user.id&&!e.source_purchase&&(e.cur||'ARS')===row.cur&&Math.abs(diffM(e.first_month,from))<=1&&Math.abs(+e.cuota-o.cuota)<0.01);
     if(dup){o.shared.e=dup.id;save();sb.from('ledger_entries').update({...row,share,source_purchase:o.id}).eq('id',dup.id).then(({error})=>{
       if(error){delete o.shared;save();render();return alert('No se pudo vincular con compartido: '+error.message)}
       shLoad().then(()=>toast('Ya estaba en compartido: quedó vinculado'))});return}
