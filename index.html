@@ -861,7 +861,7 @@ function purchaseForm(p,link){
     const nt=(d.note||'').trim();if(nt)o.note=nt;else delete o.note;
     if(d.rec){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew||cu>1||o.first>=view){delete o.rec;delete o.until}else o.until=view}
     if(!isNew){o.refAll=!!d.refAll;if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
-    if(isNew){o.refAll=!!d.refAll||d.cat==='GASTO AJENO';const r=num(d.ref);if(r&&!o.refAll)o.refunds[o.first]=r;S.purchases.push(o)}
+    if(isNew){o.refAll=!!d.refAll;const r=num(d.ref);if(r&&!o.refAll)o.refunds[o.first]=r;S.purchases.push(o)}
     syncShared(o,!!d.toshared,d.toledger,d.toshared?splitValue(f,'ps',o.cuota):null,isNew,link?.e.id);if(o.shared)o.shared.m=d.psmode;
   }, isNew?null:()=>{const sh=p.shared;S.purchases=S.purchases.filter(x=>x!==p);if(sh&&confirm('También estaba en la cuenta compartida. ¿Lo borro de ahí?'))sb.from('ledger_entries').delete().eq('id',sh.e).then(()=>shLoad())});
   let prevCat=f.cat.value;f.cat.onchange=()=>{if(f.cat.value!=='__new'){prevCat=f.cat.value;return}const n=prompt('Nombre de la nueva categoría');const c=n&&addCat(n);if(!c){f.cat.value=prevCat;return}const o=document.createElement('option');o.textContent=c;f.cat.insertBefore(o,f.cat.lastElementChild);f.cat.value=c;prevCat=c;save()};
