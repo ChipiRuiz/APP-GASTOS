@@ -170,6 +170,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .fjtog span{border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13.5px;font-weight:600;color:var(--muted)}
 .fjtog input:checked+span{border-color:var(--accent);background:var(--soft);color:var(--accent)}.fjtog input:focus-visible+span{outline:2px solid var(--accent)}
 .fjtog small{color:var(--muted);font-size:12px}
+.fjtog input:disabled+span{opacity:.75;cursor:default}
 .fjrowf{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}.fjrowf .fjtog{margin:0}
 .fjsel{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 10px;font-size:13.5px}
 .row.hit{background:var(--soft);box-shadow:inset 3px 0 0 var(--accent);transition:background .6s}
@@ -843,7 +844,7 @@ function vViajes(){
 
 /* ---------- gastos fijos: "se repite", marcados a mano (por descripción) e impuestos y servicios. Nunca por categoría ---------- */
 const fjKey=d=>(d||'').trim().replace(/\s+/g,' ').toUpperCase();
-const isFijo=p=>!!p&&(p.rec?!p.noFijo:(S.fijos||[]).includes(fjKey(p.desc)));
+const isFijo=p=>!!p&&(p.rec||(S.fijos||[]).includes(fjKey(p.desc)));
 function fjItems(m){
   const out=[],by={};
   for(const c of cardsAll())for(const l of lines(c.id,m)){if(!isFijo(l.p))continue;const k=l.p.rec?'r:'+l.p.id:'d:'+fjKey(l.p.desc)+'|'+c.id;
@@ -861,7 +862,7 @@ function vFijos(){
   const tot=cur.reduce((s,x)=>s+x.amt,0),ptot=Object.values(prev).reduce((s,v)=>s+v,0),dif=tot-ptot,pc=ptot?dif/ptot*100:0;
   const pill=x=>{const p=prev[x.k];if(p==null||!p)return '<span class="fjp new">nuevo</span>';const d=(x.amt-p)/p*100;return Math.abs(d)<.5?'<span class="fjp">igual</span>':`<span class="fjp ${d>0?'up':''}">${d>0?'+':''}${d.toFixed(0)} %</span>`};
   const was=x=>{const p=prev[x.k];return p&&Math.abs(x.amt-p)/p>=.005?` · antes ${fmt(p)}`:''};
-  const row=x=>`<div class="row fjrow"><div style="min-width:0"><div class="r-desc">${esc(x.desc)}</div><div class="r-sub">${x.card?esc(x.card.name):'Impuestos y servicios'}${was(x)}</div></div><div class="r-amt">${fmt(x.amt)} ${pill(x)}</div>${x.kind!=='tax'?`<button class="fjx" data-act="${x.kind==='rec'?'fjrecoff':'fjoff'}" data-id="${esc(x.kind==='rec'?x.pid:x.key)}" aria-label="Quitar de gastos fijos" title="Quitar de gastos fijos">✕</button>`:'<span></span>'}</div>`;
+  const row=x=>`<div class="row fjrow"><div style="min-width:0"><div class="r-desc">${esc(x.desc)}</div><div class="r-sub">${x.card?esc(x.card.name):'Impuestos y servicios'}${was(x)}</div></div><div class="r-amt">${fmt(x.amt)} ${pill(x)}</div>${x.kind==='mark'?`<button class="fjx" data-act="fjoff" data-id="${esc(x.key)}" aria-label="Quitar de gastos fijos" title="Quitar de gastos fijos">✕</button>`:'<span></span>'}</div>`;
   const sec=(t,arr,hint)=>arr.length?`<h2>${t}</h2><div class="card">${arr.map(row).join('')}</div>${hint?`<div class="hint" style="margin:-4px 2px 8px">${hint}</div>`:''}`:'';
   const up=cur.filter(x=>prev[x.k]&&x.amt>prev[x.k]*1.005).length,sg=m===curYM?fjSuggest():[];
   return `<div class="card pad hero"><div class="mut">Total fijo de ${mLabel(m).split(' ')[0].toLowerCase()}</div><div class="big">${fmt(tot)}</div>
@@ -1000,7 +1001,7 @@ function purchaseForm(p,link){
       const many=Ls.length>1&&!p.shared,sel=many?`<select name="toledger" class="fjsel">${Ls.map(L=>`<option value="${L.ledger.id}" ${L.ledger.id===curL?'selected':''}>con ${esc(shOtherOf(L))}</option>`).join('')}</select>`:`<input type="hidden" name="toledger" value="${p.shared?.l||(Ls.find(L=>L.ledger.id===curL)||Ls[0]).ledger.id}">`;
       return `<div class="fjrowf cardonly"><label class="fjtog"><input type="checkbox" name="toshared" ${p.shared?'checked':''}><span>⇄ Compartido${many?'':' con '+esc(p.shared?.w||shOtherOf(Ls.find(L=>L.ledger.id===curL)||Ls[0])||'')}</span></label>${sel}</div><div class="shopts">${splitUI('ps',p.shared?.s??.5,p.cuota||0,p.shared?.m)}</div>${p.shared?'<div class="hint" style="margin:-6px 0 10px">La parte del otro figura como reintegro y está en la cuenta compartida. Si lo editás o destildás, se actualiza ahí también.</div>':''}`})()}
     <label class="fjtog cardonly"><input type="checkbox" name="rec" ${p.rec&&!p.until?'checked':''}><span>↻ Débito automático o suscripción</span><small>Se repite todos los meses</small></label>
-    <label class="fjtog cardonly" id="fjlbl"><input type="checkbox" name="fijo" ${p.rec&&!p.until?(!p.noFijo?'checked':''):(S.fijos||[]).includes(fjKey(p.desc))?'checked':''}><span>📌 Gasto fijo</span><small>Cuenta en Más → Gastos fijos</small></label>
+    <label class="fjtog cardonly" id="fjlbl"><input type="checkbox" name="fijo" ${p.rec&&!p.until?'checked disabled':(S.fijos||[]).includes(fjKey(p.desc))?'checked':''}><span>📌 Gasto fijo</span><small>Cuenta en Más → Gastos fijos</small></label>
     <div class="cardonly">${fld('<span id="firstlbl">Primera cuota</span>',`<input type="month" name="first" value="${p.first||(p.date&&p.card!=='AHORRO'?firstFor(p.card,p.date):view)}">`,'Se calcula sola con la fecha de compra y el cierre de la tarjeta. Cambiala si hace falta.')}</div>
     ${inMonth||isNew?`<div class="f2 cardonly">${fld(`<span id="reflbl">Reintegro en ${mLabel(isNew?(p.first||(p.date?firstFor(p.card,p.date):view)):view)}</span>`,`<input name="ref" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${!isNew&&p.refunds?.[view]?nf(p.refunds[view]):''}" placeholder="0,00">`,'Devolución o descuento de esa cuota. Opcional.')}<div></div></div>`:''}
     ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(p.note||'')}</textarea>`)}
@@ -1013,7 +1014,7 @@ function purchaseForm(p,link){
     const o=isNew?{id:uid(),refunds:{}}:p;
     Object.assign(o,{card:d.card,date:d.date,desc:d.desc,cuotas:cu,cuota:Math.round(total*100)/100,cur:d.cur,cat:d.cat,first:d.first||(d.date?firstFor(d.card,d.date):view)});
     const nt=(d.note||'').trim();if(nt)o.note=nt;else delete o.note;
-    if(d.rec){if(d.fijo)delete o.noFijo;else o.noFijo=true}else{delete o.noFijo;const k=fjKey(d.desc);if(k){S.fijos=(S.fijos||[]).filter(x=>x!==k);if(d.fijo)S.fijos.push(k)}}
+    delete o.noFijo;if(!d.rec){const k=fjKey(d.desc);if(k){S.fijos=(S.fijos||[]).filter(x=>x!==k);if(d.fijo)S.fijos.push(k)}}
     if(d.rec){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew||cu>1||o.first>=view){delete o.rec;delete o.until}else o.until=view}
     if(!isNew){if(o.refAll&&!d.refAll)delete o.refAll;if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
     if(isNew){const r=num(d.ref);if(r)o.refunds[o.first]=r;S.purchases.push(o)}
@@ -1027,7 +1028,7 @@ function purchaseForm(p,link){
   f.cuotas.oninput=amtUI;f.total.oninput=amtUI;f.querySelectorAll('[name=cur]').forEach(x=>x.onchange=amtUI);
   const dsync=()=>{$('#dclr').style.visibility=f.date.value?'visible':'hidden'};$('#dclr').onclick=()=>{f.date.value='';dsync();f.date.dispatchEvent(new Event('input'))};f.date.addEventListener('input',dsync);dsync();
   if(isNew&&f.first)f.first.addEventListener('change',()=>{const l=$('#reflbl');if(l)l.textContent='Reintegro en '+mLabel(f.first.value||view)});
-  f.rec?.addEventListener('change',()=>{if(f.rec.checked&&f.fijo)f.fijo.checked=true});
+  f.rec?.addEventListener('change',()=>{if(f.fijo){f.fijo.checked=f.rec.checked||(S.fijos||[]).includes(fjKey(f.desc.value));f.fijo.disabled=f.rec.checked}});
   const psUI=splitWire(f,'ps',()=>num(f.total.value));const shBox=()=>{const o=f.querySelector('.shopts');if(o&&f.toshared)o.style.display=f.toshared.checked&&f.card.value!=='AHORRO'?'':'none'};if(f.toshared){f.toshared.addEventListener('change',shBox);f.total.addEventListener('input',()=>psUI&&psUI())}shBox();
   let firstTouched=!isNew;const autoFirst=()=>{if(firstTouched||!f.first||f.card.value==='AHORRO')return;f.first.value=f.date.value?firstFor(f.card.value,f.date.value):view;const l=$('#reflbl');if(l)l.textContent='Reintegro en '+mLabel(f.first.value||view)};
   if(f.first)f.first.addEventListener('input',()=>firstTouched=true);
@@ -1091,7 +1092,6 @@ document.addEventListener('click',e=>{
   else if(a==='next'){view=addM(view,1);render()}
   else if(a==='more'){if($('#moremenu')){$('#moremenu').remove();return}const m=document.createElement('div');m.id='moremenu';m.className='moremenu';m.innerHTML=[...(innerWidth<=700?[['viajes','✈','Vacaciones']]:[]),['fijos','📌','Gastos fijos'],['sim','%','Simulador'],['ajustes','⚙','Ajustes']].map(([k,i,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}"><span>${i}</span>${n}</button>`).join('');document.body.appendChild(m);setTimeout(()=>document.addEventListener('click',function h(ev){if(!ev.target.closest('#moremenu')&&!ev.target.closest('.nmorebtn')){m.remove();document.removeEventListener('click',h)}}),0)}
   else if(a==='search')srchOpen();
-  else if(a==='fjrecoff'){const x=S.purchases.find(y=>y.id===id);if(x){x.noFijo=true;save();render();toast('Ya no cuenta como gasto fijo')}}
   else if(a==='fjon'||a==='fjoff'||a==='fjno'){S.fijos=(S.fijos||[]).filter(k=>k!==id);if(a==='fjon')S.fijos.push(id);if(a==='fjno')(S.fijosNo=S.fijosNo||[]).push(id);save();render();toast(a==='fjon'?'Marcado como gasto fijo':a==='fjoff'?'Ya no cuenta como gasto fijo':'No lo vuelvo a sugerir')}
   else if(a==='avisooff'){const o=avisoOff();o.push(id);try{localStorage.setItem('gastos-aviso-off',JSON.stringify(o.slice(-40)))}catch(e){}render()}
   else if(a==='srchgo')srchGo(id);
