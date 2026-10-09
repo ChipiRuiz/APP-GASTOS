@@ -172,6 +172,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .dinfo{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.45}.dinfo p{margin:0 0 6px}.dinfo b{color:var(--ink)}.dinfo code{font-size:11.5px;background:var(--week);padding:1px 5px;border-radius:5px}
 .dwrap{position:relative}.dwrap input{padding-right:34px}
 .dclr{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:4px 8px;cursor:pointer;border-radius:6px}.dclr:hover{color:var(--neg)}
+.calcsw{font-size:13px;font-weight:650;letter-spacing:-.02em}.calcsw:hover{color:var(--accent)}.calcsw.on{color:var(--accent)}
 #toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 12px 10px 16px;display:flex;gap:14px;align-items:center;font-size:14px;opacity:0;pointer-events:none;transition:.2s;z-index:40;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:calc(100% - 32px)}
 #toast.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
 #toast button{border:0;background:none;color:inherit;font-weight:800;text-decoration:underline;cursor:pointer;padding:4px 6px;font-size:14px}
@@ -785,6 +786,9 @@ function sheet(html,onSave,onDel){
   f.querySelector('[data-x=cancel]').onclick=close;
   if(onDel)f.querySelector('[data-x=del]').onclick=async()=>{if(!confirm('¿Eliminar?'))return;if(onDel.constructor.name==='AsyncFunction'){if(await onDel()!==false)close();return}if(withUndo('Eliminado',onDel)!==false)close()};
   $('#ov .ov').onclick=e=>{if(e.target.classList.contains('ov'))close()};
+  f.querySelectorAll('input[data-money]').forEach(i=>{i.inputMode='decimal';const w=document.createElement('div');w.className='dwrap';i.replaceWith(w);w.append(i);
+    const b=document.createElement('button');b.type='button';b.className='dclr calcsw';b.textContent='+−';b.title='Teclado con + − × para hacer cuentas';b.setAttribute('aria-label',b.title);w.append(b);
+    b.onpointerdown=e=>e.preventDefault();b.onclick=()=>{const t=i.inputMode==='decimal';i.inputMode=t?'text':'decimal';b.classList.toggle('on',t);i.blur();i.focus()}});
   setTimeout(()=>f.querySelector('input:not([type=hidden]):not([type=radio])')?.focus(),50);
   return f;
 }
@@ -832,9 +836,10 @@ function syncShared(o,want,lid,share,isNew,linkId){
   else if(want&&o.shared&&o.shared.e){o.shared.s=share;sb.from('ledger_entries').update({...row,share}).eq('id',o.shared.e).then(()=>shLoad())}
   else if(!want&&o.shared){const e=o.shared.e;delete o.shared;save();render();if(e)sb.from('ledger_entries').delete().eq('id',e).then(()=>{shLoad();toast('Quitado de la cuenta compartida')})}
 }
+function lastCard(){const l=S.lastCard;return l==='AHORRO'||cardsAll().some(c=>c.id===l&&!c.hidden)?l:'VP'}
 function purchaseForm(p,link){
   const isNew=!p;
-  p=p||{card:tab==='ahorros'?'AHORRO':'VP',date:todayISO(),desc:'',cuotas:1,cur:'ARS',cat:'COMPRAS VARIAS',refunds:{}};
+  p=p||{card:tab==='ahorros'?'AHORRO':lastCard(),date:todayISO(),desc:'',cuotas:1,cur:'ARS',cat:'COMPRAS VARIAS',refunds:{}};
   if(link){const e=link.e;Object.assign(p,{card:(cardsAll().find(c=>isCredit(c)&&!c.hidden)||{}).id||p.card,date:e.date||p.date,desc:e.descr||'',cuotas:e.cuotas,cuota:+e.cuota,cur:e.cur==='USD'?'USD':'ARS',shared:{l:link.L.ledger.id,s:+e.share,w:shOtherOf(link.L)||''}})}
   const amt0=p.cuota||'';
   const dest=cardsAll().filter(c=>!c.hidden||c.id===p.card).map(c=>`<option value="${c.id}" ${p.card===c.id?'selected':''}>${esc(c.name)}${isCredit(c)?'':' · '+ATYPES[c.type]}</option>`).join('')+(isNew?`<option value="AHORRO" ${p.card==='AHORRO'?'selected':''}>Desde ahorros</option>`:'');
@@ -854,6 +859,7 @@ function purchaseForm(p,link){
     ${!isNew&&p.refAll?`<label class="chk cardonly"><input type="checkbox" name="refAll" checked> Reintegro total en todas las cuotas</label>`:''}`,
   d=>{
     const total=num(d.total);if(!total)return alert('Falta el monto'),false;
+    if(isNew)S.lastCard=d.card;
     if(d.card==='AHORRO'){S.savingsExp.push({id:uid(),desc:d.desc,amount:total,date:d.date,note:(d.note||'').trim()||undefined});return}
     const cu=Math.max(1,parseInt(d.cuotas)||1);
     const o=isNew?{id:uid(),refunds:{}}:p;
