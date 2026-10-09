@@ -388,7 +388,7 @@ function lines(card,m){
     let n=diffM(m,p.first)+1,cu=p.cuota;
     if(p.hist&&S.histEnd&&m<=S.histEnd){if(!(m in p.hist))return null;n=p.hist[m];cu=p.hc?.[m]??p.cuota}
     else if(p.rec){if(n<1||(p.until&&m>p.until))return null}else if(n<1||n>p.cuotas)return null;
-    const u=p.cur==='USD',rt=u?rate(m):1,hasR=p.refunds&&(m in p.refunds),sh=!!p.shared&&!p.refAll&&!hasR&&(!p.shared.from||m>=p.shared.from),uref=p.refAll?cu:hasR?p.refunds[m]:sh?Math.round(cu*p.shared.s*100)/100:0;
+    const u=p.cur==='USD',rt=u?rate(m):1,hasR=p.refunds&&(m in p.refunds),sh=!!p.shared&&!hasR&&(!p.shared.from||m>=p.shared.from),uref=sh?Math.round(cu*p.shared.s*100)/100:p.refAll?cu:hasR?p.refunds[m]:0;
     const val=cu*rt,ref=uref*rt;
     return{p,n,val,ref,net:val-ref,u,uval:u?cu:0,uref:u?uref:0,sh};
   }).filter(Boolean).sort((a,b)=>(a.p.date||'').localeCompare(b.p.date||'')||a.p.desc.localeCompare(b.p.desc));
