@@ -132,8 +132,10 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .loan{margin-bottom:10px}.loan .kv{padding:6px 14px}.loan .lnk{padding:8px 14px 12px}.lnbtns{display:flex;justify-content:space-between;flex-wrap:wrap}.lnpay{display:flex;justify-content:space-between;gap:10px;padding:8px 14px;border-top:1px solid var(--line);font-size:14px;cursor:pointer}.loan.done .lbar i{background:var(--pos)}
 .simt{display:grid;grid-template-columns:1.2fr 1fr 1fr;margin-top:12px}.simt>div{padding:8px 4px;border-top:1px solid var(--line)}.simt>div:nth-child(3n+2),.simt>div:nth-child(3n){text-align:right}.simt .h{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-top:0}
 .hero{background:var(--soft);border:2px solid color-mix(in srgb,var(--accent) 75%,var(--line))}
-.srchb{border:0;background:none;color:var(--muted);padding:4px 6px;margin:-4px 0 -4px 4px;border-radius:8px;cursor:pointer;vertical-align:-3px}
-.srchb:hover{color:var(--accent);background:var(--soft)}
+.srchbar{display:flex;align-items:center;gap:8px;flex:1;max-width:340px;border:1.5px solid color-mix(in srgb,var(--accent) 55%,var(--line));background:var(--card);color:var(--muted);border-radius:999px;padding:8px 14px;cursor:pointer;font-size:14.5px;text-align:left}
+.srchbar svg{color:var(--accent);flex:none}
+.srchbar:hover{border-color:var(--accent);color:var(--ink)}
+@media(max-width:700px){.top{flex-wrap:wrap}.top h1{flex:1;min-width:0}.top .sync{overflow:hidden;text-overflow:ellipsis}.srchbar{order:3;flex-basis:100%;max-width:none}}
 .srch{align-self:flex-start;border-radius:0 0 18px 18px;max-height:85vh;display:flex;flex-direction:column;gap:10px;padding-top:calc(14px + env(safe-area-inset-top))}
 .srch .sbox{display:flex;align-items:center;gap:8px;border:2px solid var(--accent);border-radius:12px;padding:8px 10px;background:var(--bg)}
 .srch .sbox input{border:0;background:none;outline:none;flex:1;min-width:0;font-size:16px}
@@ -223,7 +225,8 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 </head>
 <body>
 <div class="top">
-  <h1><span id="ttl">Mis Gastos</span><button class="srchb" id="srchb" data-act="search" aria-label="Buscar gastos" title="Buscar gastos"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button><span class="sync" id="sync"></span></h1>
+  <h1><span id="ttl">Mis Gastos</span><span class="sync" id="sync"></span></h1>
+  <button class="srchbar" id="srchb" data-act="search"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>Buscar gastos</span></button>
   <div class="mnav" id="mnav">
     <button class="ib" data-act="prev" aria-label="Mes anterior">‹</button>
     <b id="mlabel"></b>
@@ -436,7 +439,12 @@ function closeISO(c,m){c=c||{};const[y,mo]=m.split('-').map(Number),last=new Dat
 /* ---------- avisos de cierre: lunes de esa semana, 2 días antes, el día y el día después ---------- */
 const DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 const avisoOff=()=>{try{return JSON.parse(localStorage.getItem('gastos-aviso-off'))||[]}catch(e){return[]}};
+let avisoTest=false;
+function avisoTestHTML(){const t=todayISO(),dd=a=>Math.round((new Date(a+'T12:00:00')-new Date(t+'T12:00:00'))/864e5);
+  return cardsAll().filter(c=>!c.hidden&&isCredit(c)).map(c=>{const m=[curYM,addM(curYM,1)].find(m=>closeISO(c,m)>=t)||addM(curYM,1),x=closeISO(c,m),d=new Date(x+'T12:00:00'),nx=new Date(d);nx.setDate(nx.getDate()+1);const n=dd(x);
+    return `<div class="aviso" style="--cc:${c.color||'var(--accent)'}"><span class="adots"><i style="background:${c.color||'var(--accent)'}"></i></span><div><b>${esc(c.name)} ${n?'cierra el '+DIAS[d.getDay()]+' '+d.getDate():'cierra hoy'}</b><span>${n?`Faltan ${n} ${n===1?'día':'días'}. Lo que compres desde el ${DIAS[nx.getDay()]}`:'Lo que compres desde mañana'} entra en ${MESES[+addM(m,1).slice(5)-1].toLowerCase()}. <i>(prueba)</i></span></div><button class="ax" data-act="avisotest" aria-label="Cerrar prueba">✕</button></div>`}).join('')}
 function avisosHTML(){
+  if(avisoTest)return avisoTestHTML();
   const t=todayISO(),off=avisoOff(),ev={};
   for(const c of cardsAll()){if(c.hidden||!isCredit(c))continue;
     for(const m of [addM(curYM,-1),curYM,addM(curYM,1)]){
@@ -829,6 +837,7 @@ function vAjustes(){
     <div class="seg">${[['auto','Automático'],['light','Claro'],['dark','Oscuro']].map(([k,n])=>`<label><input type="radio" name="mode" data-mode="${k}" ${t.mode===k?'checked':''}><span>${n}</span></label>`).join('')}</div></div>
   <h2>Categorías</h2><div class="card pad"><div class="chips">${S.cats.map((c,i)=>`<span class="chip"><i style="background:${catSlot(c)>=0?CATPAL[window.__dark?'d':'l'][catSlot(c)]:'var(--muted)'}"></i>${esc(c)}<button data-act="delcat" data-id="${i}" aria-label="Borrar ${esc(c)}">×</button></span>`).join('')}</div>
     <button class="lnk" style="padding:12px 0 0" data-act="addcat">+ Nueva categoría</button><div class="hint">Hasta 20 categorías tienen color propio en el gráfico; a partir de la 21 se agrupan en "Otros". Al borrar una, su color pasa a la siguiente sin color.</div></div>
+  <h2>Avisos de cierre</h2><div class="card pad"><div class="hint" style="margin-bottom:8px">Aparecen arriba de Mis Gastos el lunes de la semana del cierre, 2 días antes, el día del cierre y el día después.</div><button class="btn sec" style="width:100%" data-act="avisotest">Ver cómo se ven ahora</button></div>
   <h2>Datos</h2><div class="card pad"><div class="btns"><button class="btn sec" data-act="export">Exportar</button><label class="btn sec" style="text-align:center">Importar<input type="file" accept=".json" id="imp" hidden></label></div>
   <div class="dinfo"><p><b>Exportar</b> descarga un archivo <b>.json</b> <code style="white-space:nowrap">gastos-AAAA-MM-DD.json</code> con todos tus datos: tarjetas, gastos y cuotas, reintegros, comentarios, sueldo, ahorros, vacaciones, categorías y apariencia. Sirve como copia de seguridad.</p>
     <p><b>Importar</b> acepta solo un <b>.json</b> exportado desde esta app (o el historial que armamos de la planilla). No acepta Excel ni CSV.</p>
@@ -1037,6 +1046,7 @@ document.addEventListener('click',e=>{
   else if(a==='next'){view=addM(view,1);render()}
   else if(a==='more'){if($('#moremenu')){$('#moremenu').remove();return}const m=document.createElement('div');m.id='moremenu';m.className='moremenu';m.innerHTML=[...(innerWidth<=700?[['viajes','✈','Vacaciones']]:[]),['sim','%','Simulador'],['ajustes','⚙','Ajustes']].map(([k,i,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}"><span>${i}</span>${n}</button>`).join('');document.body.appendChild(m);setTimeout(()=>document.addEventListener('click',function h(ev){if(!ev.target.closest('#moremenu')&&!ev.target.closest('.nmorebtn')){m.remove();document.removeEventListener('click',h)}}),0)}
   else if(a==='search')srchOpen();
+  else if(a==='avisotest'){avisoTest=!avisoTest;if(avisoTest){tab='mes';view=curYM;scrollTo(0,0)}render()}
   else if(a==='avisooff'){const o=avisoOff();o.push(id);try{localStorage.setItem('gastos-aviso-off',JSON.stringify(o.slice(-40)))}catch(e){}render()}
   else if(a==='srchgo')srchGo(id);
   else if(a==='quick'){tab==='comp'&&SH.ledger?shEntryForm(null,'gasto'):purchaseForm()}
