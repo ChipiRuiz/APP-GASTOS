@@ -851,7 +851,7 @@ function purchaseForm(p,link){
     <div class="cardonly">${fld('<span id="firstlbl">Primera cuota</span>',`<input type="month" name="first" value="${p.first||(p.date&&p.card!=='AHORRO'?firstFor(p.card,p.date):view)}">`,'Se calcula sola con la fecha de compra y el cierre de la tarjeta. Cambiala si hace falta.')}</div>
     ${inMonth||isNew?`<div class="f2 cardonly">${fld(`<span id="reflbl">Reintegro en ${mLabel(isNew?(p.first||(p.date?firstFor(p.card,p.date):view)):view)}</span>`,`<input name="ref" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${!isNew&&p.refunds?.[view]?nf(p.refunds[view]):''}" placeholder="0,00">`,'Devolución o descuento de esa cuota. Opcional.')}<div></div></div>`:''}
     ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(p.note||'')}</textarea>`)}
-    <label class="chk cardonly"><input type="checkbox" name="refAll" ${p.refAll?'checked':''}> Reintegro total en todas las cuotas (ej: gasto ajeno)</label>`,
+    ${!isNew&&p.refAll?`<label class="chk cardonly"><input type="checkbox" name="refAll" checked> Reintegro total en todas las cuotas</label>`:''}`,
   d=>{
     const total=num(d.total);if(!total)return alert('Falta el monto'),false;
     if(d.card==='AHORRO'){S.savingsExp.push({id:uid(),desc:d.desc,amount:total,date:d.date,note:(d.note||'').trim()||undefined});return}
@@ -860,8 +860,8 @@ function purchaseForm(p,link){
     Object.assign(o,{card:d.card,date:d.date,desc:d.desc,cuotas:cu,cuota:Math.round(total*100)/100,cur:d.cur,cat:d.cat,first:d.first||(d.date?firstFor(d.card,d.date):view)});
     const nt=(d.note||'').trim();if(nt)o.note=nt;else delete o.note;
     if(d.rec){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew||cu>1||o.first>=view){delete o.rec;delete o.until}else o.until=view}
-    if(!isNew){o.refAll=!!d.refAll;if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
-    if(isNew){o.refAll=!!d.refAll;const r=num(d.ref);if(r&&!o.refAll)o.refunds[o.first]=r;S.purchases.push(o)}
+    if(!isNew){if(o.refAll&&!d.refAll)delete o.refAll;if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
+    if(isNew){const r=num(d.ref);if(r)o.refunds[o.first]=r;S.purchases.push(o)}
     syncShared(o,!!d.toshared,d.toledger,d.toshared?splitValue(f,'ps',o.cuota):null,isNew,link?.e.id);if(o.shared)o.shared.m=d.psmode;
   }, isNew?null:()=>{const sh=p.shared;S.purchases=S.purchases.filter(x=>x!==p);if(sh&&confirm('También estaba en la cuenta compartida. ¿Lo borro de ahí?'))sb.from('ledger_entries').delete().eq('id',sh.e).then(()=>shLoad())});
   let prevCat=f.cat.value;f.cat.onchange=()=>{if(f.cat.value!=='__new'){prevCat=f.cat.value;return}const n=prompt('Nombre de la nueva categoría');const c=n&&addCat(n);if(!c){f.cat.value=prevCat;return}const o=document.createElement('option');o.textContent=c;f.cat.insertBefore(o,f.cat.lastElementChild);f.cat.value=c;prevCat=c;save()};
