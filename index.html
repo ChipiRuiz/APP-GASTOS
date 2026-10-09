@@ -172,6 +172,11 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .dinfo{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.45}.dinfo p{margin:0 0 6px}.dinfo b{color:var(--ink)}.dinfo code{font-size:11.5px;background:var(--week);padding:1px 5px;border-radius:5px}
 .dwrap{position:relative}.dwrap input{padding-right:34px}
 .dclr{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:4px 8px;cursor:pointer;border-radius:6px}.dclr:hover{color:var(--neg)}
+[hidden]{display:none!important}
+.freq{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;padding-bottom:2px;scrollbar-width:none}.freq::-webkit-scrollbar{display:none}.freq button{flex:none;border:1px solid var(--line);background:var(--bg);color:inherit;border-radius:999px;padding:7px 12px;font:inherit;font-size:14px;cursor:pointer}.freq button.on{background:var(--soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.amtbig input{font-size:22px;font-weight:650;text-align:right;font-variant-numeric:tabular-nums}
+.dsum{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--muted);margin:-2px 0 8px}.dsum button{border:0;background:none;color:var(--accent);font:inherit;padding:4px 0;cursor:pointer}
+.more{border-top:1px solid var(--line);margin:4px 0 6px;padding-top:6px}.more>summary{cursor:pointer;color:var(--accent);font-size:14px;font-weight:600;list-style:none;padding:6px 0}.more>summary::-webkit-details-marker{display:none}.more>summary::after{content:' ▾'}.more[open]>summary::after{content:' ▴'}.more[open]>summary{margin-bottom:8px}
 .calcsw{font-size:13px;font-weight:650;letter-spacing:-.02em}.calcsw:hover{color:var(--accent)}.calcsw.on{color:var(--accent)}
 #toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 12px 10px 16px;display:flex;gap:14px;align-items:center;font-size:14px;opacity:0;pointer-events:none;transition:.2s;z-index:40;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:calc(100% - 32px)}
 #toast.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
@@ -844,11 +849,18 @@ function purchaseForm(p,link){
   const amt0=p.cuota||'';
   const dest=cardsAll().filter(c=>!c.hidden||c.id===p.card).map(c=>`<option value="${c.id}" ${p.card===c.id?'selected':''}>${esc(c.name)}${isCredit(c)?'':' · '+ATYPES[c.type]}</option>`).join('')+(isNew?`<option value="AHORRO" ${p.card==='AHORRO'?'selected':''}>Desde ahorros</option>`:'');
   const inMonth=!isNew&&diffM(view,p.first)>=0&&(p.rec?(!p.until||view<=p.until):diffM(view,p.first)<p.cuotas);
+  const freq=isNew&&!link?freqList():[];
+  const showDate=!isNew||p.date!==todayISO();
+  const openMore=!!link||!isNew&&!!(p.shared||p.rec||p.until||p.note||p.cur==='USD'||p.refunds?.[view]||p.refAll||(p.date&&p.card!=='AHORRO'&&p.first!==firstFor(p.card,p.date)));
   const f=sheet(`<h3>${isNew?'Nuevo gasto':'Editar gasto'}</h3>
+    ${freq.length?`<div class="freq" role="group" aria-label="Gastos frecuentes">${freq.map((x,i)=>`<button type="button" data-fi="${i}">${esc(x.desc)}</button>`).join('')}</div>`:''}
+    <div class="fld amtbig"><label id="amtlbl">Monto</label><input name="total" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required value="${amt0?nf(amt0):''}" placeholder="0,00"><div class="hint" id="amthint"></div></div>
     ${fld('Descripción',`<div class="acwrap"><input name="desc" required value="${esc(p.desc)}" autocomplete="off"><div class="acl" id="acl"></div></div><div class="hint" id="achint"></div>`)}
-    <div class="f2">${fld('Fecha',`<div class="dwrap"><input type="date" name="date" value="${p.date||''}"><button type="button" class="dclr" id="dclr" aria-label="Sin fecha" title="Sin fecha">×</button></div>`)}${fld('Tarjeta',`<select name="card">${dest}</select>`)}</div>
-    <div class="f2"><div class="fld"><label id="amtlbl">Monto</label><input name="total" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required value="${amt0?nf(amt0):''}" placeholder="0,00"><div class="hint" id="amthint"></div></div>${fld('Moneda',curSeg(p.cur))}</div>
-    <div class="f2 cardonly"><div class="creditonly">${fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${p.cuotas}">`)}</div>${fld('Categoría',catSel(p.cat))}</div>
+    <div class="f2">${fld('Tarjeta',`<select name="card">${dest}</select>`)}<div class="creditonly">${fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${p.cuotas}">`)}</div></div>
+    <div class="dsum" id="dsum" ${showDate?'hidden':''}><span>📅 Hoy, ${dmy(todayISO()).slice(0,5)}</span><button type="button" id="dshow">Cambiar fecha</button></div>
+    <div id="dfld" ${showDate?'':'hidden'}>${fld('Fecha',`<div class="dwrap"><input type="date" name="date" value="${p.date||''}"><button type="button" class="dclr" id="dclr" aria-label="Sin fecha" title="Sin fecha">×</button></div>`)}</div>
+    <details class="more" id="more" ${openMore?'open':''}><summary>Más opciones</summary>
+    <div class="f2">${fld('Moneda',curSeg(p.cur))}<div class="cardonly">${fld('Categoría',catSel(p.cat))}</div></div>
     ${(()=>{const Ls=SH.all.filter(L=>shOtherOf(L));if(!Ls.length&&!p.shared)return '';const curL=p.shared?.l||SH.ledger?.id;
       const sel=Ls.length>1&&!p.shared?`<select name="toledger" style="margin-left:4px">${Ls.map(L=>`<option value="${L.ledger.id}" ${L.ledger.id===curL?'selected':''}>con ${esc(shOtherOf(L))}</option>`).join('')}</select>`:`con ${esc(p.shared?.w||shOtherOf(Ls.find(L=>L.ledger.id===curL)||Ls[0])||'')}<input type="hidden" name="toledger" value="${p.shared?.l||(Ls.find(L=>L.ledger.id===curL)||Ls[0]).ledger.id}">`;
       return `<label class="chk cardonly"><input type="checkbox" name="toshared" ${p.shared?'checked':''}> Compartido ${sel}</label><div class="shopts">${splitUI('ps',p.shared?.s??.5,p.cuota||0,p.shared?.m)}</div>${p.shared?'<div class="hint" style="margin:-6px 0 10px">La parte del otro figura como reintegro y está en la cuenta compartida. Si lo editás o destildás, se actualiza ahí también.</div>':''}`})()}
@@ -856,7 +868,7 @@ function purchaseForm(p,link){
     <div class="cardonly">${fld('<span id="firstlbl">Primera cuota</span>',`<input type="month" name="first" value="${p.first||(p.date&&p.card!=='AHORRO'?firstFor(p.card,p.date):view)}">`,'Se calcula sola con la fecha de compra y el cierre de la tarjeta. Cambiala si hace falta.')}</div>
     ${inMonth||isNew?`<div class="f2 cardonly">${fld(`<span id="reflbl">Reintegro en ${mLabel(isNew?(p.first||(p.date?firstFor(p.card,p.date):view)):view)}</span>`,`<input name="ref" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${!isNew&&p.refunds?.[view]?nf(p.refunds[view]):''}" placeholder="0,00">`,'Devolución o descuento de esa cuota. Opcional.')}<div></div></div>`:''}
     ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(p.note||'')}</textarea>`)}
-    ${!isNew&&p.refAll?`<label class="chk cardonly"><input type="checkbox" name="refAll" checked> Reintegro total en todas las cuotas</label>`:''}`,
+    ${!isNew&&p.refAll?`<label class="chk cardonly"><input type="checkbox" name="refAll" checked> Reintegro total en todas las cuotas</label>`:''}</details>`,
   d=>{
     const total=num(d.total);if(!total)return alert('Falta el monto'),false;
     if(isNew)S.lastCard=d.card;
@@ -882,8 +894,13 @@ function purchaseForm(p,link){
   let firstTouched=!isNew;const autoFirst=()=>{if(firstTouched||!f.first||f.card.value==='AHORRO')return;f.first.value=f.date.value?firstFor(f.card.value,f.date.value):view;const l=$('#reflbl');if(l)l.textContent='Reintegro en '+mLabel(f.first.value||view)};
   if(f.first)f.first.addEventListener('input',()=>firstTouched=true);
   f.card.onchange=()=>{sync();amtUI();shBox();autoFirst()};f.date.onchange=()=>{sync();autoFirst()};f.date.addEventListener('input',autoFirst);sync();amtUI();
-  if(isNew)acWire(f,()=>{sync();amtUI();shBox();autoFirst()},psUI);
+  $('#dshow').onclick=()=>{$('#dsum').hidden=true;$('#dfld').hidden=false;f.date.focus();try{f.date.showPicker()}catch(e){}};
+  if(isNew){const apply=acWire(f,()=>{sync();amtUI();shBox();autoFirst()},psUI);
+    f.querySelectorAll('[data-fi]').forEach(b=>b.onclick=()=>{f.querySelectorAll('[data-fi]').forEach(x=>x.classList.toggle('on',x===b));apply(freq[+b.dataset.fi]);f.total.focus()})}
 }
+function freqList(){const lim=addM(curYM,-6),cnt=new Map(),last=new Map();
+  for(const p of S.purchases){const k=(p.desc||'').trim().toUpperCase();if(!k||p.rec||p.until||!p.date||p.date.slice(0,7)<lim)continue;cnt.set(k,(cnt.get(k)||0)+1);const o=last.get(k);if(!o||p.date>=o.date)last.set(k,p)}
+  return [...cnt].filter(([,n])=>n>=2).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k])=>last.get(k))}
 function acHist(){const seen=new Map();for(let i=S.purchases.length-1;i>=0;i--){const p=S.purchases[i],k=(p.desc||'').trim().toUpperCase();if(!k)continue;const old=seen.get(k);if(!old||(p.date||'')>(old.date||''))seen.set(k,p)}return [...seen.values()].sort((a,b)=>(b.date||'').localeCompare(a.date||''))}
 function acWire(f,resync,psUI){
   const H=acHist(),box=$('#acl'),hint=$('#achint');let items=[],sel=-1;
@@ -892,7 +909,7 @@ function acWire(f,resync,psUI){
     const cr=f.querySelector(`[name=cur][value="${p.cur||'ARS'}"]`);if(cr)cr.checked=true;
     if(f.toshared){f.toshared.checked=!!p.shared;f.toshared.dispatchEvent(new Event('change'));
       if(p.shared&&f.psmode){const s=+p.shared.s;f.psmode.value=s===.5?'50':s===1?'100':'pct';if(f.psmode.value==='pct')f.psval.value=String(Math.round(s*1000)/10).replace('.',',');f.psmode.onchange&&f.psmode.onchange()}}
-    resync();hint.textContent=`Como la última vez: ${cardById(p.card)?.name||p.card} · ${p.cat}${p.shared?' · compartido':''}`;close()};
+    resync();if(p.shared||p.cur==='USD'){const m=$('#more');if(m)m.open=true}hint.textContent=`Como la última vez: ${cardById(p.card)?.name||p.card} · ${p.cat}${p.shared?' · compartido':''}`;close()};
   const close=()=>{box.innerHTML='';box.style.display='none';items=[];sel=-1};
   const show=()=>{const q=f.desc.value.trim().toUpperCase();hint.textContent='';if(q.length<2){close();return}
     items=H.filter(p=>p.desc.toUpperCase().includes(q)).sort((a,b)=>(b.desc.toUpperCase().startsWith(q))-(a.desc.toUpperCase().startsWith(q))).slice(0,6);
@@ -903,6 +920,7 @@ function acWire(f,resync,psUI){
   box.addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();apply(items[+b.dataset.i])});
   f.desc.addEventListener('blur',()=>setTimeout(()=>{if(!box.matches(':hover'))close()},150));
   f.desc.addEventListener('change',()=>{const q=f.desc.value.trim().toUpperCase(),m=H.find(p=>p.desc.trim().toUpperCase()===q);if(m&&!hint.textContent)apply(m)});
+  return apply;
 }
 
 function cardForm(c){
