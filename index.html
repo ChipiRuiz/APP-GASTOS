@@ -170,6 +170,8 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .fjtog span{border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13.5px;font-weight:600;color:var(--muted)}
 .fjtog input:checked+span{border-color:var(--accent);background:var(--soft);color:var(--accent)}.fjtog input:focus-visible+span{outline:2px solid var(--accent)}
 .fjtog small{color:var(--muted);font-size:12px}
+.fjrowf{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}.fjrowf .fjtog{margin:0}
+.fjsel{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 10px;font-size:13.5px}
 .row.hit{background:var(--soft);box-shadow:inset 3px 0 0 var(--accent);transition:background .6s}
 .sync{font-size:11px;white-space:nowrap;color:var(--muted);margin-left:8px;font-weight:400}
 .login{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -995,10 +997,10 @@ function purchaseForm(p,link){
     <details class="more" id="more" ${openMore?'open':''}><summary>Más opciones</summary>
     <div class="f2">${fld('Moneda',curSeg(p.cur))}<div class="cardonly">${fld('Categoría',catSel(p.cat))}</div></div>
     ${(()=>{const Ls=SH.all.filter(L=>shOtherOf(L));if(!Ls.length&&!p.shared)return '';const curL=p.shared?.l||SH.ledger?.id;
-      const sel=Ls.length>1&&!p.shared?`<select name="toledger" style="margin-left:4px">${Ls.map(L=>`<option value="${L.ledger.id}" ${L.ledger.id===curL?'selected':''}>con ${esc(shOtherOf(L))}</option>`).join('')}</select>`:`con ${esc(p.shared?.w||shOtherOf(Ls.find(L=>L.ledger.id===curL)||Ls[0])||'')}<input type="hidden" name="toledger" value="${p.shared?.l||(Ls.find(L=>L.ledger.id===curL)||Ls[0]).ledger.id}">`;
-      return `<label class="chk cardonly"><input type="checkbox" name="toshared" ${p.shared?'checked':''}> Compartido ${sel}</label><div class="shopts">${splitUI('ps',p.shared?.s??.5,p.cuota||0,p.shared?.m)}</div>${p.shared?'<div class="hint" style="margin:-6px 0 10px">La parte del otro figura como reintegro y está en la cuenta compartida. Si lo editás o destildás, se actualiza ahí también.</div>':''}`})()}
-    <label class="chk cardonly"><input type="checkbox" name="rec" ${p.rec&&!p.until?'checked':''}> Se repite todos los meses (débito automático / suscripción)</label>
-    <label class="fjtog cardonly"><input type="checkbox" name="fijo" ${!p.rec&&(S.fijos||[]).includes(fjKey(p.desc))?'checked':''}><span>📌 Gasto fijo</span><small>Cuenta en Más → Gastos fijos</small></label>
+      const many=Ls.length>1&&!p.shared,sel=many?`<select name="toledger" class="fjsel">${Ls.map(L=>`<option value="${L.ledger.id}" ${L.ledger.id===curL?'selected':''}>con ${esc(shOtherOf(L))}</option>`).join('')}</select>`:`<input type="hidden" name="toledger" value="${p.shared?.l||(Ls.find(L=>L.ledger.id===curL)||Ls[0]).ledger.id}">`;
+      return `<div class="fjrowf cardonly"><label class="fjtog"><input type="checkbox" name="toshared" ${p.shared?'checked':''}><span>⇄ Compartido${many?'':' con '+esc(p.shared?.w||shOtherOf(Ls.find(L=>L.ledger.id===curL)||Ls[0])||'')}</span></label>${sel}</div><div class="shopts">${splitUI('ps',p.shared?.s??.5,p.cuota||0,p.shared?.m)}</div>${p.shared?'<div class="hint" style="margin:-6px 0 10px">La parte del otro figura como reintegro y está en la cuenta compartida. Si lo editás o destildás, se actualiza ahí también.</div>':''}`})()}
+    <label class="fjtog cardonly"><input type="checkbox" name="rec" ${p.rec&&!p.until?'checked':''}><span>↻ Se repite todos los meses</span><small>Débito automático o suscripción</small></label>
+    <label class="fjtog cardonly" id="fjlbl" ${p.rec&&!p.until?'hidden':''}><input type="checkbox" name="fijo" ${!p.rec&&(S.fijos||[]).includes(fjKey(p.desc))?'checked':''}><span>📌 Gasto fijo</span><small>Cuenta en Más → Gastos fijos</small></label>
     <div class="cardonly">${fld('<span id="firstlbl">Primera cuota</span>',`<input type="month" name="first" value="${p.first||(p.date&&p.card!=='AHORRO'?firstFor(p.card,p.date):view)}">`,'Se calcula sola con la fecha de compra y el cierre de la tarjeta. Cambiala si hace falta.')}</div>
     ${inMonth||isNew?`<div class="f2 cardonly">${fld(`<span id="reflbl">Reintegro en ${mLabel(isNew?(p.first||(p.date?firstFor(p.card,p.date):view)):view)}</span>`,`<input name="ref" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${!isNew&&p.refunds?.[view]?nf(p.refunds[view]):''}" placeholder="0,00">`,'Devolución o descuento de esa cuota. Opcional.')}<div></div></div>`:''}
     ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(p.note||'')}</textarea>`)}
@@ -1025,6 +1027,7 @@ function purchaseForm(p,link){
   f.cuotas.oninput=amtUI;f.total.oninput=amtUI;f.querySelectorAll('[name=cur]').forEach(x=>x.onchange=amtUI);
   const dsync=()=>{$('#dclr').style.visibility=f.date.value?'visible':'hidden'};$('#dclr').onclick=()=>{f.date.value='';dsync();f.date.dispatchEvent(new Event('input'))};f.date.addEventListener('input',dsync);dsync();
   if(isNew&&f.first)f.first.addEventListener('change',()=>{const l=$('#reflbl');if(l)l.textContent='Reintegro en '+mLabel(f.first.value||view)});
+  f.rec?.addEventListener('change',()=>{const l=$('#fjlbl');if(l)l.hidden=f.rec.checked});
   const psUI=splitWire(f,'ps',()=>num(f.total.value));const shBox=()=>{const o=f.querySelector('.shopts');if(o&&f.toshared)o.style.display=f.toshared.checked&&f.card.value!=='AHORRO'?'':'none'};if(f.toshared){f.toshared.addEventListener('change',shBox);f.total.addEventListener('input',()=>psUI&&psUI())}shBox();
   let firstTouched=!isNew;const autoFirst=()=>{if(firstTouched||!f.first||f.card.value==='AHORRO')return;f.first.value=f.date.value?firstFor(f.card.value,f.date.value):view;const l=$('#reflbl');if(l)l.textContent='Reintegro en '+mLabel(f.first.value||view)};
   if(f.first)f.first.addEventListener('input',()=>firstTouched=true);
