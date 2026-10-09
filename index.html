@@ -132,6 +132,23 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .loan{margin-bottom:10px}.loan .kv{padding:6px 14px}.loan .lnk{padding:8px 14px 12px}.lnbtns{display:flex;justify-content:space-between;flex-wrap:wrap}.lnpay{display:flex;justify-content:space-between;gap:10px;padding:8px 14px;border-top:1px solid var(--line);font-size:14px;cursor:pointer}.loan.done .lbar i{background:var(--pos)}
 .simt{display:grid;grid-template-columns:1.2fr 1fr 1fr;margin-top:12px}.simt>div{padding:8px 4px;border-top:1px solid var(--line)}.simt>div:nth-child(3n+2),.simt>div:nth-child(3n){text-align:right}.simt .h{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-top:0}
 .hero{background:var(--soft);border:2px solid color-mix(in srgb,var(--accent) 75%,var(--line))}
+.srchb{border:0;background:none;color:var(--muted);padding:4px 6px;margin:-4px 0 -4px 4px;border-radius:8px;cursor:pointer;vertical-align:-3px}
+.srchb:hover{color:var(--accent);background:var(--soft)}
+.srch{align-self:flex-start;border-radius:0 0 18px 18px;max-height:85vh;display:flex;flex-direction:column;gap:10px;padding-top:calc(14px + env(safe-area-inset-top))}
+.srch .sbox{display:flex;align-items:center;gap:8px;border:2px solid var(--accent);border-radius:12px;padding:8px 10px;background:var(--bg)}
+.srch .sbox input{border:0;background:none;outline:none;flex:1;min-width:0;font-size:16px}
+.srch .sbox button{border:0;background:none;color:var(--muted);font-size:15px;cursor:pointer;padding:2px 4px}
+.srch .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.srch .chips button{flex:none;font-size:12.5px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 10px;cursor:pointer}
+.srch .chips button.on{background:var(--accent);border-color:var(--accent);color:var(--card)}
+.srch .stot{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.srch .stot b{color:var(--ink)}
+.srch .sres{overflow:auto;border:1px solid var(--line);border-radius:12px}
+.srch .sres .row{grid-template-columns:1fr auto}
+.srch .sres .row:first-child{border-top:0}
+.srch mark{background:var(--soft);color:var(--accent);border-radius:3px}
+@media(min-width:700px){.srch{align-self:flex-start;margin-top:60px;border-radius:18px}}
+.row.hit{background:var(--soft);box-shadow:inset 3px 0 0 var(--accent);transition:background .6s}
 .sync{font-size:11px;white-space:nowrap;color:var(--muted);margin-left:8px;font-weight:400}
 .login{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
 .login form{width:100%;max-width:360px}
@@ -199,7 +216,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 </head>
 <body>
 <div class="top">
-  <h1><span id="ttl">Mis Gastos</span><span class="sync" id="sync"></span></h1>
+  <h1><span id="ttl">Mis Gastos</span><button class="srchb" id="srchb" data-act="search" aria-label="Buscar gastos" title="Buscar gastos"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button><span class="sync" id="sync"></span></h1>
   <div class="mnav" id="mnav">
     <button class="ib" data-act="prev" aria-label="Mes anterior">‹</button>
     <b id="mlabel"></b>
@@ -428,6 +445,7 @@ function render(){
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab||(b.classList.contains('nmorebtn')&&(['ajustes','sim'].includes(tab)||(tab==='viajes'&&innerWidth<=700)))));
   $('#mnav').style.visibility=tab==='mes'||tab==='comp'?'visible':'hidden';$('#mnav').style.display=tab==='mes'||tab==='comp'?'':'none';
   $('#mlabel').textContent=mLabel(view);
+  $('#srchb').style.display=tab==='mes'?'':'none';
   $('#ttl').textContent={mes:'Mis Gastos',ahorros:'Ahorros',proy:'Proyección',sim:'Simulador de compra',viajes:'Vacaciones',comp:'Compartido',ajustes:'Ajustes'}[tab];
   $('#app').innerHTML={mes:vMes,ahorros:vAhorros,proy:vProy,sim:()=>simUI(true),viajes:vViajes,comp:vComp,ajustes:vAjustes}[tab]();
 }
@@ -807,6 +825,37 @@ function sheet(html,onSave,onDel){
   return f;
 }
 const close=()=>{$('#ov').innerHTML=''};
+/* ---------- buscador ---------- */
+let SQ={q:'',c:''};
+function srchMonth(p){if(lines(p.card,curYM).some(l=>l.p===p))return curYM;let m=p.first;if(!p.rec&&p.cuotas>1&&p.first<curYM){const end=addM(p.first,p.cuotas-1);m=end<curYM?end:curYM}return m}
+function srchRun(){
+  const t=SQ.q.trim().toLowerCase(),dg=t.replace(/[^\d]/g,''),box=$('#sres');if(!box)return;
+  const r=t?S.purchases.filter(p=>(!SQ.c||p.card===SQ.c)&&((p.desc||'').toLowerCase().includes(t)||(p.note||'').toLowerCase().includes(t)||(dg.length>=3&&(String(Math.round(p.cuota)).includes(dg)||String(Math.round(p.cuota*(p.rec?1:p.cuotas||1))).includes(dg))))).sort((a,b)=>(b.date||b.first+'-00').localeCompare(a.date||a.first+'-00')).slice(0,200):[];
+  const hl=x=>{x=x||'';const i=x.toLowerCase().indexOf(t);return i<0||!t?esc(x):esc(x.slice(0,i))+'<mark>'+esc(x.slice(i,i+t.length))+'</mark>'+esc(x.slice(i+t.length))};
+  $('#stot').innerHTML=t?`<span>${r.length} ${r.length===1?'gasto':'gastos'}</span>`:'<span>Buscá por descripción, comentario o monto, en todos los meses.</span>';
+  box.style.display=t?'':'none';
+  box.innerHTML=r.map(p=>{const c=cardById(p.card),u=p.cur==='USD',F=u?fmtU:fmt,n=p.rec?'↻ todos los meses':p.cuotas>1?`${p.cuotas} cuotas de ${F(p.cuota)}`:'';
+    return `<div class="row" role="button" tabindex="0" data-act="srchgo" data-id="${p.id}"><div style="min-width:0"><div class="r-desc">${hl(p.desc)}</div><div class="r-sub">${esc(c?c.name:p.card)} · ${p.date?dmy(p.date):mLabel(p.first)}${n?' · '+n:''}</div></div><div class="r-amt">${F(p.rec?p.cuota:p.cuota*(p.cuotas||1))}</div></div>`}).join('')||'<div class="empty" style="padding:14px">No hay gastos con ese texto.</div>';
+}
+function srchOpen(){
+  const cs=cardsAll().filter(c=>!c.hidden);
+  $('#ov').innerHTML=`<div class="ov" style="align-items:flex-start"><div class="sheet srch" role="dialog" aria-label="Buscar gastos">
+    <div class="sbox"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><input id="sq" type="text" enterkeyhint="search" placeholder="Buscar gastos" autocomplete="off" value="${esc(SQ.q)}"><button type="button" data-x="cancel" aria-label="Cerrar">✕</button></div>
+    ${cs.length>1?`<div class="chips" id="sch"><button type="button" data-c="" class="${SQ.c?'':'on'}">Todas</button>${cs.map(c=>`<button type="button" data-c="${c.id}" class="${SQ.c===c.id?'on':''}">${esc(c.name)}</button>`).join('')}</div>`:''}
+    <div class="stot" id="stot"></div><div class="sres" id="sres"></div></div></div>`;
+  const q=$('#sq');q.oninput=()=>{SQ.q=q.value;srchRun()};q.focus();q.select();
+  $('#ov [data-x=cancel]').onclick=close;
+  $('#ov .ov').onclick=e=>{if(e.target.classList.contains('ov'))close()};
+  const ch=$('#sch');if(ch)ch.onclick=e=>{const b=e.target.closest('button');if(!b)return;SQ.c=b.dataset.c;ch.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));srchRun()};
+  srchRun();
+}
+function srchGo(id){
+  const p=S.purchases.find(x=>x.id===id);if(!p)return;close();
+  tab='mes';view=srchMonth(p);opened.add(p.card);render();
+  const r=document.querySelector(`.cc .row[data-act="edit"][data-id="${CSS.escape(id)}"]`);
+  if(!r){toast('Ese gasto no aparece en '+mLabel(view));return}
+  r.scrollIntoView({block:'center',behavior:'smooth'});r.classList.add('hit');setTimeout(()=>r.classList.remove('hit'),2600);
+}
 let undoT=null;
 function toast(msg,undo){let t=$('#toast');if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t)}
   t.innerHTML=`<span>${esc(msg)}</span>${undo?'<button>Deshacer</button>':''}`;t.className='on';clearTimeout(undoT);
@@ -961,6 +1010,8 @@ document.addEventListener('click',e=>{
   if(a==='prev'){view=addM(view,-1);render()}
   else if(a==='next'){view=addM(view,1);render()}
   else if(a==='more'){if($('#moremenu')){$('#moremenu').remove();return}const m=document.createElement('div');m.id='moremenu';m.className='moremenu';m.innerHTML=[...(innerWidth<=700?[['viajes','✈','Vacaciones']]:[]),['sim','%','Simulador'],['ajustes','⚙','Ajustes']].map(([k,i,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}"><span>${i}</span>${n}</button>`).join('');document.body.appendChild(m);setTimeout(()=>document.addEventListener('click',function h(ev){if(!ev.target.closest('#moremenu')&&!ev.target.closest('.nmorebtn')){m.remove();document.removeEventListener('click',h)}}),0)}
+  else if(a==='search')srchOpen();
+  else if(a==='srchgo')srchGo(id);
   else if(a==='quick'){tab==='comp'&&SH.ledger?shEntryForm(null,'gasto'):purchaseForm()}
   else if(a==='shcreate')shCreate();
   else if(a==='shtocard'){const x=shPending().find(y=>y.e.id===id);if(x)purchaseForm(null,x)}
