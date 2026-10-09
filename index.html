@@ -161,6 +161,15 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .aviso div span{color:var(--muted);font-size:12.5px}
 .aviso .ax{border:0;background:none;color:var(--muted);font-size:14px;padding:8px 10px;border-radius:8px;cursor:pointer;align-self:flex-start}
 .aviso .ax:hover{background:var(--week)}
+.fjrow{grid-template-columns:1fr auto auto;cursor:default}.fjrow:hover{background:none}
+.fjp{display:inline-block;font-size:11px;font-weight:650;border-radius:999px;padding:1px 7px;margin-left:4px;background:var(--soft);color:var(--accent);vertical-align:1px}
+.fjp.up{background:color-mix(in srgb,var(--neg) 14%,var(--card));color:var(--neg)}.fjp.new{background:var(--week);color:var(--muted)}
+.fjx{border:0;background:none;color:var(--muted);padding:6px 8px;border-radius:8px;cursor:pointer}.fjx:hover{color:var(--neg);background:var(--week)}
+.fjb{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer}.fjb.on{background:var(--accent);border-color:var(--accent);color:var(--card);font-weight:650}
+.fjtog{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0;cursor:pointer}.fjtog input{position:absolute;opacity:0;pointer-events:none}
+.fjtog span{border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13.5px;font-weight:600;color:var(--muted)}
+.fjtog input:checked+span{border-color:var(--accent);background:var(--soft);color:var(--accent)}.fjtog input:focus-visible+span{outline:2px solid var(--accent)}
+.fjtog small{color:var(--muted);font-size:12px}
 .row.hit{background:var(--soft);box-shadow:inset 3px 0 0 var(--accent);transition:background .6s}
 .sync{font-size:11px;white-space:nowrap;color:var(--muted);margin-left:8px;font-weight:400}
 .login{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -443,12 +452,7 @@ function closeISO(c,m){c=c||{};const[y,mo]=m.split('-').map(Number),last=new Dat
 /* ---------- avisos de cierre: lunes de esa semana, 2 días antes, el día y el día después ---------- */
 const DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 const avisoOff=()=>{try{return JSON.parse(localStorage.getItem('gastos-aviso-off'))||[]}catch(e){return[]}};
-let avisoTest=false;
-function avisoTestHTML(){const t=todayISO(),dd=a=>Math.round((new Date(a+'T12:00:00')-new Date(t+'T12:00:00'))/864e5);
-  return cardsAll().filter(c=>!c.hidden&&isCredit(c)).map(c=>{const m=[curYM,addM(curYM,1)].find(m=>closeISO(c,m)>=t)||addM(curYM,1),x=closeISO(c,m),d=new Date(x+'T12:00:00'),nx=new Date(d);nx.setDate(nx.getDate()+1);const n=dd(x);
-    return `<div class="aviso" style="--cc:${c.color||'var(--accent)'}"><span class="adots"><i style="background:${c.color||'var(--accent)'}"></i></span><div><b>${esc(c.name)} ${n?'cierra el '+DIAS[d.getDay()]+' '+d.getDate():'cierra hoy'}</b><span>${n?`Faltan ${n} ${n===1?'día':'días'}. Lo que compres desde el ${DIAS[nx.getDay()]}`:'Lo que compres desde mañana'} entra en ${MESES[+addM(m,1).slice(5)-1].toLowerCase()}. <i>(prueba)</i></span></div><button class="ax" data-act="avisotest" aria-label="Cerrar prueba">✕</button></div>`}).join('')}
 function avisosHTML(){
-  if(avisoTest)return avisoTestHTML();
   const t=todayISO(),off=avisoOff(),ev={};
   for(const c of cardsAll()){if(c.hidden||!isCredit(c))continue;
     for(const m of [addM(curYM,-1),curYM,addM(curYM,1)]){
@@ -480,12 +484,12 @@ const savAt=m=>sumBy(S.deposits.filter(x=>x.month<m),'amount')+yTot(m)-sumBy(S.s
 
 /* ---------- vistas ---------- */
 function render(){
-  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab||(b.classList.contains('nmorebtn')&&(['ajustes','sim'].includes(tab)||(tab==='viajes'&&innerWidth<=700)))));
-  $('#mnav').style.visibility=tab==='mes'||tab==='comp'?'visible':'hidden';$('#mnav').style.display=tab==='mes'||tab==='comp'?'':'none';
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab||(b.classList.contains('nmorebtn')&&(['ajustes','sim','fijos'].includes(tab)||(tab==='viajes'&&innerWidth<=700)))));
+  $('#mnav').style.visibility=['mes','comp','fijos'].includes(tab)?'visible':'hidden';$('#mnav').style.display=['mes','comp','fijos'].includes(tab)?'':'none';
   $('#mlabel').textContent=mLabel(view);
   $('.top').classList.toggle('nosrch',tab!=='mes');
-  $('#ttl').textContent={mes:'Mis Gastos',ahorros:'Ahorros',proy:'Proyección',sim:'Simulador de compra',viajes:'Vacaciones',comp:'Compartido',ajustes:'Ajustes'}[tab];
-  $('#app').innerHTML={mes:vMes,ahorros:vAhorros,proy:vProy,sim:()=>simUI(true),viajes:vViajes,comp:vComp,ajustes:vAjustes}[tab]();
+  $('#ttl').textContent={mes:'Mis Gastos',ahorros:'Ahorros',proy:'Proyección',sim:'Simulador de compra',fijos:'Gastos fijos',viajes:'Vacaciones',comp:'Compartido',ajustes:'Ajustes'}[tab];
+  $('#app').innerHTML={mes:vMes,ahorros:vAhorros,proy:vProy,sim:()=>simUI(true),fijos:vFijos,viajes:vViajes,comp:vComp,ajustes:vAjustes}[tab]();
 }
 
 function vMes(){
@@ -835,13 +839,45 @@ function vViajes(){
   }).join('')+`<button class="btn sec" style="width:100%;margin-top:6px" data-act="addtrip">+ Nuevo viaje</button>`;
 }
 
+/* ---------- gastos fijos: "se repite", marcados a mano (por descripción) e impuestos y servicios. Nunca por categoría ---------- */
+const fjKey=d=>(d||'').trim().replace(/\s+/g,' ').toUpperCase();
+const isFijo=p=>!!p&&(p.rec||(S.fijos||[]).includes(fjKey(p.desc)));
+function fjItems(m){
+  const out=[],by={};
+  for(const c of cardsAll())for(const l of lines(c.id,m)){if(!isFijo(l.p))continue;const k=l.p.rec?'r:'+l.p.id:'d:'+fjKey(l.p.desc)+'|'+c.id;
+    if(!by[k]){by[k]={k,kind:l.p.rec?'rec':'mark',desc:l.p.desc,card:c,amt:0,key:fjKey(l.p.desc)};out.push(by[k])}by[k].amt+=l.net}
+  const M=S.months[m];if(M)for(const t of M.taxes||[]){const nm=(t.name||'').trim();if(!nm&&!num(t.amount))continue;const k='t:'+fjKey(nm);
+    if(!by[k]){by[k]={k,kind:'tax',desc:nm||'Sin nombre',amt:0};out.push(by[k])}by[k].amt+=num(t.amount)}
+  return out}
+function fjSuggest(){
+  const no=S.fijosNo||[],ms=[1,2,3,4].map(i=>addM(curYM,-i)),seen={};
+  for(const m of ms)for(const c of cardsAll())for(const l of lines(c.id,m)){if(l.p.rec||isFijo(l.p)||l.p.cuotas>1)continue;const k=fjKey(l.p.desc);if(!k||no.includes(k))continue;
+    (seen[k]=seen[k]||{k,desc:l.p.desc,card:c,ms:new Set(),amts:[]}).ms.add(m);seen[k].amts.push(l.net)}
+  return Object.values(seen).filter(x=>{if(x.ms.size<3)return false;const a=x.amts.filter(v=>v>0),mn=Math.min(...a),mx=Math.max(...a);return a.length&&mx<=mn*1.6})}
+function vFijos(){
+  const m=view,pm=addM(m,-1),cur=fjItems(m),prev=Object.fromEntries(fjItems(pm).map(x=>[x.k,x.amt]));
+  const tot=cur.reduce((s,x)=>s+x.amt,0),ptot=Object.values(prev).reduce((s,v)=>s+v,0),dif=tot-ptot,pc=ptot?dif/ptot*100:0;
+  const pill=x=>{const p=prev[x.k];if(p==null||!p)return '<span class="fjp new">nuevo</span>';const d=(x.amt-p)/p*100;return Math.abs(d)<.5?'<span class="fjp">igual</span>':`<span class="fjp ${d>0?'up':''}">${d>0?'+':''}${d.toFixed(0)} %</span>`};
+  const was=x=>{const p=prev[x.k];return p&&Math.abs(x.amt-p)/p>=.005?` · antes ${fmt(p)}`:''};
+  const row=x=>`<div class="row fjrow"><div style="min-width:0"><div class="r-desc">${esc(x.desc)}</div><div class="r-sub">${x.card?esc(x.card.name):'Impuestos y servicios'}${was(x)}</div></div><div class="r-amt">${fmt(x.amt)} ${pill(x)}</div>${x.kind==='mark'?`<button class="fjx" data-act="fjoff" data-id="${esc(x.key)}" aria-label="Quitar de gastos fijos" title="Quitar de gastos fijos">✕</button>`:'<span></span>'}</div>`;
+  const sec=(t,arr,hint)=>arr.length?`<h2>${t}</h2><div class="card">${arr.map(row).join('')}</div>${hint?`<div class="hint" style="margin:-4px 2px 8px">${hint}</div>`:''}`:'';
+  const up=cur.filter(x=>prev[x.k]&&x.amt>prev[x.k]*1.005).length,sg=m===curYM?fjSuggest():[];
+  return `<div class="card pad hero"><div class="mut">Total fijo de ${mLabel(m).split(' ')[0].toLowerCase()}</div><div class="big">${fmt(tot)}</div>
+    ${ptot?`<div class="kv"><span>Vs. ${mLabel(pm).split(' ')[0].toLowerCase()}</span><span class="${dif>0?'neg':dif<0?'pos':''}">${dif>0?'+':''}${fmt(dif)} (${dif>0?'+':''}${pc.toFixed(1).replace('.',',')} %)</span></div>`:''}
+    <div class="kv"><span>En un año, a este ritmo</span><span>${fmt(tot*12)}</span></div></div>
+    ${up?`<div class="banner">${up===1?'1 gasto fijo subió':up+' gastos fijos subieron'} respecto del mes anterior.</div>`:''}
+    ${sg.length?`<h2>¿Son gastos fijos?</h2><div class="card">${sg.map(x=>`<div class="row fjrow"><div style="min-width:0"><div class="r-desc">${esc(x.desc)}</div><div class="r-sub">${esc(x.card.name)} · aparece ${x.ms.size} de los últimos 4 meses</div></div><button class="fjb on" data-act="fjon" data-id="${esc(x.k)}">Es fijo</button><button class="fjb" data-act="fjno" data-id="${esc(x.k)}">No</button></div>`).join('')}</div>`:''}
+    ${sec('Se repiten todos los meses',cur.filter(x=>x.kind==='rec'))}
+    ${sec('Marcados como fijos',cur.filter(x=>x.kind==='mark'),'Para marcar otro, abrí el gasto y tocá 📌 Gasto fijo. La ✕ lo saca de esta lista; el gasto no se borra.')}
+    ${sec('Impuestos y servicios',cur.filter(x=>x.kind==='tax'))}
+    ${cur.length||sg.length?'':`<div class="banner">Todavía no hay gastos fijos en este mes. Aparecen los que tienen "Se repite todos los meses", los impuestos y servicios, y los que marques con 📌 Gasto fijo al abrir un gasto.</div>`}`;
+}
 function vAjustes(){
   const t=S.theme;
   return `<h2>Apariencia</h2><div class="card pad"><div class="pals">${Object.entries(PAL).map(([k,p])=>`<button class="pal ${t.p===k?'on':''}" data-act="pal" data-id="${k}"><i style="background:linear-gradient(135deg,${p.l.accent} 50%,${p.d.accent} 50%)"></i>${p.n}</button>`).join('')}</div>
     <div class="seg">${[['auto','Automático'],['light','Claro'],['dark','Oscuro']].map(([k,n])=>`<label><input type="radio" name="mode" data-mode="${k}" ${t.mode===k?'checked':''}><span>${n}</span></label>`).join('')}</div></div>
   <h2>Categorías</h2><div class="card pad"><div class="chips">${S.cats.map((c,i)=>`<span class="chip"><i style="background:${catSlot(c)>=0?CATPAL[window.__dark?'d':'l'][catSlot(c)]:'var(--muted)'}"></i>${esc(c)}<button data-act="delcat" data-id="${i}" aria-label="Borrar ${esc(c)}">×</button></span>`).join('')}</div>
     <button class="lnk" style="padding:12px 0 0" data-act="addcat">+ Nueva categoría</button><div class="hint">Hasta 20 categorías tienen color propio en el gráfico; a partir de la 21 se agrupan en "Otros". Al borrar una, su color pasa a la siguiente sin color.</div></div>
-  <h2>Avisos de cierre</h2><div class="card pad"><div class="hint" style="margin-bottom:8px">Aparecen arriba de Mis Gastos el lunes de la semana del cierre, 2 días antes, el día del cierre y el día después.</div><button class="btn sec" style="width:100%" data-act="avisotest">Ver cómo se ven ahora</button></div>
   <h2>Datos</h2><div class="card pad"><div class="btns"><button class="btn sec" data-act="export">Exportar</button><label class="btn sec" style="text-align:center">Importar<input type="file" accept=".json" id="imp" hidden></label></div>
   <div class="dinfo"><p><b>Exportar</b> descarga un archivo <b>.json</b> <code style="white-space:nowrap">gastos-AAAA-MM-DD.json</code> con todos tus datos: tarjetas, gastos y cuotas, reintegros, comentarios, sueldo, ahorros, vacaciones, categorías y apariencia. Sirve como copia de seguridad.</p>
     <p><b>Importar</b> acepta solo un <b>.json</b> exportado desde esta app (o el historial que armamos de la planilla). No acepta Excel ni CSV.</p>
@@ -962,6 +998,7 @@ function purchaseForm(p,link){
       const sel=Ls.length>1&&!p.shared?`<select name="toledger" style="margin-left:4px">${Ls.map(L=>`<option value="${L.ledger.id}" ${L.ledger.id===curL?'selected':''}>con ${esc(shOtherOf(L))}</option>`).join('')}</select>`:`con ${esc(p.shared?.w||shOtherOf(Ls.find(L=>L.ledger.id===curL)||Ls[0])||'')}<input type="hidden" name="toledger" value="${p.shared?.l||(Ls.find(L=>L.ledger.id===curL)||Ls[0]).ledger.id}">`;
       return `<label class="chk cardonly"><input type="checkbox" name="toshared" ${p.shared?'checked':''}> Compartido ${sel}</label><div class="shopts">${splitUI('ps',p.shared?.s??.5,p.cuota||0,p.shared?.m)}</div>${p.shared?'<div class="hint" style="margin:-6px 0 10px">La parte del otro figura como reintegro y está en la cuenta compartida. Si lo editás o destildás, se actualiza ahí también.</div>':''}`})()}
     <label class="chk cardonly"><input type="checkbox" name="rec" ${p.rec&&!p.until?'checked':''}> Se repite todos los meses (débito automático / suscripción)</label>
+    <label class="fjtog cardonly"><input type="checkbox" name="fijo" ${!p.rec&&(S.fijos||[]).includes(fjKey(p.desc))?'checked':''}><span>📌 Gasto fijo</span><small>Cuenta en Más → Gastos fijos</small></label>
     <div class="cardonly">${fld('<span id="firstlbl">Primera cuota</span>',`<input type="month" name="first" value="${p.first||(p.date&&p.card!=='AHORRO'?firstFor(p.card,p.date):view)}">`,'Se calcula sola con la fecha de compra y el cierre de la tarjeta. Cambiala si hace falta.')}</div>
     ${inMonth||isNew?`<div class="f2 cardonly">${fld(`<span id="reflbl">Reintegro en ${mLabel(isNew?(p.first||(p.date?firstFor(p.card,p.date):view)):view)}</span>`,`<input name="ref" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${!isNew&&p.refunds?.[view]?nf(p.refunds[view]):''}" placeholder="0,00">`,'Devolución o descuento de esa cuota. Opcional.')}<div></div></div>`:''}
     ${fld('Comentario',`<textarea name="note" rows="2" placeholder="Opcional">${esc(p.note||'')}</textarea>`)}
@@ -974,6 +1011,7 @@ function purchaseForm(p,link){
     const o=isNew?{id:uid(),refunds:{}}:p;
     Object.assign(o,{card:d.card,date:d.date,desc:d.desc,cuotas:cu,cuota:Math.round(total*100)/100,cur:d.cur,cat:d.cat,first:d.first||(d.date?firstFor(d.card,d.date):view)});
     const nt=(d.note||'').trim();if(nt)o.note=nt;else delete o.note;
+    {const k=fjKey(d.desc);if(k&&!d.rec){S.fijos=(S.fijos||[]).filter(x=>x!==k);if(d.fijo)S.fijos.push(k)}}
     if(d.rec){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew||cu>1||o.first>=view){delete o.rec;delete o.until}else o.until=view}
     if(!isNew){if(o.refAll&&!d.refAll)delete o.refAll;if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
     if(isNew){const r=num(d.ref);if(r)o.refunds[o.first]=r;S.purchases.push(o)}
@@ -1048,9 +1086,9 @@ document.addEventListener('click',e=>{
   const id=t.dataset.id,a=t.dataset.act;
   if(a==='prev'){view=addM(view,-1);render()}
   else if(a==='next'){view=addM(view,1);render()}
-  else if(a==='more'){if($('#moremenu')){$('#moremenu').remove();return}const m=document.createElement('div');m.id='moremenu';m.className='moremenu';m.innerHTML=[...(innerWidth<=700?[['viajes','✈','Vacaciones']]:[]),['sim','%','Simulador'],['ajustes','⚙','Ajustes']].map(([k,i,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}"><span>${i}</span>${n}</button>`).join('');document.body.appendChild(m);setTimeout(()=>document.addEventListener('click',function h(ev){if(!ev.target.closest('#moremenu')&&!ev.target.closest('.nmorebtn')){m.remove();document.removeEventListener('click',h)}}),0)}
+  else if(a==='more'){if($('#moremenu')){$('#moremenu').remove();return}const m=document.createElement('div');m.id='moremenu';m.className='moremenu';m.innerHTML=[...(innerWidth<=700?[['viajes','✈','Vacaciones']]:[]),['fijos','📌','Gastos fijos'],['sim','%','Simulador'],['ajustes','⚙','Ajustes']].map(([k,i,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}"><span>${i}</span>${n}</button>`).join('');document.body.appendChild(m);setTimeout(()=>document.addEventListener('click',function h(ev){if(!ev.target.closest('#moremenu')&&!ev.target.closest('.nmorebtn')){m.remove();document.removeEventListener('click',h)}}),0)}
   else if(a==='search')srchOpen();
-  else if(a==='avisotest'){avisoTest=!avisoTest;if(avisoTest){tab='mes';view=curYM;scrollTo(0,0)}render()}
+  else if(a==='fjon'||a==='fjoff'||a==='fjno'){S.fijos=(S.fijos||[]).filter(k=>k!==id);if(a==='fjon')S.fijos.push(id);if(a==='fjno')(S.fijosNo=S.fijosNo||[]).push(id);save();render();toast(a==='fjon'?'Marcado como gasto fijo':a==='fjoff'?'Ya no cuenta como gasto fijo':'No lo vuelvo a sugerir')}
   else if(a==='avisooff'){const o=avisoOff();o.push(id);try{localStorage.setItem('gastos-aviso-off',JSON.stringify(o.slice(-40)))}catch(e){}render()}
   else if(a==='srchgo')srchGo(id);
   else if(a==='quick'){tab==='comp'&&SH.ledger?shEntryForm(null,'gasto'):purchaseForm()}
