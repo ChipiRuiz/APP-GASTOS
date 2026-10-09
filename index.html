@@ -179,6 +179,43 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .tsum .kv{font-size:13.5px;font-variant-numeric:tabular-nums}
 .tbar.sm{height:6px;margin:2px 0 6px}.trbs{padding-top:8px}.trb .tline{margin-bottom:0}
 .trubs{display:flex;flex-wrap:wrap;gap:6px;padding:8px 0 6px}.trubs span{font-size:12px;background:var(--week);border-radius:999px;padding:3px 9px;color:var(--muted)}.trubs b{color:var(--ink);font-weight:600}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.vcard{display:flex;flex-direction:column;justify-content:flex-start;width:100%;text-align:left;padding:0;border:1px solid var(--line);background:var(--card);border-radius:16px;overflow:hidden;cursor:pointer;font:inherit;color:inherit}
+.vcard:hover{border-color:var(--accent)}
+.vcover,.vhead{position:relative;color:#fff;padding:14px;background:linear-gradient(135deg,var(--c1),var(--c2));overflow:hidden}
+.vcover{min-height:92px;display:flex;flex-direction:column;justify-content:flex-start}
+.vcover::after,.vhead::after{content:"";position:absolute;right:-24px;bottom:-44px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none}
+.vrow{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;position:relative;z-index:1}
+.vnm{font-size:19px;font-weight:700;letter-spacing:-.01em;position:relative;z-index:1}.vnm.big{font-size:23px;margin-top:14px}
+.vdt{font-size:12.5px;opacity:.88;position:relative;z-index:1}
+.vpill{flex:none;background:rgba(255,255,255,.2);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:650;white-space:nowrap}
+.vbody{flex:1;padding:10px 14px 12px;display:flex;flex-direction:column;gap:6px}
+.vbody .tl,.vday .tl{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}.vbody .tl b{color:var(--ink)}
+.vbody .tbar{margin:0}
+.vcard.mini .vcover{min-height:0;padding:10px 14px}.vcard.mini .vnm{font-size:16px}.vcard.mini{opacity:.8}
+.vhead{border-radius:16px;margin-bottom:12px;padding-bottom:16px}
+.vback{border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:999px;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer}
+.vmig{display:flex;align-items:center;gap:12px;background:var(--soft);border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:14px;padding:12px;margin-bottom:12px}
+.vmig div{flex:1;min-width:0;display:flex;flex-direction:column;font-size:13.5px}.vmig span{color:var(--muted);font-size:12.5px}.vmig .btn{width:auto;padding:8px 14px}
+.vtip{font-size:13px;color:var(--muted);background:var(--week);border-radius:12px;padding:10px 12px;margin-bottom:12px}
+.vday{padding:14px;background:var(--soft)}.vday .k{font-size:12.5px;color:var(--accent);font-weight:650}.vday .v{font-size:30px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.01em}.vday .s{font-size:12.5px;color:var(--muted)}
+.vdays{display:flex;gap:4px;margin-top:9px}.vdays i{flex:1;height:6px;border-radius:3px;background:color-mix(in srgb,var(--accent) 22%,var(--line))}.vdays i.on{background:var(--accent)}.vdays i.cur{background:var(--accent);box-shadow:0 0 0 2px var(--card),0 0 0 3px var(--accent)}
+.vhero{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;padding:14px}.vhero.solo{grid-template-columns:1fr}
+.vring{width:92px;height:92px}
+.vstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}.vstat .card{padding:10px 12px;margin:0}.vstat .k{font-size:12px;color:var(--muted)}.vstat .v{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.vrub{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:11px 14px;border-top:1px solid var(--line)}.vrub:first-child{border-top:0}
+.vrub .n{font-weight:650;font-size:14px}.vrub .a{text-align:right;font-variant-numeric:tabular-nums;font-size:14px;white-space:nowrap;font-weight:600}.vrub .a small{display:block;color:var(--muted);font-size:11.5px;font-weight:400}
+.vrub .tbar{margin:5px 0 0}.vrub .tbar i{background:var(--rc)}
+.vico{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px;background:color-mix(in srgb,var(--rc) 18%,var(--card));color:var(--rc)}
+.vitem{display:flex;justify-content:space-between;gap:10px;padding:9px 14px 9px 54px;border-top:1px dashed var(--line);font-size:13.5px;cursor:pointer}.vitem:hover{background:var(--soft)}
+.vitem .s{font-size:11.5px;color:var(--muted)}.vitem .a{font-variant-numeric:tabular-nums;white-space:nowrap}
+.vadd{display:block;width:100%;text-align:center;color:var(--accent);font-weight:650;padding:12px;border:0;border-top:1px solid var(--line);background:none;font:inherit;cursor:pointer}
+.vsort .mrow{padding:10px 0;border-top:1px solid var(--line)}.vsort .mrow:first-child{border-top:0}
+.vsort .h{display:flex;justify-content:space-between;gap:10px;font-size:14px}.vsort .h span{font-variant-numeric:tabular-nums;white-space:nowrap}
+.vsort .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.vsort .chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 10px;font-size:12.5px;cursor:pointer}
+.vsort .chip.sug{border-color:var(--accent);color:var(--accent)}.vsort .chip.on{background:var(--accent);border-color:var(--accent);color:var(--onacc,#fff);font-weight:650}
+:root{--r1:#2563eb;--r2:#7c3aed;--r3:#d97706;--r4:#0d9488;--r5:#64748b}
 .row.hit{background:var(--soft);box-shadow:inset 3px 0 0 var(--accent);transition:background .6s}
 .sync{font-size:11px;white-space:nowrap;color:var(--muted);margin-left:8px;font-weight:400}
 .login{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -798,7 +835,7 @@ function vAhorros(){
     <button class="lnk" data-act="adddep">+ Agregar ahorro</button></div></div>
   <div><h2>Gastos desde ahorros</h2><div class="card">
     ${[...S.savingsExp].reverse().map(x=>`<button class="li" data-act="editsx" data-id="${x.id}"><span>${esc(x.desc)}${x.date?` <span class="mut">· ${dmy(x.date)}</span>`:''}</span><b>${fmt(x.amount)}</b></button>`).join('')}
-    ${ts.map(t=>`<button class="li" data-tab="viajes"><span>✈ ${esc(t.name)} <span class="mut">· vacaciones</span></span><b>${fmt(tripSavAmt(t))}</b></button>`).join('')}
+    ${ts.map(t=>`<button class="li" data-tab="viajes" data-trip="${t.id}"><span>✈ ${esc(t.name)} <span class="mut">· vacaciones</span></span><b>${fmt(tripSavAmt(t))}</b></button>`).join('')}
     <button class="lnk" data-act="addsx">+ Agregar gasto</button></div></div></div>`;
 }
 
@@ -844,42 +881,81 @@ const tripBud=t=>num(t.budget||0)||Object.values(tripRb(t)).reduce((s,v)=>s+num(
 const dDiff=(a,b)=>Math.round((new Date(a+'T12:00:00')-new Date(b+'T12:00:00'))/864e5);
 const dShort=iso=>{const d=new Date(iso+'T12:00:00');return d.getDate()+' '+MESES[d.getMonth()].slice(0,3).toLowerCase()};
 function tripRange(t){if(!t.start)return '';if(!t.end||t.end===t.start)return dShort(t.start);return dShort(t.start)+' al '+dShort(t.end)}
-function tripSum(t,ta){
-  const today=todayISO(),b=tripBud(t),left=b-ta,days=t.start&&t.end?dDiff(t.end,t.start)+1:0,rb=tripRb(t);let h='',kv=[];
+const RUBI={'Pasajes':['✈','r1'],'Alojamiento':['⌂','r2'],'Excursiones':['⛰','r3'],'Gastos del día':['☕','r4'],'Otros':['•','r5']};
+const TRIPC=[['#0e7490','#155e75'],['#1e3a8a','#0f766e'],['#b45309','#78350f'],['#7c3aed','#4c1d95'],['#be185d','#831843'],['#15803d','#14532d'],['#475569','#1e293b']];
+const tripCol=t=>TRIPC[(t.color!=null?t.color:Math.max(0,S.trips.indexOf(t)))%TRIPC.length];
+const RUBSUG=[['Pasajes',/vuelo|aerol|pasaje|micro|bus\b|tren|aeropuerto|equipaje|despach|gol\b|latam|flybondi|jetsmart|ferry|buquebus|ómnibus|omnibus/],
+  ['Alojamiento',/hotel|airbnb|hostel|hostal|caba[nñ]a|depto|departamento|alojamiento|posada|booking|apart|hosped/],
+  ['Excursiones',/excursi|tour|paseo|entrada|museo|parque|barco|ski|actividad|visita|kayak|rafting|catamar|cerro|aerosilla/],
+  ['Gastos del día',/s[uú]per|mercado|almuerzo|cena|desayuno|merienda|comida|resto|parrilla|pizza|bar\b|caf[eé]|taxi|uber|cabify|didi|remis|nafta|combustible|ypf|shell|colectivo|subte|sube|farmacia|kiosco|helado|propina|peaje|estacionamiento|agua|cerveza/]];
+const rubSug=d=>{d=(d||'').toLowerCase();for(const[r,re]of RUBSUG)if(re.test(d))return r;return ''};
+let tripOpen=null;
+function tripInfo(t){
+  const today=todayISO(),ta=tripTot(t),b=tripBud(t),left=b-ta,days=t.start&&t.end?dDiff(t.end,t.start)+1:0,rb=tripRb(t);
+  const ph=!t.start?'none':today<t.start?'antes':today>t.end?'fin':'en';
   const rs={};t.items.forEach(i=>{const r=rubOf(i);rs[r]=(rs[r]||0)+itemARS(i)});
   const dia=num(rb['Gastos del día']||0),diaLeft=dia-(rs['Gastos del día']||0);
-  if(b){const pc=Math.min(100,ta/b*100);h+=`<div class="tbar ${ta>b?'over':''}"><i style="width:${pc}%"></i></div><div class="tline"><span>Gastado <b>${fmt(ta)}</b></span><span>de ${fmt(b)}</span></div>`;
-    const ph=!t.start||today<t.start?'antes':today>t.end?'fin':'en';
-    kv.push(left>=0?[{antes:'Falta cubrir',en:'Queda del presupuesto',fin:'Te sobró'}[ph],fmt(left)]:['Te pasaste',`<span class="neg">${fmt(-left)}</span>`])}
-  if(t.start){
-    if(today<t.start){const dl=dDiff(t.start,today),ms=diffM(t.start.slice(0,7),curYM);kv.push(['Faltan para salir',dl===1?'1 día':dl+' días']);
-      if(b&&left>0)kv.push(ms>=1?[`Apartá por mes hasta ${MESES[+t.start.slice(5,7)-1].toLowerCase()}`,`<b>${fmt(left/ms)}</b>`]:['Apartá antes de salir',`<b>${fmt(left)}</b>`]);
-      if(days&&dia)kv.push(['Gastos del día, por día',fmt(dia/days)]);else if(b&&days)kv.push(['Gasto por día previsto',fmt(b/days)])}
-    else if(today<=t.end){const n=dDiff(t.end,today)+1,q=n===1?'queda 1 día':'quedan '+n+' días';kv.push(['En viaje',`día ${dDiff(today,t.start)+1} de ${days}`]);
-      if(dia)kv.push([`Gastos del día: podés gastar por día (${q})`,diaLeft>0?`<b>${fmt(diaLeft/n)}</b>`:'<span class="neg">nada</span>']);
-      else if(b)kv.push([`Podés gastar por día (${q})`,left>0?`<b>${fmt(left/n)}</b>`:'<span class="neg">nada</span>'])}
-    else{kv.push(['Viaje terminado',days===1?'1 día':days+' días']);kv.push(['Promedio por día',fmt(ta/days)])}}
-  const withB=RUBROS.filter(r=>num(rb[r]||0));
-  const bars=withB.map(r=>{const v=num(rb[r]),g=rs[r]||0;return `<div class="trb"><div class="tline"><span>${r}</span><span><b>${fmt(g)}</b> de ${fmt(v)}</span></div><div class="tbar sm ${g>v?'over':''}"><i style="width:${Math.min(100,g/v*100)}%"></i></div></div>`}).join('');
-  const rest=t.items.some(i=>i.rub)?RUBROS.filter(r=>rs[r]&&!withB.includes(r)).map(r=>`<span>${r} <b>${fmt(rs[r])}</b></span>`).join(''):'';
-  const rub=(bars?`<div class="trbs">${bars}</div>`:'')+(rest?`<div class="trubs">${rest}</div>`:'');
-  if(!h&&!kv.length&&!rub)return '';
-  return `<div class="tsum">${h}${kv.map(([k,v])=>`<div class="kv"><span>${k}</span><span>${v}</span></div>`).join('')}${rub}</div>`;
+  const dl=t.start?dDiff(t.start,today):0,ms=t.start?diffM(t.start.slice(0,7),curYM):0,dayN=ph==='en'?dDiff(today,t.start)+1:0,nLeft=ph==='en'?dDiff(t.end,today)+1:0;
+  const perDay=ph==='en'?(dia?diaLeft/nLeft:b?left/nLeft:null):null;
+  return{today,ta,b,left,days,rb,ph,rs,dia,diaLeft,dl,ms,dayN,nLeft,perDay};
 }
+function tripPill(t,x){if(x.ph==='antes')return x.dl===1?'Sale mañana':`Faltan ${x.dl} días`;if(x.ph==='en')return `En viaje · día ${x.dayN}`;if(x.ph==='fin')return fmt(x.ta);return t.items.length+(t.items.length===1?' gasto':' gastos')}
+function tripCard(t){
+  const x=tripInfo(t),[c1,c2]=tripCol(t),pc=x.b?Math.min(100,x.ta/x.b*100):0;
+  let line='';
+  if(x.ph==='en'&&x.perDay!=null)line=`<div class="tl"><span>Hoy podés gastar</span><b class="${x.perDay<=0?'neg':''}">${x.perDay>0?fmt(x.perDay):'nada'}</b></div>`;
+  else if(x.ph==='antes'&&x.b&&x.left>0)line=`<div class="tl"><span>${x.ms>=1?'Apartá por mes':'Apartá antes de salir'}</span><b>${fmt(x.ms>=1?x.left/x.ms:x.left)}</b></div>`;
+  else if(x.b&&x.left<0)line=`<div class="tl"><span>Te pasaste</span><b class="neg">${fmt(-x.left)}</b></div>`;
+  const sub=[t.start?tripRange(t)+(x.days>1?` · ${x.days} días`:''):'Sin fechas',t.fromSavings?'con ahorros':''].filter(Boolean).join(' · ');
+  return `<button class="vcard" data-act="tripopen" data-id="${t.id}"><div class="vcover" style="--c1:${c1};--c2:${c2}"><div class="vrow"><div><div class="vnm">${esc(t.name)}</div><div class="vdt">${sub}</div></div><span class="vpill">${tripPill(t,x)}</span></div></div>
+    <div class="vbody">${x.b?`<div class="tl"><span>${x.ph==='antes'?'Pagado':'Gastado'} <b>${fmt(x.ta)}</b></span><span>de ${fmt(x.b)}</span></div><div class="tbar ${x.ta>x.b?'over':''}"><i style="width:${pc}%"></i></div>`:`<div class="tl"><span>${t.items.length} ${t.items.length===1?'gasto':'gastos'}</span><b>${fmt(x.ta)}</b></div>`}${line}</div></button>`;
+}
+function tripMini(t){const x=tripInfo(t),[c1,c2]=tripCol(t);
+  return `<button class="vcard mini" data-act="tripopen" data-id="${t.id}"><div class="vcover" style="--c1:${c1};--c2:${c2}"><div class="vrow"><div><div class="vnm">${esc(t.name)}</div><div class="vdt">${t.start?MESES[+t.start.slice(5,7)-1].slice(0,3).toLowerCase()+'. '+t.start.slice(0,4):'Sin fechas'}${t.fromSavings?' · con ahorros':''}</div></div><span class="vpill">${fmt(x.ta)}</span></div></div></button>`}
 function vViajes(){
-  return S.trips.map(t=>{
-    const ta=t.items.reduce((s,i)=>s+itemARS(i),0),tu=sumBy(t.items,'usd'),ar=sumBy(t.items,'ars');
-    return `<section class="card cc ${closed.has(t.id)?'closed':''}"><header data-act="toggle" data-id="${t.id}"><span class="chev">▼</span><h3>${esc(t.name)} <span class="mut" style="font-weight:400">· ${t.items.length} gastos${t.fromSavings?' · con ahorros':''}</span>${t.start?`<span class="cdate">${tripRange(t)}</span>`:''}</h3><b>${fmt(ta)}${tripBud(t)?`<span class="cdate" style="text-align:right">de ${fmt(tripBud(t))}</span>`:''}</b><button class="x" data-act="edittrip" data-id="${t.id}" aria-label="Editar viaje">✎</button></header>
-      <div class="rows">${tripSum(t,ta)}<table class="tbl">
-      <thead><tr><th>Descripción</th><th>Gasto ($)</th><th>Gasto (U$D)</th><th>Total ($)</th></tr></thead><tbody>
-      ${t.items.map(i=>`<tr class="c" data-act="edititem" data-trip="${t.id}" data-id="${i.id}"><td>${esc(i.desc)}${i.rub?`<div class="r-sub">${esc(rubOf(i))}</div>`:''}${i.usd?`<div class="r-sub mob">${fmtU(i.usd)} ${i.rate?'@ '+fmt(i.rate):'· sin cotización'}</div>`:''}</td><td>${i.ars?fmt(i.ars):'—'}</td>
-        <td>${i.usd?fmtU(i.usd)+`<div class="r-sub">${i.rate?'@ '+fmt(i.rate):'<span class="warn">sin cotización</span>'}</div>`:'—'}</td><td>${fmt(itemARS(i))}</td></tr>`).join('')}
-      </tbody><tfoot><tr><td>Total</td><td>${fmt(ar)}</td><td>${fmtU(tu)}</td><td>${fmt(ta)}</td></tr></tfoot></table>
-      <button class="lnk" data-act="additem" data-trip="${t.id}">+ Agregar gasto</button></div>
-      <footer><span>Pesos ${fmt(ar)}</span><span>${fmtU(tu)}</span><b>Total ${fmt(ta)}</b></footer></section>`;
-  }).join('')+`<button class="btn sec" style="width:100%;margin-top:6px" data-act="addtrip">+ Nuevo viaje</button>`;
+  const t0=tripOpen&&S.trips.find(t=>t.id===tripOpen);if(t0)return vTrip(t0);tripOpen=null;
+  const act=[],fin=[];S.trips.forEach(t=>(tripInfo(t).ph==='fin'?fin:act).push(t));
+  const ord=t=>{const x=tripInfo(t);return (x.ph==='en'?'0':x.ph==='antes'?'1'+t.start:'2')};act.sort((a,b)=>ord(a).localeCompare(ord(b)));fin.sort((a,b)=>b.start.localeCompare(a.start));
+  return (S.trips.length?'':`<div class="banner">Todavía no hay viajes. Creá uno con <b>+ Nuevo viaje</b>.</div>`)+`<div class="vgrid">${act.map(tripCard).join('')}</div>`+(fin.length?`<h2>Terminados</h2><div class="vgrid">${fin.map(tripMini).join('')}</div>`:'')+`<button class="btn sec" style="width:100%;margin-top:10px" data-act="addtrip">+ Nuevo viaje</button>`;
 }
-
+function ringSVG(pc,over){const c=2*Math.PI*40,d=Math.min(1,pc/100)*c;return `<svg class="vring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--week)" stroke-width="11"/><circle cx="50" cy="50" r="40" fill="none" stroke="${over?'var(--neg)':'var(--accent)'}" stroke-width="11" stroke-linecap="round" stroke-dasharray="${d.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 50 50)"/><text x="50" y="56" text-anchor="middle" font-size="19" font-weight="700" fill="var(--ink)">${Math.round(pc)}%</text></svg>`}
+function vTrip(t){
+  const x=tripInfo(t),[c1,c2]=tripCol(t),pend=!t.rubDone&&t.items.some(i=>!i.rub);
+  const sub=[t.start?tripRange(t)+(x.days>1?` · ${x.days} días`:''):'Sin fechas',x.ph==='antes'?(x.dl===1?'sale mañana':`faltan ${x.dl} días`):x.ph==='en'?`día ${x.dayN} de ${x.days}`:'',t.fromSavings?'con ahorros':''].filter(Boolean).join(' · ');
+  let h=`<div class="vhead" style="--c1:${c1};--c2:${c2}"><div class="vrow"><button class="vback" data-act="tripback">‹ Vacaciones</button><button class="vback" data-act="edittrip" data-id="${t.id}" aria-label="Editar viaje">✎ Editar</button></div><div class="vnm big">${esc(t.name)}</div><div class="vdt">${sub}</div></div>`;
+  if(pend)h+=`<div class="vmig"><div><b>Ordená los gastos de este viaje</b><span>Elegí el rubro de cada uno para ver en qué se fue. Los montos no cambian.</span></div><button class="btn" data-act="tripsort" data-id="${t.id}">Ordenar</button></div>`;
+  if(!t.start&&!x.b)h+=`<div class="vtip">Agregá fechas y presupuesto con <b>✎ Editar</b> para ver cuánto apartar por mes y cuánto podés gastar por día.</div>`;
+  if(x.ph==='en'&&x.perDay!=null){const dd=Array.from({length:x.days},(_,k)=>`<i class="${k+1<x.dayN?'on':k+1===x.dayN?'cur':''}"></i>`).join('');
+    h+=`<div class="card vday"><div class="k">Hoy podés gastar</div><div class="v ${x.perDay<=0?'neg':''}">${x.perDay>0?fmt(x.perDay):'$0'}</div><div class="s">${x.dia?`Te quedan ${fmt(Math.max(0,x.diaLeft))} de Gastos del día`:`Te quedan ${fmt(Math.max(0,x.left))} del presupuesto`} para ${x.nLeft===1?'hoy':x.nLeft+' días'}</div>${x.days<=31?`<div class="vdays" aria-hidden="true">${dd}</div>`:''}</div>`}
+  if(x.b){const lbl=x.left<0?'Te pasaste':{antes:'Falta cubrir',en:'Queda del presupuesto',fin:'Te sobró',none:'Queda del presupuesto'}[x.ph];
+    h+=`<div class="card vhero">${ringSVG(x.ta/x.b*100,x.ta>x.b)}<div><div class="mut" style="font-size:12.5px">${lbl}</div><div class="big ${x.left<0?'neg':''}">${fmt(Math.abs(x.left))}</div><div class="mut" style="font-size:12.5px">${x.ph==='antes'?'Pagado':'Gastado'} ${fmt(x.ta)} de ${fmt(x.b)}</div></div></div>`}
+  else h+=`<div class="card vhero solo"><div><div class="mut" style="font-size:12.5px">Total del viaje</div><div class="big">${fmt(x.ta)}</div></div></div>`;
+  const st=[];
+  if(x.ph==='antes'){if(x.b&&x.left>0)st.push(x.ms>=1?['Apartá por mes',fmt(x.left/x.ms),x.ms===1?'este mes':'hasta '+MESES[+t.start.slice(5,7)-1].toLowerCase()]:['Apartá antes de salir',fmt(x.left),'']);
+    if(x.days&&x.dia)st.push(['Gastos del día',fmt(x.dia/x.days),'por día, previsto']);else if(x.days&&x.b)st.push(['Gasto por día',fmt(x.b/x.days),'previsto'])}
+  if(x.ph==='fin'&&x.days)st.push(['Promedio por día',fmt(x.ta/x.days),x.days+' días']);
+  const tu=sumBy(t.items,'usd');if(tu)st.push(['En dólares',fmtU(tu),'pasados a pesos con su cotización']);
+  if(t.fromSavings)st.push(['Restado de ahorros',fmt(tripSavAmt(t)),'']);
+  if(st.length)h+=`<div class="vstat">${st.map(([k,v,s])=>`<div class="card"><div class="k">${k}</div><div class="v">${v}</div>${s?`<div class="k">${s}</div>`:''}</div>`).join('')}</div>`;
+  const rubs=RUBROS.filter(r=>x.rs[r]||num(x.rb[r]||0));
+  h+=`<h2>${t.items.some(i=>i.rub)||Object.keys(x.rb).length?'Por rubro':'Gastos'}</h2><div class="card">`;
+  h+=rubs.map(r=>{const[ic,rc]=RUBI[r],v=num(x.rb[r]||0),g=x.rs[r]||0,its=t.items.filter(i=>rubOf(i)===r);
+    return `<div class="vrub" style="--rc:var(--${rc})"><span class="vico">${ic}</span><div style="min-width:0"><div class="n">${r}</div>${v?`<div class="tbar sm ${g>v?'over':''}"><i style="width:${Math.min(100,g/v*100)}%"></i></div>`:''}</div><div class="a">${fmt(g)}${v?`<small>de ${fmt(v)}</small>`:''}</div></div>`+
+      [...its].reverse().map(i=>`<div class="vitem" role="button" tabindex="0" data-act="edititem" data-trip="${t.id}" data-id="${i.id}"><div style="min-width:0">${esc(i.desc)}${i.usd?`<div class="s">${fmtU(i.usd)} ${i.rate?'@ '+fmt(i.rate):'<span class="warn">· sin cotización</span>'}</div>`:''}</div><span class="a">${fmt(itemARS(i))}</span></div>`).join('')}).join('')||'<div class="empty" style="padding:14px">Sin gastos todavía.</div>';
+  h+=`<button class="vadd" data-act="additem" data-trip="${t.id}">+ Agregar gasto</button></div>`;
+  return h;
+}
+function tripSort(t){
+  const its=t.items.filter(i=>!i.rub),pick={};its.forEach(i=>pick[i.id]=rubSug(i.desc));
+  const row=i=>`<div class="mrow" data-id="${i.id}"><div class="h"><b>${esc(i.desc)}</b><span>${i.usd&&!i.ars?fmtU(i.usd):fmt(itemARS(i))}</span></div><div class="chips">${RUBROS.map(r=>`<button type="button" class="chip ${pick[i.id]===r?'sug':''}" data-r="${r}">${r}</button>`).join('')}</div></div>`;
+  $('#ov').innerHTML=`<div class="ov"><form class="sheet vsort"><h3>Ordená los gastos · ${esc(t.name)}</h3><div class="hint" style="margin-bottom:8px">Tocá el rubro de cada gasto. El borde de color es la sugerencia: si no tocás nada, se usa esa. Sin sugerencia, queda en Otros.</div>
+    <div class="mlist">${its.map(row).join('')}</div><div class="btns"><button type="button" class="btn sec" data-x="skip">Saltear</button><button class="btn">Listo</button></div></form></div>`;
+  const f=$('#ov form'),chosen={};
+  f.querySelector('.mlist').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;const r=b.closest('.mrow');r.querySelectorAll('.chip').forEach(c=>c.classList.remove('on','sug'));b.classList.add('on');chosen[r.dataset.id]=b.dataset.r};
+  f.querySelector('[data-x=skip]').onclick=()=>{t.rubDone=true;close();save();render()};
+  f.onsubmit=e=>{e.preventDefault();its.forEach(i=>{const r=chosen[i.id]||pick[i.id]||'Otros';i.rub=r});t.rubDone=true;close();save();render();toast('Gastos ordenados')};
+  $('#ov .ov').onclick=e=>{if(e.target.classList.contains('ov'))close()};
+}
 /* ---------- gastos fijos: "se repite", marcados a mano (por descripción) e impuestos y servicios. Nunca por categoría ---------- */
 const fjKey=d=>(d||'').trim().replace(/\s+/g,' ').toUpperCase();
 const isFijo=p=>!!p&&(p.rec||(S.fijos||[]).includes(fjKey(p.desc)));
@@ -1124,12 +1200,15 @@ function simpleForm(title,fields,obj,onSave,onDel){
 /* ---------- eventos ---------- */
 document.addEventListener('click',e=>{
   const t=e.target.closest('[data-act],[data-tab]');if(!t)return;
-  if(t.dataset.tab){$('#moremenu')?.remove();tab=t.dataset.tab;render();scrollTo(0,0);return}
+  if(t.dataset.tab){$('#moremenu')?.remove();tab=t.dataset.tab;if(tab==='viajes')tripOpen=t.dataset.trip||null;render();scrollTo(0,0);return}
   const id=t.dataset.id,a=t.dataset.act;
   if(a==='prev'){view=addM(view,-1);render()}
   else if(a==='next'){view=addM(view,1);render()}
   else if(a==='more'){if($('#moremenu')){$('#moremenu').remove();return}const m=document.createElement('div');m.id='moremenu';m.className='moremenu';m.innerHTML=[...(innerWidth<=700?[['viajes','✈','Vacaciones']]:[]),['fijos','📌','Gastos fijos'],['sim','%','Simulador'],['ajustes','⚙','Ajustes']].map(([k,i,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}"><span>${i}</span>${n}</button>`).join('');document.body.appendChild(m);setTimeout(()=>document.addEventListener('click',function h(ev){if(!ev.target.closest('#moremenu')&&!ev.target.closest('.nmorebtn')){m.remove();document.removeEventListener('click',h)}}),0)}
   else if(a==='search')srchOpen();
+  else if(a==='tripopen'){tripOpen=id;render();scrollTo(0,0)}
+  else if(a==='tripback'){tripOpen=null;render();scrollTo(0,0)}
+  else if(a==='tripsort'){const x=S.trips.find(y=>y.id===id);if(x)tripSort(x)}
   else if(a==='fjon'||a==='fjoff'||a==='fjno'){S.fijos=(S.fijos||[]).filter(k=>k!==id);if(a==='fjon')S.fijos.push(id);if(a==='fjno')(S.fijosNo=S.fijosNo||[]).push(id);save();render();toast(a==='fjon'?'Marcado como gasto fijo':a==='fjoff'?'Ya no cuenta como gasto fijo':'No lo vuelvo a sugerir')}
   else if(a==='avisooff'){const o=avisoOff();o.push(id);try{localStorage.setItem('gastos-aviso-off',JSON.stringify(o.slice(-40)))}catch(e){}render()}
   else if(a==='srchgo')srchGo(id);
@@ -1170,7 +1249,7 @@ document.addEventListener('click',e=>{
   else if(a==='edityld'){const x=S.yields.find(y=>y.id===id);simpleForm('Rendimientos FCI',[['date','Fecha','date',x.date],['amount','Monto','num',(x.amount<0?'-':'')+nf(x.amount)]],x,d=>{Object.assign(x,{date:d.date,amount:num(d.amount)})},()=>{S.yields=S.yields.filter(y=>y!==x)})}
   else if(a==='addsx')simpleForm('Gasto desde ahorros',[['desc','Descripción'],['date','Fecha','date',todayISO()],['amount','Monto','num']],null,d=>{S.savingsExp.push({id:uid(),desc:d.desc,date:d.date,amount:num(d.amount)})});
   else if(a==='editsx'){const x=S.savingsExp.find(y=>y.id===id);simpleForm('Editar gasto desde ahorros',[['desc','Descripción','',x.desc],['date','Fecha','date',x.date],['amount','Monto','num',nf(x.amount)]],x,d=>{Object.assign(x,{desc:d.desc,date:d.date,amount:num(d.amount)})},()=>{S.savingsExp=S.savingsExp.filter(y=>y!==x)})}
-  else if(a==='addtrip'){const x=null;sheet(`<h3>Nuevo viaje</h3>${fld('Nombre','<input name="name" required>')}<div class="f2">${fld('Desde',`<input type="date" name="start" value="${x?.start||''}">`)}${fld('Hasta',`<input type="date" name="end" value="${x?.end||''}">`)}</div>${fld('Presupuesto ($)',`<input name="budget" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.budget?nf(x.budget):''}" placeholder="Opcional">`,'Si lo dejás vacío, se usa la suma de los rubros.')}<details class="more" ${x&&x.rb&&Object.keys(x.rb).length?'open':''}><summary>Presupuesto por rubro</summary>${RUBROS.map(r=>fld(r+(RUBHINT[r]?` <span class="mut">· ${RUBHINT[r]}</span>`:''),`<input name="rb_${r}" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.rb?.[r]?nf(x.rb[r]):''}" placeholder="Opcional">`)).join('')}</details><label class="chk"><input type="checkbox" name="fs"> Pagado con ahorros (se resta del saldo de ahorros)</label>`,d=>{const o={id:uid(),name:d.name,items:[],fromSavings:!!d.fs};tripDates(o,d);S.trips.push(o)})}
+  else if(a==='addtrip'){const x=null;sheet(`<h3>Nuevo viaje</h3>${fld('Nombre','<input name="name" required>')}<div class="f2">${fld('Desde',`<input type="date" name="start" value="${x?.start||''}">`)}${fld('Hasta',`<input type="date" name="end" value="${x?.end||''}">`)}</div>${fld('Presupuesto ($)',`<input name="budget" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.budget?nf(x.budget):''}" placeholder="Opcional">`,'Si lo dejás vacío, se usa la suma de los rubros.')}<details class="more" ${x&&x.rb&&Object.keys(x.rb).length?'open':''}><summary>Presupuesto por rubro</summary>${RUBROS.map(r=>fld(r+(RUBHINT[r]?` <span class="mut">· ${RUBHINT[r]}</span>`:''),`<input name="rb_${r}" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.rb?.[r]?nf(x.rb[r]):''}" placeholder="Opcional">`)).join('')}</details><label class="chk"><input type="checkbox" name="fs"> Pagado con ahorros (se resta del saldo de ahorros)</label>`,d=>{const o={id:uid(),name:d.name,items:[],fromSavings:!!d.fs,rubDone:true,color:S.trips.length%TRIPC.length};tripDates(o,d);S.trips.push(o);tripOpen=o.id})}
   else if(a==='edittrip'){const x=S.trips.find(y=>y.id===id);const f=sheet(`<h3>Editar viaje</h3>${fld('Nombre',`<input name="name" required value="${esc(x.name)}">`)}<div class="f2">${fld('Desde',`<input type="date" name="start" value="${x?.start||''}">`)}${fld('Hasta',`<input type="date" name="end" value="${x?.end||''}">`)}</div>${fld('Presupuesto ($)',`<input name="budget" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.budget?nf(x.budget):''}" placeholder="Opcional">`,'Si lo dejás vacío, se usa la suma de los rubros.')}<details class="more" ${x&&x.rb&&Object.keys(x.rb).length?'open':''}><summary>Presupuesto por rubro</summary>${RUBROS.map(r=>fld(r+(RUBHINT[r]?` <span class="mut">· ${RUBHINT[r]}</span>`:''),`<input name="rb_${r}" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.rb?.[r]?nf(x.rb[r]):''}" placeholder="Opcional">`)).join('')}</details><label class="chk"><input type="checkbox" name="fs" ${x.fromSavings?'checked':''}> Pagado con ahorros (se resta del saldo de ahorros)</label><div class="savonly">${fld('Monto restado de ahorros',`<input name="sa" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x.savAmt?nf(x.savAmt):''}" placeholder="${nf(tripTot(x))}">`,'Vacío = total del viaje.')}</div>`,d=>{x.name=d.name;x.fromSavings=!!d.fs;tripDates(x,d);const v=num(d.sa);if(x.fromSavings&&v)x.savAmt=v;else delete x.savAmt},()=>{S.trips=S.trips.filter(y=>y!==x)});const sy=()=>f.querySelector('.savonly').style.display=f.fs.checked?'':'none';f.fs.onchange=sy;sy()}
   else if(a==='additem'||a==='edititem'){
     const tr=S.trips.find(y=>y.id===t.dataset.trip),it=a==='edititem'?tr.items.find(y=>y.id===id):null;
@@ -1178,12 +1257,13 @@ document.addEventListener('click',e=>{
     const f=sheet(`<h3>${it?'Editar':'Nuevo'} gasto · ${esc(tr.name)}</h3>
       ${fld('Descripción',`<input name="desc" required value="${esc(it?.desc||'')}">`)}
       <div class="f2">${fld('Monto',`<input name="amt" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required value="${it?nf(cur==='USD'?it.usd:it.ars):''}" placeholder="0,00">`)}${fld('Moneda',curSeg(cur))}</div>
-      ${fld('Rubro',`<select name="rub"><option value="">Sin rubro</option>${RUBROS.map(r=>`<option value="${r}" ${it&&it.rub&&rubOf(it)===r?'selected':''}>${r}${RUBHINT[r]?' ('+RUBHINT[r]+')':''}</option>`).join('')}</select>`,'Opcional. Solo para ver en qué se va el viaje.')}
+      ${fld('Rubro',`<select name="rub"><option value="">Sin rubro</option>${RUBROS.map(r=>`<option value="${r}" ${(it&&it.rub?rubOf(it):'')===r?'selected':''}>${r}${RUBHINT[r]?' ('+RUBHINT[r]+')':''}</option>`).join('')}</select>`,'Opcional. Solo para ver en qué se va el viaje.')}
       <div class="usdonly">${fld('Cotización (queda fija)',`<input name="rate" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${nf(it?.rate||rate(curYM)||0)}">`,'Este valor no cambia aunque cambies el dólar del mes.')}</div>`,
       d=>{const v=num(d.amt),o=it||{id:uid()};Object.assign(o,{desc:d.desc,ars:d.cur==='USD'?0:v,usd:d.cur==='USD'?v:0,rate:d.cur==='USD'?num(d.rate):0});if(d.rub)o.rub=d.rub;else delete o.rub;if(!it)tr.items.push(o)},
       it?()=>{tr.items=tr.items.filter(y=>y!==it)}:null);
     const sync=()=>f.querySelector('.usdonly').style.display=f.cur.value==='USD'?'':'none';
     f.querySelectorAll('[name=cur]').forEach(r=>r.onchange=sync);sync();
+    if(!it){let tch=false;f.rub.onchange=()=>tch=true;f.desc.oninput=()=>{if(!tch)f.rub.value=rubSug(f.desc.value)}}
   }
   else if(a==='pal'){S.theme.p=id;save();applyTheme();render()}
   else if(a==='addcat')sheet(`<h3>Nueva categoría</h3>${fld('Nombre','<input name="name" required placeholder="Ej: SALIDAS">')}`,d=>{const n=normCat(d.name);if(S.cats.includes(n)){alert('Esa categoría ya existe.');return false}addCat(n)});
