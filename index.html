@@ -148,6 +148,13 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .srch .sres .row:first-child{border-top:0}
 .srch mark{background:var(--soft);color:var(--accent);border-radius:3px}
 @media(min-width:700px){.srch{align-self:flex-start;margin-top:60px;border-radius:18px}}
+.aviso{display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--cc) 10%,var(--card));border:1px solid color-mix(in srgb,var(--cc) 35%,var(--line));border-radius:12px;padding:8px 4px 8px 12px;margin-bottom:10px}
+.aviso.soft{background:var(--card);border-style:dashed}
+.aviso .adots{display:flex;flex:none}.aviso .adots i{width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 2px var(--card)}.aviso .adots i+i{margin-left:-4px}
+.aviso div{flex:1;min-width:0;display:flex;flex-direction:column;font-size:13.5px;line-height:1.3}
+.aviso div span{color:var(--muted);font-size:12.5px}
+.aviso .ax{border:0;background:none;color:var(--muted);font-size:14px;padding:8px 10px;border-radius:8px;cursor:pointer;align-self:flex-start}
+.aviso .ax:hover{background:var(--week)}
 .row.hit{background:var(--soft);box-shadow:inset 3px 0 0 var(--accent);transition:background .6s}
 .sync{font-size:11px;white-space:nowrap;color:var(--muted);margin-left:8px;font-weight:400}
 .login{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -426,6 +433,25 @@ const dm=d=>String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padSt
 function closeISO(c,m){c=c||{};const[y,mo]=m.split('-').map(Number),last=new Date(y,mo,0).getDate();let d;
   if(c.closeRule==='jue30'){const w=c.closeDow??4;d=new Date(y,mo-1,Math.min(30,last));let k=(w-d.getDay()+7)%7;if(k>3)k-=7;d.setDate(d.getDate()+k-7*(c.closeWk||0))}else d=new Date(y,mo-1,Math.min(c.close||26,last));
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+/* ---------- avisos de cierre: lunes de esa semana, 2 días antes, el día y el día después ---------- */
+const DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const avisoOff=()=>{try{return JSON.parse(localStorage.getItem('gastos-aviso-off'))||[]}catch(e){return[]}};
+function avisosHTML(){
+  const t=todayISO(),off=avisoOff(),ev={};
+  for(const c of cardsAll()){if(c.hidden||!isCredit(c))continue;
+    for(const m of [addM(curYM,-1),curYM,addM(curYM,1)]){
+      const x=closeISO(c,m),d=new Date(x+'T12:00:00'),sh=n=>{const z=new Date(d);z.setDate(z.getDate()+n);return isoOf(z)};
+      const k=t===x?'hoy':t===sh(1)?'post':t===sh(-2)?'pre':t===isoOf(monday(x))?'lun':null;if(!k)continue;
+      const key=x+'|'+k;(ev[key]=ev[key]||{key,x,k,m,cs:[]}).cs.push(c)}}
+  return Object.values(ev).filter(e=>!off.includes(e.key)).sort((a,b)=>a.x.localeCompare(b.x)).map(e=>{
+    const d=new Date(e.x+'T12:00:00'),nx=new Date(d);nx.setDate(nx.getDate()+1);
+    const many=e.cs.length>1,names=e.cs.map(c=>esc(c.name)).join(' y '),dia=DIAS[d.getDay()]+' '+d.getDate(),sig=DIAS[nx.getDay()],mes=MESES[+addM(e.m,1).slice(5)-1].toLowerCase();
+    const [ti,sub]={lun:[`${names} ${many?'cierran':'cierra'} el ${dia}`,`Es esta semana. Lo que compres desde el ${sig} entra en ${mes}.`],
+      pre:[`${names} ${many?'cierran':'cierra'} el ${dia}`,`Faltan 2 días. Lo que compres desde el ${sig} entra en ${mes}.`],
+      hoy:[`${names} ${many?'cierran':'cierra'} hoy`,`Lo que compres desde mañana entra en ${mes}.`],
+      post:[`${names} ya ${many?'cerraron':'cerró'}`,`Lo que compres desde hoy entra en ${mes}.`]}[e.k];
+    return `<div class="aviso ${e.k==='post'?'soft':''}" style="--cc:${e.cs[0].color||'var(--accent)'}"><span class="adots">${e.cs.map(c=>`<i style="background:${c.color||'var(--accent)'}"></i>`).join('')}</span><div><b>${ti}</b><span>${sub}</span></div><button class="ax" data-act="avisooff" data-id="${e.key}" aria-label="Ocultar aviso">✕</button></div>`}).join('');
+}
 function isoOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function periodOf(c,m){if(c&&!isCredit(c)){const[y,mo]=m.split('-').map(Number);return[m+'-01',isoOf(new Date(y,mo,0))]}const d=new Date(closeISO(c,addM(m,-1))+'T12:00:00');d.setDate(d.getDate()+1);return[isoOf(d),closeISO(c,m)]}
 function closeDate(c,m){if(!isCredit(c))return '';const x=closeISO(c,m);return x.slice(8,10)+'/'+x.slice(5,7)}
@@ -455,7 +481,7 @@ function vMes(){
   const cs=cardsAll().map(c=>cardTot(c,m));
   const tc=tcTotal(cs,M),tx=M.taxes.reduce((s,t)=>s+num(t.amount),0);
   const sv=savingOf(m),inc=incOf(m),owe=shOweMonth(m),rest=num(M.salary)+inc-sv-tc-tx-owe;
-    let h=(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta o cuenta</b> para crear tus tarjetas, débito, transferencias o efectivo, y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+(()=>{const pd=shPending();if(!pd.length)return '';return `<div class="card pad" style="margin-bottom:12px"><div style="font-weight:650;margin-bottom:4px">Cargados a tu nombre en compartido</div><div class="hint" style="margin-bottom:6px">Los cargó ${esc(shName(pd[0].e.created_by))} diciendo que pagaste vos. Si salieron de una tarjeta tuya, agregalos y quedan vinculados (no se duplican).</div>`+pd.map(({e})=>`<div class="kv"><span style="min-width:0">${esc(e.descr||'Gasto')} <span class="mut">· ${(isU(e)?fmtU:fmt)(+e.cuota)}${e.cuotas>1?' x'+e.cuotas:''} · ${mLabel(e.first_month)}</span></span><span style="white-space:nowrap"><button class="lnk" data-act="shtocard" data-id="${e.id}">A mi tarjeta</button> <button class="lnk" data-act="shign" data-id="${e.id}">Ignorar</button></span></div>`).join('')+`</div>`})()+`<div class="sumwrap"><div class="card pad sumcard">
+    let h=(view===curYM?avisosHTML():'')+(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta o cuenta</b> para crear tus tarjetas, débito, transferencias o efectivo, y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+(()=>{const pd=shPending();if(!pd.length)return '';return `<div class="card pad" style="margin-bottom:12px"><div style="font-weight:650;margin-bottom:4px">Cargados a tu nombre en compartido</div><div class="hint" style="margin-bottom:6px">Los cargó ${esc(shName(pd[0].e.created_by))} diciendo que pagaste vos. Si salieron de una tarjeta tuya, agregalos y quedan vinculados (no se duplican).</div>`+pd.map(({e})=>`<div class="kv"><span style="min-width:0">${esc(e.descr||'Gasto')} <span class="mut">· ${(isU(e)?fmtU:fmt)(+e.cuota)}${e.cuotas>1?' x'+e.cuotas:''} · ${mLabel(e.first_month)}</span></span><span style="white-space:nowrap"><button class="lnk" data-act="shtocard" data-id="${e.id}">A mi tarjeta</button> <button class="lnk" data-act="shign" data-id="${e.id}">Ignorar</button></span></div>`).join('')+`</div>`})()+`<div class="sumwrap"><div class="card pad sumcard">
     <div class="sum">
       <div class="fld"><label>Sueldo</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="salary" value="${M.salary?nf(M.salary):''}" placeholder="0,00"></div>
       <div class="fld"><label>Ahorro esperado</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="saving" value="${sv?nf(sv):''}" placeholder="0,00"></div>
@@ -1011,6 +1037,7 @@ document.addEventListener('click',e=>{
   else if(a==='next'){view=addM(view,1);render()}
   else if(a==='more'){if($('#moremenu')){$('#moremenu').remove();return}const m=document.createElement('div');m.id='moremenu';m.className='moremenu';m.innerHTML=[...(innerWidth<=700?[['viajes','✈','Vacaciones']]:[]),['sim','%','Simulador'],['ajustes','⚙','Ajustes']].map(([k,i,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}"><span>${i}</span>${n}</button>`).join('');document.body.appendChild(m);setTimeout(()=>document.addEventListener('click',function h(ev){if(!ev.target.closest('#moremenu')&&!ev.target.closest('.nmorebtn')){m.remove();document.removeEventListener('click',h)}}),0)}
   else if(a==='search')srchOpen();
+  else if(a==='avisooff'){const o=avisoOff();o.push(id);try{localStorage.setItem('gastos-aviso-off',JSON.stringify(o.slice(-40)))}catch(e){}render()}
   else if(a==='srchgo')srchGo(id);
   else if(a==='quick'){tab==='comp'&&SH.ledger?shEntryForm(null,'gasto'):purchaseForm()}
   else if(a==='shcreate')shCreate();
