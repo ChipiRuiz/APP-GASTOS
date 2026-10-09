@@ -177,6 +177,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .tbar{height:10px;border-radius:6px;background:var(--week);overflow:hidden;margin-bottom:6px}.tbar i{display:block;height:100%;background:var(--accent);border-radius:6px}.tbar.over i{background:var(--neg)}
 .tline{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:4px}.tline b{color:var(--ink)}
 .tsum .kv{font-size:13.5px;font-variant-numeric:tabular-nums}
+.tbar.sm{height:6px;margin:2px 0 6px}.trbs{padding-top:8px}.trb .tline{margin-bottom:0}
 .trubs{display:flex;flex-wrap:wrap;gap:6px;padding:8px 0 6px}.trubs span{font-size:12px;background:var(--week);border-radius:999px;padding:3px 9px;color:var(--muted)}.trubs b{color:var(--ink);font-weight:600}
 .row.hit{background:var(--soft);box-shadow:inset 3px 0 0 var(--accent);transition:background .6s}
 .sync{font-size:11px;white-space:nowrap;color:var(--muted);margin-left:8px;font-weight:400}
@@ -834,35 +835,44 @@ function vProy(){
 }
 
 /* ---------- vacaciones: fechas, presupuesto y rubros son opcionales; los rubros son solo informativos ---------- */
-function tripDates(o,d){let a=d.start||'',b=d.end||'';if(a&&b&&b<a)[a,b]=[b,a];if(!a&&b)a=b;if(a&&!b)b=a;if(a){o.start=a;o.end=b}else{delete o.start;delete o.end}const v=num(d.budget);if(v)o.budget=v;else delete o.budget}
-const RUBROS=['Pasajes','Alojamiento','Excursiones','Comidas','Otros'];
+function tripDates(o,d){let a=d.start||'',b=d.end||'';if(a&&b&&b<a)[a,b]=[b,a];if(!a&&b)a=b;if(a&&!b)b=a;if(a){o.start=a;o.end=b}else{delete o.start;delete o.end}const v=num(d.budget);if(v)o.budget=v;else delete o.budget;const rb={};RUBROS.forEach(r=>{const n=num(d['rb_'+r]);if(n)rb[r]=n});if(Object.keys(rb).length)o.rb=rb;else delete o.rb}
+const RUBROS=['Pasajes','Alojamiento','Excursiones','Gastos del día','Otros'];
+const RUBHINT={'Gastos del día':'comida, transporte y gastos comunes'};
+const rubOf=i=>i.rub==='Comidas'?'Gastos del día':(i.rub||'Otros');
+const tripRb=t=>t.rb||{};
+const tripBud=t=>num(t.budget||0)||Object.values(tripRb(t)).reduce((s,v)=>s+num(v),0);
 const dDiff=(a,b)=>Math.round((new Date(a+'T12:00:00')-new Date(b+'T12:00:00'))/864e5);
 const dShort=iso=>{const d=new Date(iso+'T12:00:00');return d.getDate()+' '+MESES[d.getMonth()].slice(0,3).toLowerCase()};
 function tripRange(t){if(!t.start)return '';if(!t.end||t.end===t.start)return dShort(t.start);return dShort(t.start)+' al '+dShort(t.end)}
 function tripSum(t,ta){
-  const today=todayISO(),b=num(t.budget||0),left=b-ta,days=t.start&&t.end?dDiff(t.end,t.start)+1:0;let h='',kv=[];
+  const today=todayISO(),b=tripBud(t),left=b-ta,days=t.start&&t.end?dDiff(t.end,t.start)+1:0,rb=tripRb(t);let h='',kv=[];
+  const rs={};t.items.forEach(i=>{const r=rubOf(i);rs[r]=(rs[r]||0)+itemARS(i)});
+  const dia=num(rb['Gastos del día']||0),diaLeft=dia-(rs['Gastos del día']||0);
   if(b){const pc=Math.min(100,ta/b*100);h+=`<div class="tbar ${ta>b?'over':''}"><i style="width:${pc}%"></i></div><div class="tline"><span>Gastado <b>${fmt(ta)}</b></span><span>de ${fmt(b)}</span></div>`;
-    const ph=!t.start||today<t.start?'antes':t.end&&today>t.end||!t.end&&today>t.start?'fin':'en';
+    const ph=!t.start||today<t.start?'antes':today>t.end?'fin':'en';
     kv.push(left>=0?[{antes:'Falta cubrir',en:'Queda del presupuesto',fin:'Te sobró'}[ph],fmt(left)]:['Te pasaste',`<span class="neg">${fmt(-left)}</span>`])}
   if(t.start){
     if(today<t.start){const dl=dDiff(t.start,today),ms=diffM(t.start.slice(0,7),curYM);kv.push(['Faltan para salir',dl===1?'1 día':dl+' días']);
       if(b&&left>0)kv.push(ms>=1?[`Apartá por mes hasta ${MESES[+t.start.slice(5,7)-1].toLowerCase()}`,`<b>${fmt(left/ms)}</b>`]:['Apartá antes de salir',`<b>${fmt(left)}</b>`]);
-      if(b&&days)kv.push(['Gasto por día previsto',fmt(b/days)])}
-    else if(!t.end||today<=t.end){const n=t.end?dDiff(t.end,today)+1:0;kv.push(['En viaje',days?`día ${dDiff(today,t.start)+1} de ${days}`:'']);
-      if(b&&n)kv.push([`Podés gastar por día (${n===1?'queda 1 día':'quedan '+n+' días'})`,left>0?`<b>${fmt(left/n)}</b>`:'<span class="neg">nada</span>'])}
-    else{kv.push(['Viaje terminado',days?(days===1?'1 día':days+' días'):'']);if(days)kv.push(['Promedio por día',fmt(ta/days)])}}
-  const rs={};t.items.forEach(i=>{const r=i.rub||'Otros';rs[r]=(rs[r]||0)+itemARS(i)});
-  const rub=t.items.some(i=>i.rub)?`<div class="trubs">${RUBROS.filter(r=>rs[r]).map(r=>`<span>${r} <b>${fmt(rs[r])}</b></span>`).join('')}</div>`:'';
+      if(days&&dia)kv.push(['Gastos del día, por día',fmt(dia/days)]);else if(b&&days)kv.push(['Gasto por día previsto',fmt(b/days)])}
+    else if(today<=t.end){const n=dDiff(t.end,today)+1,q=n===1?'queda 1 día':'quedan '+n+' días';kv.push(['En viaje',`día ${dDiff(today,t.start)+1} de ${days}`]);
+      if(dia)kv.push([`Gastos del día: podés gastar por día (${q})`,diaLeft>0?`<b>${fmt(diaLeft/n)}</b>`:'<span class="neg">nada</span>']);
+      else if(b)kv.push([`Podés gastar por día (${q})`,left>0?`<b>${fmt(left/n)}</b>`:'<span class="neg">nada</span>'])}
+    else{kv.push(['Viaje terminado',days===1?'1 día':days+' días']);kv.push(['Promedio por día',fmt(ta/days)])}}
+  const withB=RUBROS.filter(r=>num(rb[r]||0));
+  const bars=withB.map(r=>{const v=num(rb[r]),g=rs[r]||0;return `<div class="trb"><div class="tline"><span>${r}</span><span><b>${fmt(g)}</b> de ${fmt(v)}</span></div><div class="tbar sm ${g>v?'over':''}"><i style="width:${Math.min(100,g/v*100)}%"></i></div></div>`}).join('');
+  const rest=t.items.some(i=>i.rub)?RUBROS.filter(r=>rs[r]&&!withB.includes(r)).map(r=>`<span>${r} <b>${fmt(rs[r])}</b></span>`).join(''):'';
+  const rub=(bars?`<div class="trbs">${bars}</div>`:'')+(rest?`<div class="trubs">${rest}</div>`:'');
   if(!h&&!kv.length&&!rub)return '';
   return `<div class="tsum">${h}${kv.map(([k,v])=>`<div class="kv"><span>${k}</span><span>${v}</span></div>`).join('')}${rub}</div>`;
 }
 function vViajes(){
   return S.trips.map(t=>{
     const ta=t.items.reduce((s,i)=>s+itemARS(i),0),tu=sumBy(t.items,'usd'),ar=sumBy(t.items,'ars');
-    return `<section class="card cc ${closed.has(t.id)?'closed':''}"><header data-act="toggle" data-id="${t.id}"><span class="chev">▼</span><h3>${esc(t.name)} <span class="mut" style="font-weight:400">· ${t.items.length} gastos${t.fromSavings?' · con ahorros':''}</span>${t.start?`<span class="cdate">${tripRange(t)}</span>`:''}</h3><b>${fmt(ta)}${num(t.budget||0)?`<span class="cdate" style="text-align:right">de ${fmt(num(t.budget))}</span>`:''}</b><button class="x" data-act="edittrip" data-id="${t.id}" aria-label="Editar viaje">✎</button></header>
+    return `<section class="card cc ${closed.has(t.id)?'closed':''}"><header data-act="toggle" data-id="${t.id}"><span class="chev">▼</span><h3>${esc(t.name)} <span class="mut" style="font-weight:400">· ${t.items.length} gastos${t.fromSavings?' · con ahorros':''}</span>${t.start?`<span class="cdate">${tripRange(t)}</span>`:''}</h3><b>${fmt(ta)}${tripBud(t)?`<span class="cdate" style="text-align:right">de ${fmt(tripBud(t))}</span>`:''}</b><button class="x" data-act="edittrip" data-id="${t.id}" aria-label="Editar viaje">✎</button></header>
       <div class="rows">${tripSum(t,ta)}<table class="tbl">
       <thead><tr><th>Descripción</th><th>Gasto ($)</th><th>Gasto (U$D)</th><th>Total ($)</th></tr></thead><tbody>
-      ${t.items.map(i=>`<tr class="c" data-act="edititem" data-trip="${t.id}" data-id="${i.id}"><td>${esc(i.desc)}${i.rub?`<div class="r-sub">${esc(i.rub)}</div>`:''}${i.usd?`<div class="r-sub mob">${fmtU(i.usd)} ${i.rate?'@ '+fmt(i.rate):'· sin cotización'}</div>`:''}</td><td>${i.ars?fmt(i.ars):'—'}</td>
+      ${t.items.map(i=>`<tr class="c" data-act="edititem" data-trip="${t.id}" data-id="${i.id}"><td>${esc(i.desc)}${i.rub?`<div class="r-sub">${esc(rubOf(i))}</div>`:''}${i.usd?`<div class="r-sub mob">${fmtU(i.usd)} ${i.rate?'@ '+fmt(i.rate):'· sin cotización'}</div>`:''}</td><td>${i.ars?fmt(i.ars):'—'}</td>
         <td>${i.usd?fmtU(i.usd)+`<div class="r-sub">${i.rate?'@ '+fmt(i.rate):'<span class="warn">sin cotización</span>'}</div>`:'—'}</td><td>${fmt(itemARS(i))}</td></tr>`).join('')}
       </tbody><tfoot><tr><td>Total</td><td>${fmt(ar)}</td><td>${fmtU(tu)}</td><td>${fmt(ta)}</td></tr></tfoot></table>
       <button class="lnk" data-act="additem" data-trip="${t.id}">+ Agregar gasto</button></div>
@@ -1160,15 +1170,15 @@ document.addEventListener('click',e=>{
   else if(a==='edityld'){const x=S.yields.find(y=>y.id===id);simpleForm('Rendimientos FCI',[['date','Fecha','date',x.date],['amount','Monto','num',(x.amount<0?'-':'')+nf(x.amount)]],x,d=>{Object.assign(x,{date:d.date,amount:num(d.amount)})},()=>{S.yields=S.yields.filter(y=>y!==x)})}
   else if(a==='addsx')simpleForm('Gasto desde ahorros',[['desc','Descripción'],['date','Fecha','date',todayISO()],['amount','Monto','num']],null,d=>{S.savingsExp.push({id:uid(),desc:d.desc,date:d.date,amount:num(d.amount)})});
   else if(a==='editsx'){const x=S.savingsExp.find(y=>y.id===id);simpleForm('Editar gasto desde ahorros',[['desc','Descripción','',x.desc],['date','Fecha','date',x.date],['amount','Monto','num',nf(x.amount)]],x,d=>{Object.assign(x,{desc:d.desc,date:d.date,amount:num(d.amount)})},()=>{S.savingsExp=S.savingsExp.filter(y=>y!==x)})}
-  else if(a==='addtrip'){const x=null;sheet(`<h3>Nuevo viaje</h3>${fld('Nombre','<input name="name" required>')}<div class="f2">${fld('Desde',`<input type="date" name="start" value="${x?.start||''}">`)}${fld('Hasta',`<input type="date" name="end" value="${x?.end||''}">`)}</div>${fld('Presupuesto ($)',`<input name="budget" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.budget?nf(x.budget):''}" placeholder="Opcional">`,'Fechas y presupuesto son opcionales.')}<label class="chk"><input type="checkbox" name="fs"> Pagado con ahorros (se resta del saldo de ahorros)</label>`,d=>{const o={id:uid(),name:d.name,items:[],fromSavings:!!d.fs};tripDates(o,d);S.trips.push(o)})}
-  else if(a==='edittrip'){const x=S.trips.find(y=>y.id===id);const f=sheet(`<h3>Editar viaje</h3>${fld('Nombre',`<input name="name" required value="${esc(x.name)}">`)}<div class="f2">${fld('Desde',`<input type="date" name="start" value="${x?.start||''}">`)}${fld('Hasta',`<input type="date" name="end" value="${x?.end||''}">`)}</div>${fld('Presupuesto ($)',`<input name="budget" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.budget?nf(x.budget):''}" placeholder="Opcional">`,'Fechas y presupuesto son opcionales.')}<label class="chk"><input type="checkbox" name="fs" ${x.fromSavings?'checked':''}> Pagado con ahorros (se resta del saldo de ahorros)</label><div class="savonly">${fld('Monto restado de ahorros',`<input name="sa" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x.savAmt?nf(x.savAmt):''}" placeholder="${nf(tripTot(x))}">`,'Vacío = total del viaje.')}</div>`,d=>{x.name=d.name;x.fromSavings=!!d.fs;tripDates(x,d);const v=num(d.sa);if(x.fromSavings&&v)x.savAmt=v;else delete x.savAmt},()=>{S.trips=S.trips.filter(y=>y!==x)});const sy=()=>f.querySelector('.savonly').style.display=f.fs.checked?'':'none';f.fs.onchange=sy;sy()}
+  else if(a==='addtrip'){const x=null;sheet(`<h3>Nuevo viaje</h3>${fld('Nombre','<input name="name" required>')}<div class="f2">${fld('Desde',`<input type="date" name="start" value="${x?.start||''}">`)}${fld('Hasta',`<input type="date" name="end" value="${x?.end||''}">`)}</div>${fld('Presupuesto ($)',`<input name="budget" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.budget?nf(x.budget):''}" placeholder="Opcional">`,'Si lo dejás vacío, se usa la suma de los rubros.')}<details class="more" ${x&&x.rb&&Object.keys(x.rb).length?'open':''}><summary>Presupuesto por rubro</summary>${RUBROS.map(r=>fld(r+(RUBHINT[r]?` <span class="mut">· ${RUBHINT[r]}</span>`:''),`<input name="rb_${r}" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.rb?.[r]?nf(x.rb[r]):''}" placeholder="Opcional">`)).join('')}</details><label class="chk"><input type="checkbox" name="fs"> Pagado con ahorros (se resta del saldo de ahorros)</label>`,d=>{const o={id:uid(),name:d.name,items:[],fromSavings:!!d.fs};tripDates(o,d);S.trips.push(o)})}
+  else if(a==='edittrip'){const x=S.trips.find(y=>y.id===id);const f=sheet(`<h3>Editar viaje</h3>${fld('Nombre',`<input name="name" required value="${esc(x.name)}">`)}<div class="f2">${fld('Desde',`<input type="date" name="start" value="${x?.start||''}">`)}${fld('Hasta',`<input type="date" name="end" value="${x?.end||''}">`)}</div>${fld('Presupuesto ($)',`<input name="budget" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.budget?nf(x.budget):''}" placeholder="Opcional">`,'Si lo dejás vacío, se usa la suma de los rubros.')}<details class="more" ${x&&x.rb&&Object.keys(x.rb).length?'open':''}><summary>Presupuesto por rubro</summary>${RUBROS.map(r=>fld(r+(RUBHINT[r]?` <span class="mut">· ${RUBHINT[r]}</span>`:''),`<input name="rb_${r}" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.rb?.[r]?nf(x.rb[r]):''}" placeholder="Opcional">`)).join('')}</details><label class="chk"><input type="checkbox" name="fs" ${x.fromSavings?'checked':''}> Pagado con ahorros (se resta del saldo de ahorros)</label><div class="savonly">${fld('Monto restado de ahorros',`<input name="sa" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x.savAmt?nf(x.savAmt):''}" placeholder="${nf(tripTot(x))}">`,'Vacío = total del viaje.')}</div>`,d=>{x.name=d.name;x.fromSavings=!!d.fs;tripDates(x,d);const v=num(d.sa);if(x.fromSavings&&v)x.savAmt=v;else delete x.savAmt},()=>{S.trips=S.trips.filter(y=>y!==x)});const sy=()=>f.querySelector('.savonly').style.display=f.fs.checked?'':'none';f.fs.onchange=sy;sy()}
   else if(a==='additem'||a==='edititem'){
     const tr=S.trips.find(y=>y.id===t.dataset.trip),it=a==='edititem'?tr.items.find(y=>y.id===id):null;
     const cur=it&&it.usd&&!it.ars?'USD':'ARS';
     const f=sheet(`<h3>${it?'Editar':'Nuevo'} gasto · ${esc(tr.name)}</h3>
       ${fld('Descripción',`<input name="desc" required value="${esc(it?.desc||'')}">`)}
       <div class="f2">${fld('Monto',`<input name="amt" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required value="${it?nf(cur==='USD'?it.usd:it.ars):''}" placeholder="0,00">`)}${fld('Moneda',curSeg(cur))}</div>
-      ${fld('Rubro',`<select name="rub"><option value="">Sin rubro</option>${RUBROS.map(r=>`<option ${it?.rub===r?'selected':''}>${r}</option>`).join('')}</select>`,'Opcional. Solo para ver en qué se va el viaje.')}
+      ${fld('Rubro',`<select name="rub"><option value="">Sin rubro</option>${RUBROS.map(r=>`<option value="${r}" ${it&&it.rub&&rubOf(it)===r?'selected':''}>${r}${RUBHINT[r]?' ('+RUBHINT[r]+')':''}</option>`).join('')}</select>`,'Opcional. Solo para ver en qué se va el viaje.')}
       <div class="usdonly">${fld('Cotización (queda fija)',`<input name="rate" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${nf(it?.rate||rate(curYM)||0)}">`,'Este valor no cambia aunque cambies el dólar del mes.')}</div>`,
       d=>{const v=num(d.amt),o=it||{id:uid()};Object.assign(o,{desc:d.desc,ars:d.cur==='USD'?0:v,usd:d.cur==='USD'?v:0,rate:d.cur==='USD'?num(d.rate):0});if(d.rub)o.rub=d.rub;else delete o.rub;if(!it)tr.items.push(o)},
       it?()=>{tr.items=tr.items.filter(y=>y!==it)}:null);
