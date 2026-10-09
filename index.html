@@ -285,13 +285,13 @@ mq.addEventListener?.('change',()=>applyTheme());
 let S=emptyState(),user=null,remoteAt=null,pushT=null,pending=false;
 const cacheKey=()=>'gastos-cache-'+(user?user.id:'anon');
 const setSync=t=>{const e=$('#sync');if(e)e.textContent=t};
-function cache(){try{localStorage.setItem(cacheKey(),JSON.stringify({S,remoteAt}))}catch(e){}}
+function cache(){try{localStorage.setItem(cacheKey(),JSON.stringify({S,remoteAt,pending}))}catch(e){}}
 function save(){cache();pending=true;setSync('guardando…');clearTimeout(pushT);pushT=setTimeout(push,1200)}
 async function push(){
   if(!sb||!user)return;
   const at=new Date().toISOString();
   const {error}=await sb.from('app_state').upsert({user_id:user.id,data:S,updated_at:at});
-  if(error){setSync('sin conexión · se guarda al volver');console.warn(error);return}
+  if(error){setSync(navigator.onLine?'no se pudo guardar · reintentando':'sin conexión · guardado en el celular');console.warn(error);return}
   remoteAt=at;pending=false;cache();setSync('guardado');
 }
 async function pull(force){
@@ -300,7 +300,9 @@ async function pull(force){
   if(data&&(force||!remoteAt||data.updated_at>remoteAt)){S=data.data;remoteAt=data.updated_at;cache();return true}
   return false;
 }
-addEventListener('online',()=>{if(pending)push()});
+addEventListener('online',()=>{if(pending)push();if(user)shRefresh()});
+addEventListener('offline',()=>setSync(pending?'sin conexión · guardado en el celular':'sin conexión'));
+setInterval(()=>{if(pending&&user&&navigator.onLine)push()},30000);
 document.addEventListener('visibilitychange',async()=>{
   if(document.visibilityState!=='visible'||!user)return;
   if(pending){push();return}
@@ -348,9 +350,10 @@ function showNewPass(msg,fromSettings){
   if(fromSettings)$('#cancelpw').onclick=()=>{$('#login').innerHTML='';applyTheme()};
 }
 async function boot(){
-  try{const c=JSON.parse(localStorage.getItem(cacheKey()));if(c){S=c.S;remoteAt=c.remoteAt}}catch(e){}
+  try{const c=JSON.parse(localStorage.getItem(cacheKey()));if(c){S=c.S;remoteAt=c.remoteAt;pending=!!c.pending}}catch(e){}
   applyTheme();render();
-  try{await pull(!remoteAt);setSync('')}catch(e){setSync('sin conexión')}
+  if(pending)push();
+  else try{await pull(!remoteAt);setSync('')}catch(e){setSync('sin conexión')}
   if(!S||!S.months)S=emptyState();
   if(migrate())save();
   applyTheme();render();
@@ -363,9 +366,11 @@ async function start(){
   if(/error_code=|error=/.test(location.hash)){history.replaceState(null,'',appURL());return showForgot('El link venció o ya se usó. Pedí uno nuevo.')}
   let shown=false;
   sb.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY'&&!shown){shown=true;showNewPass()}});
-  const {data}=await sb.auth.getSession();
+  const {data,error}=await sb.auth.getSession();
   if(recovering||shown){if(!shown){shown=true;showNewPass()}return}
-  if(data.session){user=data.session.user;await boot()}else showLogin();
+  let u=data.session?.user;
+  if(!u&&(error||!navigator.onLine))try{u=JSON.parse(localStorage.getItem('sb-'+new URL(SB_URL).hostname.split('.')[0]+'-auth-token'))?.user}catch(e){}
+  if(u){user=u;await boot()}else showLogin();
 }
 let view=curYM, tab='mes';
 const closed=new Set(),opened=new Set();
@@ -546,7 +551,8 @@ async function shLoad(){
       sb.from('ledger_entries').select('*').in('ledger_id',ids).order('first_month'),
       sb.from('ledger_loans').select('*').in('ledger_id',ids).order('date')]);
     SH.all=(lgs||[]).sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||'')).map(l=>({ledger:l,members:(ms||[]).filter(m=>m.ledger_id===l.id),entries:(es||[]).filter(e=>e.ledger_id===l.id),loans:(lns||[]).filter(e=>e.ledger_id===l.id)}));
-    shSelect(S.shCur);SH.loaded=true;SH.err='';
+    shSelect(S.shCur);SH.loaded=true;SH.err='';SH.off=false;
+    try{localStorage.setItem('gastos-sh-'+user.id,JSON.stringify(SH.all))}catch(e){}
     let ch=false;const byE={};SH.all.forEach(L=>L.entries.forEach(e=>byE[e.id]=[L,e]));
     for(const L of SH.all)for(const e of L.entries){if(!e.source_purchase||e.paid_by!==user.id)continue;const p=S.purchases.find(x=>x.id===e.source_purchase);if(p&&!p.shared){p.shared={l:L.ledger.id,e:e.id,s:+e.share,w:shOtherOf(L)||'',from:e.first_month};ch=true}}
     for(const p of S.purchases){if(!p.shared||!p.shared.e)continue;const hit=byE[p.shared.e];
@@ -560,7 +566,10 @@ async function shLoad(){
       .on('postgres_changes',{event:'*',schema:'public',table:'ledger_members'},()=>shRefresh())
       .on('postgres_changes',{event:'*',schema:'public',table:'ledger_loans'},()=>shRefresh())
       .subscribe()}
-  }catch(err){SH.err='No se pudo cargar lo compartido.';SH.loaded=true;console.warn(err)}
+  }catch(err){
+    let c=null;try{c=JSON.parse(localStorage.getItem('gastos-sh-'+user.id))}catch(e){}
+    if(c&&!navigator.onLine){SH.all=c;shSelect(S.shCur);SH.off=true;SH.err=''}else SH.err='No se pudo cargar lo compartido.';
+    SH.loaded=true;console.warn(err)}
 }
 let shT=null;function shRefresh(){clearTimeout(shT);shT=setTimeout(async()=>{await shLoad();shRender()},250)}
 function shRender(){const a=document.activeElement;if(a&&a.closest&&a.closest('#app')&&a.matches('input,textarea,select'))return;render()}
@@ -579,7 +588,7 @@ function vComp(){
   const chips=`<div class="shchips">${SH.all.map(L=>{const b=shMonthNet(view,L.entries),bu=shMonthNet(view,L.entries,'USD');return `<button class="shchip ${L.ledger.id===SH.ledger.id?'on':''}" data-act="shsel" data-id="${L.ledger.id}"><b>${esc(L.ledger.name)}</b><span>${esc(shOtherOf(L)||'sin invitar')} · ${b>0.005?'+':b<-0.005?'−':''}${fmt(Math.abs(b))}${Math.abs(bu)>0.005?` · ${bu>0?'+':'−'}${fmtU(Math.abs(bu))}`:''}</span></button>`}).join('')}<button class="shchip add" data-act="shcreate">+ Nueva</button></div>`;
   const o=shOther(),m=view,b=shMonthNet(m),bu=shMonthNet(m,SH.entries,'USD');
   const who=b>0.005?`${esc(shOtherName())} te debe`:b<-0.005?`Le debés a ${esc(shOtherName())}`:'Están a mano';
-  let h=chips+`<div class="card pad hero"><div class="mut" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(SH.ledger.name)} · ${mLabel(m)}</span><button class="x" style="margin:-6px -8px 0 0" data-act="shedit" aria-label="Editar cuenta">✎</button></div><div class="kv" style="border:0;align-items:baseline"><span><b>${who}</b><div class="hint">neto del mes</div></span><span class="big ${b<-0.005?'neg':''}">${fmt(Math.abs(b))}</span></div>
+  let h=(SH.off?`<div class="banner">Sin conexión: esto es lo compartido de la última vez. Para cambiar algo acá necesitás internet.</div>`:'')+chips+`<div class="card pad hero"><div class="mut" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(SH.ledger.name)} · ${mLabel(m)}</span><button class="x" style="margin:-6px -8px 0 0" data-act="shedit" aria-label="Editar cuenta">✎</button></div><div class="kv" style="border:0;align-items:baseline"><span><b>${who}</b><div class="hint">neto del mes</div></span><span class="big ${b<-0.005?'neg':''}">${fmt(Math.abs(b))}</span></div>
     ${Math.abs(bu)>0.005?`<div class="kv"><span><b>${bu>0?esc(shOtherName())+' te debe':'Le debés'}</b> <span class="mut">en dólares</span></span><span class="${bu<0?'neg':''}" style="font-size:20px;font-weight:700">${fmtU(Math.abs(bu))}</span></div>`:''}
     ${!o?`<div class="warn" style="margin-top:8px">Todavía estás sola en esta cuenta. Invitá a la otra persona con ✎.</div>`:''}
     <button class="btn" style="width:100%;margin-top:12px" data-act="shpay">Registrar pago</button></div>`;
@@ -1026,6 +1035,7 @@ document.addEventListener('change',e=>{
   else if(t.id==='imp'&&t.files[0]){t.files[0].text().then(s=>{try{const d=JSON.parse(s);if(!d.purchases||!d.months)throw 0;if(S.purchases.length&&!confirm('Esto reemplaza todos los datos actuales. ¿Seguir?'))return;S=d;S.theme=S.theme||{p:'rosa',mode:'auto'};migrate();save();applyTheme();render();alert('Importado: '+d.purchases.length+' gastos')}catch(err){alert('Archivo inválido')}})}
 });
 start();
+if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body>
 </html>
