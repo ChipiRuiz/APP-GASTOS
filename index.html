@@ -135,7 +135,11 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .srchbar{display:flex;align-items:center;gap:8px;flex:1;max-width:340px;border:1.5px solid color-mix(in srgb,var(--accent) 55%,var(--line));background:var(--card);color:var(--muted);border-radius:999px;padding:8px 14px;cursor:pointer;font-size:14.5px;text-align:left}
 .srchbar svg{color:var(--accent);flex:none}
 .srchbar:hover{border-color:var(--accent);color:var(--ink)}
-@media(max-width:700px){.top{flex-wrap:wrap}.top h1{flex:1;min-width:0}.top .sync{overflow:hidden;text-overflow:ellipsis}.srchbar{order:3;flex-basis:100%;max-width:none}}
+.srchb{display:none;border:0;background:none;color:var(--accent);padding:6px;margin:-6px 0 -6px 6px;border-radius:10px;cursor:pointer;vertical-align:-5px}
+.srchb:hover{background:var(--soft)}
+.srchbar{margin-left:20px}.mnav{margin-left:auto}
+.top.nosrch .srchb,.top.nosrch .srchbar{display:none!important}
+@media(max-width:700px){.srchb{display:inline-block}.srchbar{display:none}.top h1{flex:1;min-width:0}.top .sync{overflow:hidden;text-overflow:ellipsis}}
 .srch{align-self:flex-start;border-radius:0 0 18px 18px;max-height:85vh;display:flex;flex-direction:column;gap:10px;padding-top:calc(14px + env(safe-area-inset-top))}
 .srch .sbox{display:flex;align-items:center;gap:8px;border:2px solid var(--accent);border-radius:12px;padding:8px 10px;background:var(--bg)}
 .srch .sbox input{border:0;background:none;outline:none;flex:1;min-width:0;font-size:16px}
@@ -225,8 +229,8 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 </head>
 <body>
 <div class="top">
-  <h1><span id="ttl">Mis Gastos</span><span class="sync" id="sync"></span></h1>
-  <button class="srchbar" id="srchb" data-act="search"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>Buscar gastos</span></button>
+  <h1><span id="ttl">Mis Gastos</span><button class="srchb" data-act="search" aria-label="Buscar gastos" title="Buscar gastos"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button><span class="sync" id="sync"></span></h1>
+  <button class="srchbar" data-act="search"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>Buscar gastos</span></button>
   <div class="mnav" id="mnav">
     <button class="ib" data-act="prev" aria-label="Mes anterior">‹</button>
     <b id="mlabel"></b>
@@ -479,7 +483,7 @@ function render(){
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab||(b.classList.contains('nmorebtn')&&(['ajustes','sim'].includes(tab)||(tab==='viajes'&&innerWidth<=700)))));
   $('#mnav').style.visibility=tab==='mes'||tab==='comp'?'visible':'hidden';$('#mnav').style.display=tab==='mes'||tab==='comp'?'':'none';
   $('#mlabel').textContent=mLabel(view);
-  $('#srchb').style.display=tab==='mes'?'':'none';
+  $('.top').classList.toggle('nosrch',tab!=='mes');
   $('#ttl').textContent={mes:'Mis Gastos',ahorros:'Ahorros',proy:'Proyección',sim:'Simulador de compra',viajes:'Vacaciones',comp:'Compartido',ajustes:'Ajustes'}[tab];
   $('#app').innerHTML={mes:vMes,ahorros:vAhorros,proy:vProy,sim:()=>simUI(true),viajes:vViajes,comp:vComp,ajustes:vAjustes}[tab]();
 }
