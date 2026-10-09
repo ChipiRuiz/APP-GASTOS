@@ -869,10 +869,10 @@ function vFijos(){
     <div class="kv"><span>En un año, a este ritmo</span><span>${fmt(tot*12)}</span></div></div>
     ${up?`<div class="banner">${up===1?'1 gasto fijo subió':up+' gastos fijos subieron'} respecto del mes anterior.</div>`:''}
     ${sg.length?`<h2>¿Son gastos fijos?</h2><div class="card">${sg.map(x=>`<div class="row fjrow"><div style="min-width:0"><div class="r-desc">${esc(x.desc)}</div><div class="r-sub">${esc(x.card.name)} · aparece ${x.ms.size} de los últimos 4 meses</div></div><button class="fjb on" data-act="fjon" data-id="${esc(x.k)}">Es fijo</button><button class="fjb" data-act="fjno" data-id="${esc(x.k)}">No</button></div>`).join('')}</div>`:''}
-    ${sec('Se repiten todos los meses',cur.filter(x=>x.kind==='rec'))}
+    ${sec('Débitos automáticos y suscripciones',cur.filter(x=>x.kind==='rec'))}
     ${sec('Marcados como fijos',cur.filter(x=>x.kind==='mark'),'Para marcar otro, abrí el gasto y tocá 📌 Gasto fijo. La ✕ lo saca de esta lista; el gasto no se borra.')}
     ${sec('Impuestos y servicios',cur.filter(x=>x.kind==='tax'))}
-    ${cur.length||sg.length?'':`<div class="banner">Todavía no hay gastos fijos en este mes. Aparecen los que tienen "Se repite todos los meses", los impuestos y servicios, y los que marques con 📌 Gasto fijo al abrir un gasto.</div>`}`;
+    ${cur.length||sg.length?'':`<div class="banner">Todavía no hay gastos fijos en este mes. Aparecen los débitos automáticos y suscripciones, los impuestos y servicios, y los que marques con 📌 Gasto fijo al abrir un gasto.</div>`}`;
 }
 function vAjustes(){
   const t=S.theme;
