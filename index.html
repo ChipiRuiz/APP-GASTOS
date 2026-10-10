@@ -493,8 +493,8 @@ function migrate(){let ch=false;
 function cardTot(c,m){const L=lines(c.id,m),A=L.filter(l=>!l.u),U=L.filter(l=>l.u);const b=sumBy(A,'val'),r=sumBy(A,'ref'),ub=sumBy(U,'uval'),ur=sumBy(U,'uref'),sh=sumBy(A.filter(l=>l.sh),'ref'),ush=sumBy(U.filter(l=>l.sh),'uref');const R2=v=>Math.round(v*100)/100;return{c,L,b,r,sh,ush,rf:R2(r-sh),urf:R2(ur-ush),n:b-r,ub,ur,un:ub-ur}}
 function tcTotal(cs,M){const ars=cs.reduce((s,x)=>s+x.n,0),un=cs.reduce((s,x)=>s+x.un,0);return ars+Math.max(0,un-num(M.usdPaid||0))*(num(M.usd)||0)}
 const incOf=m=>((S.months[m]||{}).incomes||[]).reduce((s,x)=>s+num(x.amount),0);
-/* saldo de reintegros: lo reintegrado en tarjetas (sin la parte compartida) desde S.refStart, menos los ingresos marcados ↩ */
-function refAvail(m){if(!S.refStart||m<S.refStart)return null;let t=0;for(let k=S.refStart;k<=m;k=addM(k,1)){for(const c of cardsAll()){const x=cardTot(c,k);t+=x.rf+x.urf*rate(k)}t-=((S.months[k]||{}).incomes||[]).filter(i=>i.ref).reduce((s,i)=>s+Math.abs(num(i.amount)),0)}return Math.round(t*100)/100}
+/* saldo de reintegros: lo reintegrado en tarjetas desde S.refStart (sin compartidos ni "reintegro total", que es plata que te devuelve otra persona), menos los ingresos marcados ↩ */
+function refAvail(m){if(!S.refStart||m<S.refStart)return null;let t=0;for(let k=S.refStart;k<=m;k=addM(k,1)){for(const c of cardsAll())for(const l of lines(c.id,k))if(!l.sh&&!l.p.refAll)t+=l.ref;t-=((S.months[k]||{}).incomes||[]).filter(i=>i.ref).reduce((s,i)=>s+Math.abs(num(i.amount)),0)}return Math.round(t*100)/100}
 function monthTotals(m){const M=S.months[m]||lastMonth(m);const tc=tcTotal(cardsAll().map(c=>cardTot(c,m)),{usd:rate(m),usdPaid:(S.months[m]||{}).usdPaid||0});const tx=(M.taxes||[]).reduce((s,t)=>s+num(t.amount),0);const sal=num(M.salary),inc=incOf(m),sv=savingOf(m),owe=shOweMonth(m);return{sal,inc,tc:tc+owe,tx,sv,owe,rest:sal+inc-sv-tc-tx-owe}}
 function lines(card,m){
   return S.purchases.filter(p=>p.card===card).map(p=>{
