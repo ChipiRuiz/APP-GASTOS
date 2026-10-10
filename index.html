@@ -73,7 +73,9 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .paid.on{background:var(--accent);color:var(--onacc)}
 .tax{display:grid;grid-template-columns:auto minmax(0,1fr) 100px auto;gap:8px;align-items:center;padding:8px 14px;border-top:1px solid var(--line)}
 .tax:first-child{border-top:0}
-.tax.inc{grid-template-columns:minmax(0,1fr) 110px auto}
+.tax.inc{grid-template-columns:minmax(0,1fr) auto 110px auto}
+.incref{border:1.5px solid var(--line);background:none;color:var(--muted);border-radius:999px;font-size:10.5px;font-weight:700;padding:4px 8px;cursor:pointer;white-space:nowrap}.incref.on{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.refbal{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--line);background:var(--week)}.refbal span{display:flex;flex-direction:column;font-weight:600;font-size:13px}.refbal small{font-weight:400;color:var(--muted);font-size:11.5px}
 .tax input[type=text]{border:1px solid transparent;background:none;border-radius:7px;padding:6px;width:100%}
 .tax input[type=text]:focus{border-color:var(--line);background:var(--bg)}
 .tax input.amt{text-align:right}
@@ -491,6 +493,8 @@ function migrate(){let ch=false;
 function cardTot(c,m){const L=lines(c.id,m),A=L.filter(l=>!l.u),U=L.filter(l=>l.u);const b=sumBy(A,'val'),r=sumBy(A,'ref'),ub=sumBy(U,'uval'),ur=sumBy(U,'uref'),sh=sumBy(A.filter(l=>l.sh),'ref'),ush=sumBy(U.filter(l=>l.sh),'uref');const R2=v=>Math.round(v*100)/100;return{c,L,b,r,sh,ush,rf:R2(r-sh),urf:R2(ur-ush),n:b-r,ub,ur,un:ub-ur}}
 function tcTotal(cs,M){const ars=cs.reduce((s,x)=>s+x.n,0),un=cs.reduce((s,x)=>s+x.un,0);return ars+Math.max(0,un-num(M.usdPaid||0))*(num(M.usd)||0)}
 const incOf=m=>((S.months[m]||{}).incomes||[]).reduce((s,x)=>s+num(x.amount),0);
+/* saldo de reintegros: lo reintegrado en tarjetas (sin la parte compartida) desde S.refStart, menos los ingresos marcados ↩ */
+function refAvail(m){if(!S.refStart||m<S.refStart)return null;let t=0;for(let k=S.refStart;k<=m;k=addM(k,1)){for(const c of cardsAll()){const x=cardTot(c,k);t+=x.rf+x.urf*rate(k)}t-=((S.months[k]||{}).incomes||[]).filter(i=>i.ref).reduce((s,i)=>s+Math.abs(num(i.amount)),0)}return Math.round(t*100)/100}
 function monthTotals(m){const M=S.months[m]||lastMonth(m);const tc=tcTotal(cardsAll().map(c=>cardTot(c,m)),{usd:rate(m),usdPaid:(S.months[m]||{}).usdPaid||0});const tx=(M.taxes||[]).reduce((s,t)=>s+num(t.amount),0);const sal=num(M.salary),inc=incOf(m),sv=savingOf(m),owe=shOweMonth(m);return{sal,inc,tc:tc+owe,tx,sv,owe,rest:sal+inc-sv-tc-tx-owe}}
 function lines(card,m){
   return S.purchases.filter(p=>p.card===card).map(p=>{
@@ -595,7 +599,7 @@ function vMes(){
       <footer><span>Bruto ${fmt(x.b)}</span>${x.rf||!x.sh?`<span class="pos">Reint. ${fmt(x.rf)}</span>`:''}${x.sh?`<span class="pos">⇄ Compartido ${fmt(x.sh)}</span>`:''}<b>Neto ${fmt(x.n)}</b></footer>${x.ub?`<footer class="ufoot"><span>U$D bruto ${fmtU(x.ub)}</span>${x.urf||!x.ush?`<span class="pos">Reint. ${fmtU(x.urf)}</span>`:''}${x.ush?`<span class="pos">⇄ Compartido ${fmtU(x.ush)}</span>`:''}<b>Neto ${fmtU(x.un)}</b></footer>`:''}</section>`;
   }
   h+=`</div><button class="addcard" data-act="addcard">+ Nueva tarjeta o cuenta</button>`;
-  h+=`<h2>Otros ingresos</h2><div class="card">${(M.incomes||[]).map(t=>`<div class="tax inc"><input type="text" data-ic="name" data-id="${t.id}" value="${esc(t.name)}" placeholder="Ej: Aguinaldo"><input type="text" class="amt" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-ic="amount" data-id="${t.id}" value="${num(t.amount)?(num(t.amount)<0?'-':'')+nf(num(t.amount)):''}" placeholder="0,00"><button class="x" data-act="delinc" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('')}<button class="lnk" data-act="addinc">+ Agregar ingreso</button></div>`;
+  h+=`<h2>Otros ingresos</h2><div class="card">${(M.incomes||[]).map(t=>`<div class="tax inc"><input type="text" data-ic="name" data-id="${t.id}" value="${esc(t.name)}" placeholder="Ej: Aguinaldo"><button class="incref ${t.ref?'on':''}" data-act="incref" data-id="${t.id}" aria-pressed="${!!t.ref}" title="Pagado con reintegros">↩ reint.</button><input type="text" class="amt" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-ic="amount" data-id="${t.id}" value="${num(t.amount)?(num(t.amount)<0?'-':'')+nf(num(t.amount)):''}" placeholder="0,00"><button class="x" data-act="delinc" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('')}<button class="lnk" data-act="addinc">+ Agregar ingreso</button>${(()=>{const r=refAvail(view);return r===null?'':`<div class="refbal"><span>Reintegros disponibles<small>Desde ${mLabel(S.refStart).toLowerCase()}, menos lo marcado con ↩</small></span><b class="${r<0?'neg':'pos'}">${fmt(r)}</b></div>`})()}</div>`;
   h+=`<div class="grid4"><div><h2>Impuestos y servicios</h2><div class="card">`;
   h+=M.taxes.map(t=>`<div class="tax"><button class="paid ${t.paid?'on':''}" data-act="paidtx" data-id="${t.id}" aria-pressed="${!!t.paid}">${t.paid?'✓ PAGADA':'NO PAGADA'}</button>
     <input type="text" data-tx="name" data-id="${t.id}" value="${esc(t.name)}"><label class="txcat ${t.cat?'':'e'}"><span>${t.cat?esc(t.cat)+' ▾':'+ Categoría'}</span><select data-tx="cat" data-id="${t.id}" aria-label="Categoría"><option value="">Sin categoría</option>${S.cats.map(c=>`<option ${t.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select></label>
@@ -1251,6 +1255,7 @@ document.addEventListener('click',e=>{
   else if(a==='addcard'||a==='editcard')cardForm(a==='editcard'?cardById(id):null);
   else if(a==='paidtx'){const x=S.months[view].taxes.find(y=>y.id===id);x.paid=!x.paid;save();render()}
   else if(a==='addinc'){const M=S.months[view];(M.incomes=M.incomes||[]).push({id:uid(),name:'',amount:0});save();render();setTimeout(()=>{const e=[...document.querySelectorAll('[data-ic=name]')].pop();e&&e.focus()},30)}
+  else if(a==='incref'){const x=(S.months[view].incomes||[]).find(y=>y.id===id);if(x){x.ref=!x.ref;if(!x.ref)delete x.ref;else if(!S.refStart||view<S.refStart)S.refStart=view;save();render()}}
   else if(a==='delinc'){withUndo('Ingreso eliminado',()=>{const M=S.months[view];M.incomes=M.incomes.filter(x=>x.id!==id)})}
   else if(a==='addtax'){S.months[view].taxes.push({id:uid(),name:'',amount:0,paid:false});save();render()}
   else if(a==='deltax'){withUndo('Servicio eliminado',()=>{const M=S.months[view];M.taxes=M.taxes.filter(x=>x.id!==id)})}
