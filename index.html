@@ -608,7 +608,7 @@ function vMes(){
       rows+=`<div class="row" role="button" tabindex="0" data-act="edit" data-id="${l.p.id}">
         <div style="min-width:0"><div class="r-desc">${esc(l.p.desc)}</div><div class="r-sub">${l.p.date?dmy(l.p.date)+' · ':''}${esc(l.p.cat)}${l.u?' · dólares':''}</div>${l.p.note?`<div class="r-note"><span>💬 ${esc(l.p.note)}</span><button class="nx" data-act="delnote" data-id="${l.p.id}" aria-label="Borrar comentario">×</button></div>`:''}</div>
         <span class="r-cu">${l.p.rec?'↻':l.p.cuotas>1?l.n+'/'+l.p.cuotas:'—'}</span>
-        <div class="r-amt">${l.u?fmtU(l.uval):fmt(l.val)}${l.ref||l.uref?`<small>${l.sh?`⇄ le toca a ${esc(l.p.shared.w||'la otra persona')} `:'↩ reint. '}${l.u?'-'+fmtU(l.uref):fmt(-l.ref)}</small><small class="r-net">neto ${l.u?fmtU(l.uval-l.uref):fmt(l.net)}</small>`:''}</div>
+        <div class="r-amt">${l.u?fmtU(l.uval):fmt(l.val)}${l.ref||l.uref?`<small>${l.sh?`⇄ le toca a ${esc(l.p.shared.w||'la otra persona')} `:'↩ reint. '}${l.u?'-'+fmtU(l.uref):fmt(l.sh?-Math.abs(l.ref):-l.ref)}</small><small class="r-net">neto ${l.u?fmtU(l.uval-l.uref):fmt(l.net)}</small>`:''}</div>
         <button class="dots ${l.p.note?'has':''}" data-act="note" data-id="${l.p.id}" aria-label="Comentario">⋯</button></div>`;
     }
     h+=`<section class="card cc ${opened.has(x.c.id)?'':'closed'}" style="--cc:${x.c.color}">
