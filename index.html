@@ -740,7 +740,7 @@ function vComp(){
     return `<div class="row" role="button" tabindex="0" data-act="shentry" data-id="${e.id}"><div style="min-width:0"><div class="r-desc">${e.kind==='pago'?'💸 ':''}${esc(e.descr||(e.kind==='pago'?'Pago':'Gasto'))}</div>
       <div class="r-sub">${e.date?dmy(e.date)+' · ':''}${e.kind==='pago'?(e.paid_by===user?.id?'Pagaste vos':`Pagó ${esc(shName(e.paid_by))}`):`${e.paid_by===user?.id?'Pagaste vos':'Pagó '+esc(shName(e.paid_by))} · ${shareLabel(+e.share,+e.cuota)} del otro`}</div>${e.note?`<div class="r-note"><span>💬 ${esc(e.note)}</span></div>`:''}</div>
       <span class="r-cu">${e.cuotas>1?n+'/'+e.cuotas:'—'}</span>
-      <div class="r-amt">${F(+e.cuota)}<small style="${v<0?'color:var(--neg)':''}">${v>=0?'te deben ':'debés '}${F(Math.abs(v))}</small></div><span></span></div>`}).join('')||'<div class="empty">Sin movimientos este mes.</div>';
+      <div class="r-amt">${F(+e.cuota)}${e.kind!=='pago'&&+e.cuota<0?`<small>${e.paid_by===user?.id?'le toca a '+esc(shOtherName()):'te toca'} -${F(Math.abs(v))}</small>`:`<small style="${v<0?'color:var(--neg)':''}">${v>=0?'te deben ':'debés '}${F(Math.abs(v))}</small>`}</div><span></span></div>`}).join('')||'<div class="empty">Sin movimientos este mes.</div>';
   if(!op)rows.forEach(({e})=>{const v=shSigned(e);if(isU(e))totU+=v;else tot+=v});
   h+=`<footer class="shfoot"><span>Neto del mes</span><b class="${tot<0?'neg':'pos'}">${tot>=0?'+':'−'}${fmt(Math.abs(tot))}${Math.abs(totU)>0.005?` <span class="${totU<0?'neg':'pos'}">· ${totU>=0?'+':'−'}${fmtU(Math.abs(totU))}</span>`:''}</b></footer></div>
   <div class="hint" style="margin:6px 2px">Positivo: a tu favor. Negativo: le debés. Las cuotas se suman mes a mes.</div>`;
