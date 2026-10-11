@@ -1036,7 +1036,8 @@ function vAjustes(){
   <h2>Datos</h2><div class="card pad"><div class="btns"><button class="btn sec" data-act="export">Exportar</button><label class="btn sec" style="text-align:center">Importar<input type="file" accept=".json" id="imp" hidden></label></div>
   <div class="dinfo"><p><b>Exportar</b> descarga un archivo <b>.json</b> <code style="white-space:nowrap">gastos-AAAA-MM-DD.json</code> con todos tus datos: tarjetas, gastos y cuotas, reintegros, comentarios, sueldo, ahorros, vacaciones, categorías y apariencia. Sirve como copia de seguridad.</p>
     <p><b>Importar</b> acepta solo un <b>.json</b> exportado desde esta app (o el historial que armamos de la planilla). No acepta Excel ni CSV.</p>
-    <p><b>Ojo:</b> importar <b>reemplaza todo</b>; no suma ni mezcla. Exportá antes para no perder nada.</p></div></div>
+    <p><b>Ojo:</b> importar <b>reemplaza todo</b>; no suma ni mezcla. Exportá antes para no perder nada.</p></div>
+  <button class="btn sec" style="width:100%;margin-top:10px" data-act="backups">Restaurar copia</button><div class="hint">La nube guarda sola una copia por hora de tus datos (y siempre que se borra mucho de golpe) durante 30 días. Desde acá volvés a cualquiera.</div></div>
   <h2>Cuenta</h2><div class="card pad"><div class="hint" style="margin-bottom:8px">${esc(user?.email||'')}</div>${fld('Tu nombre visible',`<input data-myname value="${esc(S.myName||'')}" placeholder="Cómo te ven en las cuentas compartidas">`)}<button class="btn sec" style="width:100%;margin-bottom:8px" data-act="chpass">Cambiar contraseña</button><button class="btn sec" style="width:100%" data-act="logout">Cerrar sesión</button></div>`;
 }
 
@@ -1085,6 +1086,25 @@ function srchGo(id){
   const r=document.querySelector(`.cc .row[data-act="edit"][data-id="${CSS.escape(id)}"]`);
   if(!r){toast('Ese gasto no aparece en '+mLabel(view));return}
   r.scrollIntoView({block:'center',behavior:'smooth'});r.classList.add('hit');setTimeout(()=>r.classList.remove('hit'),2600);
+}
+/* ---------- copias automáticas (las guarda la base en app_state_history) ---------- */
+async function bkOpen(){
+  $('#ov').innerHTML=`<div class="ov"><div class="sheet" role="dialog" aria-label="Copias automáticas"><h3>Copias automáticas</h3><div id="bkl" class="hint">Cargando…</div><div class="btns"><button type="button" class="btn sec" data-x="cancel">Cerrar</button></div></div></div>`;
+  $('#ov [data-x=cancel]').onclick=close;$('#ov .ov').onclick=e=>{if(e.target.classList.contains('ov'))close()};
+  const {data,error}=await sb.from('app_state_history').select('id,saved_at,created_at,reason,n_gastos').eq('user_id',user.id).order('created_at',{ascending:false}).limit(200);
+  const box=$('#bkl');if(!box)return;
+  if(error){box.textContent=navigator.onLine?'No se pudieron cargar las copias.':'Sin conexión. Las copias están en la nube.';console.warn(error);return}
+  if(!data.length){box.textContent='Todavía no hay copias. Se crean solas a medida que usás la app.';return}
+  const why={achique:' · antes de un borrado grande','antes de restaurar':' · antes de restaurar',inicial:' · primera copia'};
+  const when=t=>{const d=new Date(t),z=n=>String(n).padStart(2,'0');return `${z(d.getDate())}/${z(d.getMonth()+1)}/${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`};
+  box.className='';box.innerHTML=`<div class="hint" style="margin-bottom:6px">Ahora tenés ${S.purchases.length} gastos. Al restaurar, lo actual también queda guardado como copia.</div>`+data.map(v=>`<div class="kv"><span style="min-width:0">${when(v.saved_at)} <span class="mut">· ${v.n_gastos} gastos${why[v.reason]||''}</span></span><button class="lnk" data-bk="${v.id}" data-w="${when(v.saved_at)}">Restaurar</button></div>`).join('');
+  box.onclick=async e=>{const b=e.target.closest('[data-bk]');if(!b)return;
+    if(!confirm('¿Volver a la copia del '+b.dataset.w+'? Lo que tenés ahora queda guardado como otra copia.'))return;
+    b.disabled=true;clearTimeout(pushT);if(pending)await push();
+    const {data:r,error:e2}=await sb.rpc('restore_app_state',{version_id:+b.dataset.bk});
+    if(e2||!r||!r[0]){b.disabled=false;alert('No se pudo restaurar. Revisá la conexión.');console.warn(e2);return}
+    S=r[0].data;remoteAt=r[0].updated_at;pending=false;if(!S||!S.months)S=emptyState();S.theme=S.theme||{p:'rosa',mode:'auto'};
+    const mg=migrate();cache();close();applyTheme();render();if(mg)save();toast('Copia restaurada')};
 }
 let undoT=null;
 function toast(msg,undo){let t=$('#toast');if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t)}
@@ -1309,6 +1329,7 @@ document.addEventListener('click',e=>{
   else if(a==='addcat')sheet(`<h3>Nueva categoría</h3>${fld('Nombre','<input name="name" required placeholder="Ej: SALIDAS">')}`,d=>{const n=normCat(d.name);if(S.cats.includes(n)){alert('Esa categoría ya existe.');return false}addCat(n)});
   else if(a==='delcat'){const c=S.cats[+id],n=S.purchases.filter(p=>p.cat===c).length;if(confirm(n?`"${c}" está en ${n} gastos. Esos gastos la conservan, pero no va a aparecer para elegir. ¿Borrarla?`:`¿Borrar "${c}"?`)){withUndo('Categoría borrada',()=>{S.cats.splice(+id,1)})}}
   else if(a==='export'){const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download='gastos-'+todayISO()+'.json';l.click()}
+  else if(a==='backups')bkOpen();
   else if(a==='chpass')showNewPass('',true);
   else if(a==='logout'){if(confirm('¿Cerrar sesión?')){sb.auth.signOut().then(()=>location.reload())}}
 });
