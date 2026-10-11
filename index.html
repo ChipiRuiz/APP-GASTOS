@@ -394,11 +394,11 @@ function applyTheme(o){
   document.querySelector('meta[name=theme-color]').content=v.bg;
 }
 mq.addEventListener?.('change',()=>applyTheme());
-let S=emptyState(),user=null,remoteAt=null,pushT=null,pending=false;
+let S=emptyState(),user=null,remoteAt=null,pushT=null,pending=false,booting=false;
 const cacheKey=()=>'gastos-cache-'+(user?user.id:'anon');
 const setSync=t=>{const e=$('#sync');if(e)e.textContent=t};
 function cache(){try{localStorage.setItem(cacheKey(),JSON.stringify({S,remoteAt,pending}))}catch(e){}}
-function save(){cache();pending=true;setSync('guardando…');clearTimeout(pushT);pushT=setTimeout(push,1200)}
+function save(){if(booting)return;cache();pending=true;setSync('guardando…');clearTimeout(pushT);pushT=setTimeout(push,1200)}
 async function push(){
   if(!sb||!user)return;
   const at=new Date().toISOString();
@@ -406,9 +406,12 @@ async function push(){
   if(error){setSync(navigator.onLine?'no se pudo guardar · reintentando':'sin conexión · guardado en el celular');console.warn(error);return}
   remoteAt=at;pending=false;cache();setSync('guardado');
 }
+const isBlank=d=>!d||!['purchases','deposits','savingsExp','trips','cards'].some(k=>(d[k]||[]).length)&&!Object.values(d.months||{}).some(M=>num(M.salary)||(M.taxes||[]).length||(M.incomes||[]).length);
 async function pull(force){
   const {data,error}=await sb.from('app_state').select('data,updated_at').eq('user_id',user.id).maybeSingle();
   if(error)throw error;
+  /* nunca pisar datos cargados en este dispositivo con un estado vacío de la nube: se suben los de acá */
+  if(data&&isBlank(data.data)&&!isBlank(S)){pending=true;push();return false}
   if(data&&(force||!remoteAt||data.updated_at>remoteAt)){S=data.data;remoteAt=data.updated_at;cache();return true}
   return false;
 }
@@ -463,7 +466,8 @@ function showNewPass(msg,fromSettings){
 }
 async function boot(){
   try{const c=JSON.parse(localStorage.getItem(cacheKey()));if(c){S=c.S;remoteAt=c.remoteAt;pending=!!c.pending}}catch(e){}
-  applyTheme();render();
+  /* el primer dibujado es con lo guardado en el celular (o vacío): no tiene que marcar cambios ni subir nada antes de bajar los datos de la nube */
+  booting=true;try{applyTheme();render()}finally{booting=false}
   if(pending)push();
   else try{await pull(!remoteAt);setSync('')}catch(e){setSync('sin conexión')}
   if(!S||!S.months)S=emptyState();
