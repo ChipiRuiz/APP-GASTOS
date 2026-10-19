@@ -43,7 +43,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .dot{width:10px;height:10px;border-radius:50%;background:var(--cc)}
 .cc.closed .rows{display:none}
 .cc footer.ufoot{border-top:1px dashed var(--line)}
-.chev{display:inline-block;color:var(--muted);font-size:12px;transition:transform .2s;width:14px;text-align:center}
+.chev{display:inline-block;flex:none;color:var(--muted);transition:transform .2s}
 .cc.closed .chev{transform:rotate(-90deg)}
 .wk.cu{color:var(--ink)}
 .wk{background:var(--week);font-size:12px;color:var(--muted);padding:5px 14px;font-weight:600}
@@ -81,7 +81,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .tax input[type=text]{border:1px solid transparent;background:none;border-radius:7px;padding:6px;width:100%}
 .tax input[type=text]:focus{border-color:var(--line);background:var(--bg)}
 .tax input.amt{text-align:right}
-.txn{min-width:0;display:flex;flex-direction:column}.tax .txcat{grid-column:2/-1;grid-row:2;justify-self:start;margin-top:-6px}.txcat{position:relative;align-self:flex-start;display:inline-flex;max-width:100%;margin:2px 0 0 4px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);border:1px solid transparent;border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:600;cursor:pointer}.txcat span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.txcat.e{background:none;border:1px dashed color-mix(in srgb,var(--accent) 45%,var(--line));color:var(--muted);font-weight:400}.txcat select{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer;font-size:16px}.txcat option{background:var(--card);color:var(--ink)}
+.txn{min-width:0;display:flex;flex-direction:column}.tax .txcat{grid-column:2/-1;grid-row:2;justify-self:start;margin-top:-6px}.txcat{position:relative;align-self:flex-start;display:inline-flex;max-width:100%;margin:2px 0 0 4px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);border:1px solid transparent;border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:600;cursor:pointer}.txcat span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tax:not(:focus-within) .txcat.e{visibility:hidden;max-height:0;padding-top:0;padding-bottom:0;margin-top:-8px;transition:visibility 0s .35s,max-height 0s .35s,padding 0s .35s,margin 0s .35s}.txcat.e{max-height:30px;background:none;border:1px dashed color-mix(in srgb,var(--accent) 45%,var(--line));color:var(--muted);font-weight:400}.txcat select{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer;font-size:16px}.txcat option{background:var(--card);color:var(--ink)}
 .x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px 8px}
 .lnk{border:0;background:none;color:var(--accent);font-weight:600;cursor:pointer;padding:10px 14px}
 .bar{display:grid;grid-template-columns:130px 1fr auto;gap:8px;align-items:center;font-size:13px;padding:5px 0}
@@ -256,11 +256,21 @@ body.priv #app input[data-money]:not(:focus),body.priv #app input.amt:not(:focus
 .ptbl tr.cur{background:var(--soft)}
 .ptbl td::before{content:attr(data-l);color:var(--muted);font-size:12px;margin-right:6px}
 .ptbl td:first-child{grid-column:1/-1;font-weight:700;font-size:15px}.ptbl td:first-child::before{content:none}
-.ptbl td input{min-width:0;width:auto;flex:1;max-width:105px;padding:3px 4px;border-color:var(--line);font-size:12.5px}}
+.ptbl td input{min-width:0;width:auto;flex:1;max-width:105px;padding:3px 4px;border-color:var(--line);font-size:12.5px}
+.ptbl td:first-child{cursor:pointer;display:flex;justify-content:flex-start;gap:8px}.pchev{display:inline-block;width:7px;height:7px;border:solid var(--muted);border-width:0 2px 2px 0;transform:rotate(45deg);margin:-3px 2px 0 1px;transition:transform .15s}
+.ptbl tr:not(.op){grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center}
+.ptbl tr:not(.op) td:first-child{grid-column:auto;font-size:14px;font-weight:650}.ptbl tr:not(.op) .pchev{transform:rotate(-45deg);margin-top:0}
+.ptbl tr:not(.op) td:nth-child(n+2):nth-child(-n+5){display:none}
+.ptbl tr:not(.op) td:nth-child(n+6){display:block;text-align:right;padding:0}.ptbl tr:not(.op) td:nth-child(n+6)::before{display:block;margin:0;font-size:10.5px}
+.ptbl tr:not(.op) td .r-sub{display:none}
+.ptbl td:nth-child(2){flex-wrap:wrap}.ptbl td:nth-child(2) .r-sub{flex-basis:100%;text-align:right;margin-top:2px}}
 .cbars{display:grid;gap:12px}
+.dbars{display:grid;grid-template-columns:repeat(12,1fr);gap:5px;align-items:end;height:92px;padding:14px 14px 8px}.dbars div{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:4px}.dbars i{display:block;width:100%;max-width:22px;background:var(--accent);border-radius:4px 4px 1px 1px}.dbars span{font-size:10px;color:var(--muted)}
 .pchart{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}.pchart svg{display:block;width:100%;max-width:640px;height:auto;margin:0 auto;overflow:visible}
 .pgl{stroke:var(--line);stroke-width:1}.pgl.z{stroke:var(--muted);stroke-opacity:.5}.pax{font-size:10px;fill:var(--muted)}
-.pline{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}.parea{fill:var(--accent);fill-opacity:.12}.pdot{fill:var(--accent);stroke:var(--card);stroke-width:1.5}
+.pline{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}.parea{fill:var(--accent);fill-opacity:.12}.pdot{fill:var(--accent);stroke:var(--card);stroke-width:1.5;transition:r .12s}.pdot.on{r:5.5px}
+.pchart{position:relative}.phit{fill:transparent;cursor:pointer}.pguide{stroke:var(--muted);stroke-dasharray:3 3;opacity:0}.pguide.on{opacity:.7}
+.ptip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:9px;padding:5px 9px;font-size:12px;line-height:1.25;white-space:nowrap;opacity:0;transition:opacity .12s;z-index:2}.ptip.on{opacity:1}.ptip span{display:block;opacity:.75;font-size:11px}
 .cbtot{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--muted);padding-bottom:10px;border-bottom:1px solid var(--line)}.cbtot b{font-size:18px;color:var(--ink)}
 .cbh{display:grid;grid-template-columns:1fr auto 38px;gap:8px;align-items:baseline;font-size:13px;margin-bottom:5px}.cbh span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cbh .pc{color:var(--muted);font-size:12px;text-align:right}
@@ -340,7 +350,7 @@ const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,10);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const nf=n=>Math.abs(n).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const nf=n=>{const a=Math.round(Math.abs(n)*100)/100;return a.toLocaleString('es-AR',{minimumFractionDigits:Number.isInteger(a)?0:2,maximumFractionDigits:2})};
 let priv=false;try{priv=localStorage.getItem('gastos-priv')==='1'}catch(e){}
 const setPriv=v=>{priv=v;document.body.classList.toggle('priv',v);const b=document.querySelector('.eyeb');if(b){const l=v?'Mostrar montos':'Ocultar montos';b.title=l;b.setAttribute('aria-label',l)}};setPriv(priv);
 const nfs=n=>(n<0?'-':'')+nf(n);
@@ -583,7 +593,7 @@ function vMes(){
     </div>
     ${cs.some(x=>x.ub)?`<div class="sum" style="margin-top:10px"><div class="fld"><label>U$D del mes (neto)</label><div style="padding:9px 0;font-weight:650">${fmtU(cs.reduce((s,x)=>s+x.un,0))}</div></div><div class="fld"><label>U$D pagados en dólares</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="usdPaid" value="${M.usdPaid?nfs(M.usdPaid):''}" placeholder="0,00"></div></div><div class="hint">Lo que pagues en dólares no se suma al total en pesos; el resto se convierte con el dólar del mes.</div>`:''}
     ${cs.some(x=>x.ub)&&!M.usd?'<div class="warn">Hay compras en USD y falta el dólar del mes.</div>':''}
-    ${distrHTML(num(M.salary)+inc,[['Ahorro',sv,'#1baf7a'],['Tarjetas y cuentas',tc,'#3987e5'],['Servicios',tx,'#c98500'],['Compartidos',owe,'#9085e9']],rest)}
+    ${distrHTML(num(M.salary)+inc,[['Ahorro',sv,'color-mix(in srgb,var(--accent) 60%,var(--ink))'],['Tarjetas y cuentas',tc,'color-mix(in srgb,var(--accent) 62%,var(--card))'],['Servicios',tx,'color-mix(in srgb,var(--accent) 40%,var(--card))'],['Compartidos',owe,'color-mix(in srgb,var(--accent) 24%,var(--card))']],rest)}
   </div>
   <div class="card pad hero">
     <div class="kv"><span>Sueldo</span><span>${fmt(num(M.salary))}</span></div>${inc?`<div class="kv"><span>+ Otros ingresos y egresos</span><span class="${inc<0?'neg':'pos'}">${fmt(inc)}</span></div>`:''}
@@ -609,7 +619,7 @@ function vMes(){
         <button class="dots ${l.p.note?'has':''}" data-act="note" data-id="${l.p.id}" aria-label="Comentario">⋯</button></div>`;
     }
     h+=`<section class="card cc ${opened.has(x.c.id)?'':'closed'}" style="--cc:${x.c.color}">
-      <header data-act="toggle" data-id="${x.c.id}"><span class="chev">▼</span><span class="dot"></span><h3><span class="cname">${esc(x.c.name)}</span><span class="cdate">${isCredit(x.c)?'Cierre '+closeDate(x.c,m):ATYPES[x.c.type]} · ${x.L.length} ${x.L.length===1?'gasto':'gastos'}</span></h3><b>${fmt(x.n)}${x.ub?`<span class="cdate" style="text-align:right">+ ${fmtU(x.un)}</span>`:''}</b><button class="x" data-act="editcard" data-id="${x.c.id}" aria-label="Editar tarjeta">✎</button></header>
+      <header data-act="toggle" data-id="${x.c.id}"><svg class="chev" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg><span class="dot"></span><h3><span class="cname">${esc(x.c.name)}</span><span class="cdate">${isCredit(x.c)?'Cierre '+closeDate(x.c,m):ATYPES[x.c.type]} · ${x.L.length} ${x.L.length===1?'gasto':'gastos'}</span></h3><b>${fmt(x.n)}${x.ub?`<span class="cdate" style="text-align:right">+ ${fmtU(x.un)}</span>`:''}</b><button class="x" data-act="editcard" data-id="${x.c.id}" aria-label="Editar tarjeta"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button></header>
       <div class="rows">${rows||'<div class="empty">Sin cuotas este mes.</div>'}</div>
       <footer><span><small>Bruto</small>${fmt(x.b)}</span>${x.rf||!x.sh?`<span class="pos"><small>Reint.</small>${fmt(x.rf)}</span>`:''}${x.sh?`<span class="pos"><small>⇄ Compartido</small>${fmt(x.sh)}</span>`:''}<b><small>Neto</small>${fmt(x.n)}</b></footer>${x.ub?`<footer class="ufoot"><span><small>U$D bruto</small>${fmtU(x.ub)}</span>${x.urf||!x.ush?`<span class="pos"><small>Reint.</small>${fmtU(x.urf)}</span>`:''}${x.ush?`<span class="pos"><small>⇄ Compartido</small>${fmtU(x.ush)}</span>`:''}<b><small>Neto</small>${fmtU(x.un)}</b></footer>`:''}</section>`;
   }
@@ -704,14 +714,14 @@ function vComp(){
   const chips=`<div class="shchips">${SH.all.map(L=>{const b=shMonthNet(view,L.entries),bu=shMonthNet(view,L.entries,'USD');return `<button class="shchip ${L.ledger.id===SH.ledger.id?'on':''}" data-act="shsel" data-id="${L.ledger.id}"><b>${esc(L.ledger.name)}</b><span>${esc(shOtherOf(L)||'sin invitar')} · ${b>0.005?'+':b<-0.005?'−':''}${fmt(Math.abs(b))}${Math.abs(bu)>0.005?` · ${bu>0?'+':'−'}${fmtU(Math.abs(bu))}`:''}</span></button>`}).join('')}<button class="shchip add" data-act="shcreate">+ Nueva</button></div>`;
   const o=shOther(),m=view,b=shMonthNet(m),bu=shMonthNet(m,SH.entries,'USD');
   const who=b>0.005?`${esc(shOtherName())} te debe`:b<-0.005?`Le debés a ${esc(shOtherName())}`:'Están a mano';
-  let h=(SH.off?`<div class="banner">Sin conexión: esto es lo compartido de la última vez. Para cambiar algo acá necesitás internet.</div>`:'')+chips+`<div class="card pad hero"><div class="mut" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(SH.ledger.name)} · ${mLabel(m)}</span><button class="x" style="margin:-6px -8px 0 0" data-act="shedit" aria-label="Editar cuenta">✎</button></div><div class="kv" style="border:0;align-items:baseline"><span><b>${who}</b><div class="hint">neto del mes</div></span><span class="big ${b<-0.005?'neg':''}">${fmt(Math.abs(b))}</span></div>
+  let h=(SH.off?`<div class="banner">Sin conexión: esto es lo compartido de la última vez. Para cambiar algo acá necesitás internet.</div>`:'')+chips+`<div class="card pad hero"><div class="mut" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(SH.ledger.name)} · ${mLabel(m)}</span><button class="x" style="margin:-6px -8px 0 0" data-act="shedit" aria-label="Editar cuenta"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button></div><div class="kv" style="border:0;align-items:baseline"><span><b>${who}</b><div class="hint">neto del mes</div></span><span class="big ${b<-0.005?'neg':''}">${fmt(Math.abs(b))}</span></div>
     ${Math.abs(bu)>0.005?`<div class="kv"><span><b>${bu>0?esc(shOtherName())+' te debe':'Le debés'}</b> <span class="mut">en dólares</span></span><span class="${bu<0?'neg':''}" style="font-size:20px;font-weight:700">${fmtU(Math.abs(bu))}</span></div>`:''}
     ${!o?`<div class="warn" style="margin-top:8px">Todavía estás sola en esta cuenta. Invitá a la otra persona con ✎.</div>`:''}
     <button class="btn" style="width:100%;margin-top:12px" data-act="shpay">Registrar pago</button></div>`;
   const rows=SH.entries.flatMap(e=>{const ms=shMonthsOf(e),i=ms.indexOf(m);return i<0?[]:[{e,n:i+1}]}).sort((a,c)=>(a.e.date||'').localeCompare(c.e.date||''));
   let tot=0,totU=0;
   const op=!!S.shMovOpen;
-  h+=`<h2 class="tgl" role="button" tabindex="0" data-act="shmov"><span class="chev" style="display:inline-block;transition:transform .15s;${op?'':'transform:rotate(-90deg)'}">▼</span> Movimientos de ${mLabel(m)} <span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">· ${rows.length}</span></h2><div class="card">`;
+  h+=`<h2 class="tgl" role="button" tabindex="0" data-act="shmov"><svg class="chev" style="transition:transform .15s;vertical-align:-3px;${op?'':'transform:rotate(-90deg)'}" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg> Movimientos de ${mLabel(m)} <span class="mut" style="text-transform:none;letter-spacing:0;font-weight:400">· ${rows.length}</span></h2><div class="card">`;
   if(op)h+=rows.map(({e,n})=>{const v=shSigned(e),U=isU(e),F=U?fmtU:fmt;if(U)totU+=v;else tot+=v;
     return `<div class="row" role="button" tabindex="0" data-act="shentry" data-id="${e.id}"><div style="min-width:0"><div class="r-desc">${e.kind==='pago'?'💸 ':''}${esc(e.descr||(e.kind==='pago'?'Pago':'Gasto'))}</div>
       <div class="r-sub">${e.date?dmy(e.date)+' · ':''}${e.kind==='pago'?(e.paid_by===user?.id?'Pagaste vos':`Pagó ${esc(shName(e.paid_by))}`):`${e.paid_by===user?.id?'Pagaste vos':'Pagó '+esc(shName(e.paid_by))} · ${shareLabel(+e.share,+e.cuota)} del otro`}</div>${e.note?`<div class="r-note"><span>💬 ${esc(e.note)}</span></div>`:''}</div>
@@ -835,12 +845,19 @@ function endingHTML(cs,m){
   return `<div class="ending">¡Desde ${nx} tenés <b>+${fmt(tot)}</b> libres! Chau a ${L.length} ${L.length===1?'cuota':'cuotas'} 💪</div>`;
 }
 
+const depLi=x=>`<button class="li" data-act="editdep" data-id="${x.id}"><span>${mLabel(x.month)}${x.note?` <span class="mut">· ${esc(x.note)}</span>`:''}</span><b class="${x.month>=curYM?'mut':'pos'}">${fmt(x.amount)}</b></button>`;
+/* barras de lo depositado en los últimos 12 meses (con nota incluida) */
+function depBars(){
+  const ms=[...Array(12)].map((_,i)=>addM(curYM,i-12)),v=ms.map(m=>S.deposits.filter(x=>x.month===m).reduce((s,x)=>s+ +x.amount,0));
+  const mx=Math.max(...v);if(mx<=0)return '';
+  return `<div class="dbars">${ms.map((m,i)=>`<div title="${mLabel(m)}: ${fmt(v[i])}"><i style="height:${v[i]>0?Math.max(3,v[i]/mx*100):0}%"></i><span>${MESES[+m.slice(5)-1][0]}</span></div>`).join('')}</div>`}
 function vAhorros(){
-  const ys=S.yields||[],yt=yTot(),d=sumBy(depDone(),'amount'),pend=S.deposits.filter(x=>x.month>=curYM),g=sumBy(S.savingsExp,'amount'),v=tripSav(),ts=S.trips.filter(t=>t.fromSavings);
+  const ys=S.yields||[],yt=yTot(),d=sumBy(depDone(),'amount'),pend=S.deposits.filter(x=>x.month>=curYM).sort((a,b)=>a.month.localeCompare(b.month)),g=sumBy(S.savingsExp,'amount'),v=tripSav(),ts=S.trips.filter(t=>t.fromSavings);
   return `<div class="card pad hero"><div class="mut">Saldo de ahorros</div><div class="big">${fmt(d+yt-g-v)}</div><button class="btn sec" style="width:100%;margin:6px 0 4px" data-act="realbal">Actualizar saldo real</button>
     <div class="kv"><span>Total ahorrado</span><span>${fmt(d)}</span></div>${ys.length?`<div class="kv"><span>+ Rendimientos FCI</span><span class="${yt<0?'neg':'pos'}">${fmt(yt)}</span></div>`:''}<div class="kv"><span>• Gastado desde ahorros</span><span>${fmt(g)}</span></div>${ts.length?`<div class="kv"><span>• Vacaciones pagadas con ahorros</span><span>${fmt(v)}</span></div>`:''}</div>
   <div class="grid4"><div><h2>Ahorros</h2><div class="card">
-    ${[...S.deposits].reverse().map(x=>`<button class="li" data-act="editdep" data-id="${x.id}"><span>${mLabel(x.month)}${x.note?` <span class="mut">· ${esc(x.note)}</span>`:''}${x.month>=curYM?' <span class="mut">· pendiente</span>':''}</span><b class="${x.month>=curYM?'mut':'pos'}">${fmt(x.amount)}</b></button>`).join('')}
+    ${depBars()}${pend.length?`<div class="wk">Próximos · ${fmt(sumBy(pend,'amount'))}</div>`:''}${pend.map(depLi).join('')}
+    ${depDone().length?`<div class="wk">Depositados · ${fmt(d)}</div>`:''}${[...depDone()].reverse().map(depLi).join('')}
     ${[...ys].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<button class="li" data-act="edityld" data-id="${x.id}"><span>📈 Rendimientos FCI <span class="mut">· ${x.date?dmy(x.date):''}</span></span><b class="${x.amount<0?'neg':'pos'}">${fmt(x.amount)}</b></button>`).join('')}
     <button class="lnk" data-act="adddep">+ Agregar ahorro</button></div></div>
   <div><h2>Gastos desde ahorros</h2><div class="card">
@@ -883,13 +900,27 @@ function projChart(start,pts){
     area=path+`L${X(v.length-1)} ${Y(Math.max(lo,0))}L${X(0)} ${Y(Math.max(lo,0))}Z`;
   const lab=['Hoy',...pts.map(p=>MESES[+p[0].slice(5)-1].slice(0,3))],ticks=v.map((_,i)=>i).filter(i=>i%3===0||i===v.length-1);
   const xl=ticks.map(i=>`<text x="${X(i)}" y="${H-6}" text-anchor="${i===0?'start':i===v.length-1?'end':'middle'}" class="pax">${lab[i]}</text>`).join('');
-  const dots=xs.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="${i===xs.length-1?4:2.5}" class="pdot"><title>${i?mLabel(pts[i-1][0]):'Hoy'}: ${fmt(v[i])}</title></circle>`).join('');
-  return `<div class="pchart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ahorro acumulado mes a mes">${g}<path d="${area}" class="parea"/><path d="${path}" class="pline"/>${dots}${xl}</svg></div>`;
+  const cw=(W-l-r)/(v.length-1);
+  const dots=xs.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="${i===xs.length-1?4:2.5}" class="pdot" data-pd="${i}"/>`).join('');
+  const hits=xs.map((p,i)=>`<rect x="${p[0]-cw/2}" y="0" width="${cw}" height="${H-b}" class="phit" data-pi="${i}" data-x="${(p[0]/W*100).toFixed(2)}" data-y="${(p[1]/H*100).toFixed(2)}" data-k="${i?mLabel(pts[i-1][0]):'Hoy'}" data-v="${fmt(v[i])}"/>`).join('');
+  return `<div class="pchart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ahorro acumulado mes a mes">${g}<path d="${area}" class="parea"/><path d="${path}" class="pline"/><line class="pguide" y1="${t}" y2="${H-b}" x1="0" x2="0"/>${dots}${xl}${hits}</svg><div class="ptip"></div></div>`;
 }
+function projTip(h){const c=h?.closest('.pchart')||$('.pchart');if(!c)return;const tip=c.querySelector('.ptip'),gd=c.querySelector('.pguide');
+  c.querySelectorAll('.pdot.on').forEach(d=>d.classList.remove('on'));
+  if(!h){tip.classList.remove('on');gd.classList.remove('on');return}
+  const i=h.dataset.pi,x=+h.dataset.x;c.querySelector(`[data-pd="${i}"]`).classList.add('on');
+  const vb=c.querySelector('svg').viewBox.baseVal;gd.setAttribute('x1',x*vb.width/100);gd.setAttribute('x2',x*vb.width/100);gd.classList.add('on');
+  tip.innerHTML=`<span>${esc(h.dataset.k)}</span><b>${esc(h.dataset.v)}</b>`;tip.style.left=x+'%';tip.style.top=h.dataset.y+'%';
+  tip.style.transform=`translate(${x<18?'-12%':x>82?'-88%':'-50%'},calc(-100% - 10px))`;tip.classList.add('on')}
+document.addEventListener('pointerover',e=>{const h=e.target.closest?.('.phit');if(h&&e.pointerType==='mouse')projTip(h)});
+document.addEventListener('pointerout',e=>{if(e.pointerType==='mouse'&&e.target.closest?.('.pchart svg')&&!e.relatedTarget?.closest?.('.pchart svg'))projTip(null)});
+document.addEventListener('click',e=>{const h=e.target.closest?.('.phit');if(h){projTip(h);return}if(!e.target.closest?.('.pchart'))projTip(null)});
+
+const pOpen=new Set([curYM]);
 function vProy(){
   let bal=savBal();const start=bal;let rows='',n=12;const pts=[];
   for(let i=0;i<n;i++){const m=addM(curYM,i),t=monthTotals(m),extra=S.deposits.filter(x=>x.month===m&&x.note).reduce((s,x)=>s+ +x.amount,0);bal+=t.sv+extra;pts.push([m,bal]);
-    rows+=`<tr class="${i===0?'cur':''}"><td>${mLabel(m)}</td><td data-l="Sueldo"><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-pj="sal" data-m="${m}" value="${t.sal?nfs(t.sal):''}" placeholder="0,00">${t.inc?`<div class="r-sub ${t.inc<0?'neg':'pos'}" title="Otros ingresos y egresos">${t.inc<0?'-':'+'} ${fmt(Math.abs(t.inc))} otros</div>`:''}</td><td data-l="Gastos">${fmt(t.tc)}</td><td data-l="Servicios">${fmt(t.tx)}</td>
+    rows+=`<tr class="${i===0?'cur':''} ${pOpen.has(m)?'op':''}"><td data-act="ptog" data-m="${m}"><span class="pchev"></span>${mLabel(m)}</td><td data-l="Sueldo"><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-pj="sal" data-m="${m}" value="${t.sal?nfs(t.sal):''}" placeholder="0,00">${t.inc?`<div class="r-sub ${t.inc<0?'neg':'pos'}" title="Otros ingresos y egresos">${t.inc<0?'-':'+'} ${fmt(Math.abs(t.inc))} otros</div>`:''}</td><td data-l="Gastos">${fmt(t.tc)}</td><td data-l="Servicios">${fmt(t.tx)}</td>
     <td data-l="Ahorro"><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-pj="sv" data-m="${m}" value="${t.sv?nfs(t.sv):''}" placeholder="0,00"></td><td data-l="Te sobra" class="${t.rest<0?'neg':'pos'}"><b>${fmt(t.rest)}</b></td><td data-l="Acum.">${fmt(bal)}${extra?`<div class="r-sub">+ ${fmt(extra)} extra</div>`:''}</td></tr>`}
   return `<div class="card pad hero"><div class="mut">Ahorros hoy</div><div class="big">${fmt(start)}</div><div class="kv"><span>En ${mLabel(addM(curYM,n-1))}</span><b>${fmt(bal)}</b></div>${projChart(start,pts)}</div>
   
@@ -1252,6 +1283,7 @@ document.addEventListener('click',e=>{
   const t=e.target.closest('[data-act],[data-tab]');if(!t)return;
   if(t.dataset.tab){$('#moremenu')?.remove();tab=t.dataset.tab;if(tab==='viajes')tripOpen=t.dataset.trip||null;render();scrollTo(0,0);return}
   const id=t.dataset.id,a=t.dataset.act;
+  if(a==='ptog'){const m=t.dataset.m;pOpen.has(m)?pOpen.delete(m):pOpen.add(m);render();return}
   if(a==='priv'){setPriv(!priv);try{localStorage.setItem('gastos-priv',priv?'1':'0')}catch(e){}render()}
   else if(a==='prev'){view=addM(view,-1);render()}
   else if(a==='next'){view=addM(view,1);render()}
