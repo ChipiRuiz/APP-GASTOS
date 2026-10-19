@@ -265,7 +265,7 @@ body.priv #app input[data-money]:not(:focus),body.priv #app input.amt:not(:focus
 .ptbl tr:not(.op) td .r-sub{display:none}
 .ptbl td:nth-child(2){flex-wrap:wrap}.ptbl td:nth-child(2) .r-sub{flex-basis:100%;text-align:right;margin-top:2px}}
 .cbars{display:grid;gap:12px}
-.dbw{padding:14px 14px 6px}.dbhd{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted)}.dbhd span:last-child{text-align:right}.dbhd b{display:block;font-size:17px;color:var(--ink);font-weight:700}
+.dbw{padding:14px 14px 6px}.dbhd{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted)}.dbhd b{display:block;font-size:17px;color:var(--ink);font-weight:700}
 .dbars{position:relative;display:grid;grid-template-columns:repeat(12,1fr);gap:3px;align-items:end;height:118px;margin-top:10px}
 .dbb{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:5px;border:0;background:none;padding:0;cursor:pointer;border-radius:6px;min-width:0}
 .dbb i{display:block;width:100%;max-width:22px;background:var(--accent);border-radius:4px 4px 1px 1px;transition:opacity .12s}.dbb span{font-size:10px;color:var(--muted);padding-bottom:4px}
@@ -862,7 +862,7 @@ const depLi=x=>`<button class="li" data-act="editdep" data-id="${x.id}"><span>${
 function depBars(){
   const ms=[...Array(12)].map((_,i)=>addM(curYM,i-12)),v=ms.map(m=>S.deposits.filter(x=>x.month===m).reduce((s,x)=>s+ +x.amount,0));
   const mx=Math.max(...v);if(mx<=0)return '';const tot=v.reduce((s,x)=>s+x,0);
-  return `<div class="dbw"><div class="dbhd"><span>Últimos 12 meses<b>${fmt(tot)}</b></span><span class="dbsel" data-k="Promedio por mes" data-v="${fmt(tot/12)}">Promedio por mes<b>${fmt(tot/12)}</b></span></div>
+  return `<div class="dbw"><div class="dbhd"><span class="dbsel" data-k="Promedio por mes" data-v="${fmt(tot/12)}">Promedio por mes<b>${fmt(tot/12)}</b></span></div>
   <div class="dbars">${ms.map((m,i)=>`<button type="button" class="dbb" data-k="${mLabel(m)}" data-v="${v[i]?fmt(v[i]):'Sin ahorro'}" aria-label="${mLabel(m)}: ${v[i]?fmt(v[i]):'sin ahorro'}"><i style="height:${v[i]>0?Math.max(3,v[i]/mx*100):0}%"></i><span>${MESES[+m.slice(5)-1].slice(0,3)}</span></button>`).join('')}</div></div>`}
 /* tocar una barra muestra arriba el mes y el monto; tocar afuera vuelve al promedio */
 function depTip(b){const w=document.querySelector('.dbars');if(!w)return;const h=document.querySelector('.dbsel');w.querySelectorAll('.dbb.on').forEach(x=>x.classList.remove('on'));w.classList.toggle('hl',!!b);
