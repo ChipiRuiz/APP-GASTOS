@@ -281,7 +281,7 @@ body.priv #app input[data-money]:not(:focus),body.priv #app input.amt:not(:focus
 .cbh{display:grid;grid-template-columns:1fr auto 38px;gap:8px;align-items:baseline;font-size:13px;margin-bottom:5px}.cbh span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cbh .pc{color:var(--muted);font-size:12px;text-align:right}
 .cbtn{display:block;width:100%;border:0;background:none;padding:0;text-align:left;cursor:pointer}.cbar.op .cbh span:first-child{font-weight:650}
-.cbl{margin-top:8px;border-radius:10px;background:var(--week);padding:2px 10px}.cbi{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:7px 0;font-size:13px;border-top:1px solid var(--line)}.cbi:first-child{border-top:0}.cbi[role=button]{cursor:pointer}.cbi>span:first-child{min-width:0}.cbi b{display:block;font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cbi small{display:block;color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cbi>span:last-child{white-space:nowrap}
+.cbl{margin-top:8px;border-radius:10px;background:var(--week);padding:2px 10px}.cbi{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:7px 0;font-size:13px;border-top:1px solid var(--line)}.cbi:first-child{border-top:0}.cbi>span:first-child{min-width:0}.cbi b{display:block;font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cbi small{display:block;color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cbi>span:last-child{white-space:nowrap}
 .cbt{height:8px;border-radius:4px;background:color-mix(in srgb,var(--ink) 10%,transparent)}.cbt i{display:block;height:100%;border-radius:4px;background:var(--accent)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{display:inline-flex;align-items:center;gap:6px;background:var(--week);border:1px solid var(--line);border-radius:999px;padding:5px 4px 5px 10px;font-size:13px}
@@ -650,7 +650,7 @@ function vMes(){
     <input type="text" class="amt" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-tx="amount" data-id="${t.id}" value="${num(t.amount)?nfs(num(t.amount)):''}" placeholder="0,00">
     <button class="x" data-act="deltax" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('');
   h+=`<button class="lnk" data-act="addtax">+ Agregar</button></div></div>`;
-  const cat={},cit={},ad=(k,v,it)=>{cat[k]=(cat[k]||0)+v;(cit[k]=cit[k]||[]).push(it)};cs.forEach(x=>x.L.forEach(l=>ad(l.p.cat,l.net,{d:l.p.desc,s:x.c.name+(l.p.cuotas>1&&!l.p.rec?' · cuota '+l.n+'/'+l.p.cuotas:''),v:l.net,id:l.p.id})));M.taxes.forEach(t=>{if(t.cat&&num(t.amount))ad(t.cat,num(t.amount),{d:t.name||'Servicio',s:'Impuestos y servicios',v:num(t.amount)})});
+  const cat={},cit={},ad=(k,v,it)=>{cat[k]=(cat[k]||0)+v;(cit[k]=cit[k]||[]).push(it)};cs.forEach(x=>x.L.forEach(l=>ad(l.p.cat,l.net,{d:l.p.desc,s:(l.p.date?(l.p.date.slice(0,4)===m.slice(0,4)?dmy(l.p.date).slice(0,5):dmy(l.p.date))+' · ':'')+x.c.name+(l.p.cuotas>1&&!l.p.rec?' · cuota '+l.n+'/'+l.p.cuotas:''),v:l.net})));M.taxes.forEach(t=>{if(t.cat&&num(t.amount))ad(t.cat,num(t.amount),{d:t.name||'Servicio',s:'Impuestos y servicios',v:num(t.amount)})});
   h+=`<div><h2>Por categoría</h2><div class="card pad">${catBarsHTML(cat,cit)}</div></div></div>`;
   return h;
 }
@@ -666,7 +666,7 @@ function catBarsHTML(cat,cit={}){
   const seg=Object.entries(cat).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
   const tot=seg.reduce((s,x)=>s+x[1],0);if(!tot)return '<div class="mut">Sin gastos.</div>';
   const max=seg[0][1];
-  return `<div class="cbars"><div class="cbtot"><span>Total del mes</span><b>${fmt(tot)}</b></div>${seg.map(([k,v])=>`<div class="cbar ${catOpen.has(k)?'op':''}"><button type="button" class="cbtn" data-act="cattog" data-k="${esc(k)}" aria-expanded="${catOpen.has(k)}"><div class="cbh"><span>${esc(k&&k!=='undefined'?k:'Sin categoría')}</span><b>${fmt(v)}</b><span class="pc">${Math.round(v/tot*100)}%</span></div><div class="cbt"><i style="width:${Math.max(1.5,v/max*100)}%"></i></div></button>${catOpen.has(k)?`<div class="cbl">${(cit[k]||[]).sort((a,b)=>b.v-a.v).map(it=>`<div ${it.id?`role="button" tabindex="0" data-act="edit" data-id="${it.id}"`:''} class="cbi"><span><b>${esc(it.d)}</b><small>${esc(it.s)}</small></span><span>${fmt(it.v)}</span></div>`).join('')}</div>`:''}</div>`).join('')}</div>`;
+  return `<div class="cbars"><div class="cbtot"><span>Total del mes</span><b>${fmt(tot)}</b></div>${seg.map(([k,v])=>`<div class="cbar ${catOpen.has(k)?'op':''}"><button type="button" class="cbtn" data-act="cattog" data-k="${esc(k)}" aria-expanded="${catOpen.has(k)}"><div class="cbh"><span>${esc(k&&k!=='undefined'?k:'Sin categoría')}</span><b>${fmt(v)}</b><span class="pc">${Math.round(v/tot*100)}%</span></div><div class="cbt"><i style="width:${Math.max(1.5,v/max*100)}%"></i></div></button>${catOpen.has(k)?`<div class="cbl">${(cit[k]||[]).sort((a,b)=>b.v-a.v).map(it=>`<div class="cbi"><span><b>${esc(it.d)}</b><small>${esc(it.s)}</small></span><span>${fmt(it.v)}</span></div>`).join('')}</div>`:''}</div>`).join('')}</div>`;
 }
 
 /* ---------- cuentas compartidas ---------- */
