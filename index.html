@@ -527,11 +527,11 @@ function setSaving(m,v){let d=plainDep(m);if(!v){if(d)S.deposits=S.deposits.filt
 function migrate(){let ch=false;
   if(!S.cards){S.cards=DEF_CARDS.map(c=>({...c,close:(S.close&&S.close[c.id])||c.close}));delete S.close;ch=true}for(const[m,M]of Object.entries(S.months||{})){if('saving'in M){if(M.saving&&!plainDep(m))setSaving(m,M.saving);delete M.saving;ch=true}}return ch}
 function cardTot(c,m){const L=lines(c.id,m),A=L.filter(l=>!l.u),U=L.filter(l=>l.u);const b=sumBy(A,'val'),r=sumBy(A,'ref'),ub=sumBy(U,'uval'),ur=sumBy(U,'uref'),sh=sumBy(A.filter(l=>l.sh),'ref'),ush=sumBy(U.filter(l=>l.sh),'uref');const R2=v=>Math.round(v*100)/100;return{c,L,b,r,sh,ush,rf:R2(r-sh),urf:R2(ur-ush),n:b-r,ub,ur,un:ub-ur}}
-function tcTotal(cs,M){const ars=cs.reduce((s,x)=>s+x.n,0),un=cs.reduce((s,x)=>s+x.un,0);return ars+Math.max(0,un-num(M.usdPaid||0))*(num(M.usd)||0)}
+function tcTotal(cs,M){const ars=cs.reduce((s,x)=>s+x.n,0),un=cs.reduce((s,x)=>s+x.un,0);return ars+Math.max(0,un)*(num(M.usd)||0)}
 const incOf=m=>((S.months[m]||{}).incomes||[]).reduce((s,x)=>s+num(x.amount),0);
 /* saldo de reintegros: lo reintegrado en tarjetas desde S.refStart (sin compartidos ni "reintegro total", que es plata que te devuelve otra persona), más los ingresos y menos los egresos marcados ↩ */
 function refAvail(m){if(!S.refStart||m<S.refStart)return null;let t=0;for(let k=S.refStart;k<=m;k=addM(k,1)){for(const c of cardsAll())for(const l of lines(c.id,k))if(!l.sh&&!l.p.refAll)t+=l.ref;t-=((S.months[k]||{}).incomes||[]).filter(i=>i.ref).reduce((s,i)=>s-num(i.amount),0)}return Math.round(t*100)/100}
-function monthTotals(m){const M=S.months[m]||lastMonth(m);const tc=tcTotal(cardsAll().map(c=>cardTot(c,m)),{usd:rate(m),usdPaid:(S.months[m]||{}).usdPaid||0});const tx=(M.taxes||[]).reduce((s,t)=>s+num(t.amount),0);const sal=num(M.salary),inc=incOf(m),sv=savingOf(m),owe=shOweMonth(m);return{sal,inc,tc:tc+owe,tx,sv,owe,rest:sal+inc-sv-tc-tx-owe}}
+function monthTotals(m){const M=S.months[m]||lastMonth(m);const tc=tcTotal(cardsAll().map(c=>cardTot(c,m)),{usd:rate(m)});const tx=(M.taxes||[]).reduce((s,t)=>s+num(t.amount),0);const sal=num(M.salary),inc=incOf(m),sv=savingOf(m),owe=shOweMonth(m);return{sal,inc,tc:tc+owe,tx,sv,owe,rest:sal+inc-sv-tc-tx-owe}}
 function lines(card,m){
   return S.purchases.filter(p=>p.card===card).map(p=>{
     let n=diffM(m,p.first)+1,cu=p.cuota;
@@ -603,7 +603,7 @@ function vMes(){
       <div class="fld"><label>Dólar del mes</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="usd" value="${M.usd?nfs(M.usd):''}" placeholder="0,00"></div>
       <div class="fld"><label>${m>curYM?'Ahorros proyectados':'Ahorros disponibles'}</label><div style="padding:9px 0;font-weight:650">${fmt(m===curYM?savBal():savAt(m))}</div></div>
     </div>
-    ${cs.some(x=>x.ub)?`<div class="sum" style="margin-top:10px"><div class="fld"><label>U$D del mes (neto)</label><div style="padding:9px 0;font-weight:650">${fmtU(cs.reduce((s,x)=>s+x.un,0))}</div></div><div class="fld"><label>U$D pagados en dólares</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="usdPaid" value="${M.usdPaid?nfs(M.usdPaid):''}" placeholder="0,00"></div></div><div class="hint">Lo que pagues en dólares no se suma al total en pesos; el resto se convierte con el dólar del mes.</div>`:''}
+    ${cs.some(x=>x.ub)?`<div class="sum" style="margin-top:10px"><div class="fld"><label>U$D del mes (neto)</label><div style="padding:9px 0;font-weight:650">${fmtU(cs.reduce((s,x)=>s+x.un,0))}</div></div></div><div class="hint">Se convierte a pesos con el dólar del mes.</div>`:''}
     </div>${cs.some(x=>x.ub)&&!M.usd?'<div class="warn">Hay compras en USD y falta el dólar del mes.</div>':''}
     ${distrHTML(num(M.salary)+inc,[['Ahorro',sv,'color-mix(in srgb,var(--accent) 45%,var(--card))'],['Tarjetas y cuentas',tc,'color-mix(in srgb,var(--muted) 75%,var(--card))'],['Servicios',tx,'color-mix(in srgb,var(--muted) 48%,var(--card))'],['Compartidos',owe,'color-mix(in srgb,var(--muted) 28%,var(--card))']],rest)}
   </div>
