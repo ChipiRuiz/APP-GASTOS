@@ -265,7 +265,11 @@ body.priv #app input[data-money]:not(:focus),body.priv #app input.amt:not(:focus
 .ptbl tr:not(.op) td .r-sub{display:none}
 .ptbl td:nth-child(2){flex-wrap:wrap}.ptbl td:nth-child(2) .r-sub{flex-basis:100%;text-align:right;margin-top:2px}}
 .cbars{display:grid;gap:12px}
-.dbars{display:grid;grid-template-columns:repeat(12,1fr);gap:5px;align-items:end;height:92px;padding:14px 14px 8px}.dbars div{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:4px}.dbars i{display:block;width:100%;max-width:22px;background:var(--accent);border-radius:4px 4px 1px 1px}.dbars span{font-size:10px;color:var(--muted)}
+.dbw{padding:14px 14px 6px}.dbhd{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted)}.dbhd span:last-child{text-align:right}.dbhd b{display:block;font-size:17px;color:var(--ink);font-weight:700}
+.dbars{position:relative;display:grid;grid-template-columns:repeat(12,1fr);gap:3px;align-items:end;height:118px;margin-top:10px}
+.dbb{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:5px;border:0;background:none;padding:0;cursor:pointer;border-radius:6px;min-width:0}
+.dbb i{display:block;width:100%;max-width:22px;background:var(--accent);border-radius:4px 4px 1px 1px;transition:opacity .12s}.dbb span{font-size:10px;color:var(--muted);padding-bottom:4px}
+.dbars.hl .dbb:not(.on) i{opacity:.35}.dbb.on span{color:var(--ink);font-weight:650}
 .pchart{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}.pchart svg{display:block;width:100%;max-width:640px;height:auto;margin:0 auto;overflow:visible}
 .pgl{stroke:var(--line);stroke-width:1}.pgl.z{stroke:var(--muted);stroke-opacity:.5}.pax{font-size:10px;fill:var(--muted)}
 .pline{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}.parea{fill:var(--accent);fill-opacity:.12}.pdot{fill:var(--accent);stroke:var(--card);stroke-width:1.5;transition:r .12s}.pdot.on{r:5.5px}
@@ -857,8 +861,15 @@ const depLi=x=>`<button class="li" data-act="editdep" data-id="${x.id}"><span>${
 /* barras de lo depositado en los últimos 12 meses (con nota incluida) */
 function depBars(){
   const ms=[...Array(12)].map((_,i)=>addM(curYM,i-12)),v=ms.map(m=>S.deposits.filter(x=>x.month===m).reduce((s,x)=>s+ +x.amount,0));
-  const mx=Math.max(...v);if(mx<=0)return '';
-  return `<div class="dbars">${ms.map((m,i)=>`<div title="${mLabel(m)}: ${fmt(v[i])}"><i style="height:${v[i]>0?Math.max(3,v[i]/mx*100):0}%"></i><span>${MESES[+m.slice(5)-1][0]}</span></div>`).join('')}</div>`}
+  const mx=Math.max(...v);if(mx<=0)return '';const tot=v.reduce((s,x)=>s+x,0);
+  return `<div class="dbw"><div class="dbhd"><span>Últimos 12 meses<b>${fmt(tot)}</b></span><span class="dbsel" data-k="Promedio por mes" data-v="${fmt(tot/12)}">Promedio por mes<b>${fmt(tot/12)}</b></span></div>
+  <div class="dbars">${ms.map((m,i)=>`<button type="button" class="dbb" data-k="${mLabel(m)}" data-v="${v[i]?fmt(v[i]):'Sin ahorro'}" aria-label="${mLabel(m)}: ${v[i]?fmt(v[i]):'sin ahorro'}"><i style="height:${v[i]>0?Math.max(3,v[i]/mx*100):0}%"></i><span>${MESES[+m.slice(5)-1].slice(0,3)}</span></button>`).join('')}</div></div>`}
+/* tocar una barra muestra arriba el mes y el monto; tocar afuera vuelve al promedio */
+function depTip(b){const w=document.querySelector('.dbars');if(!w)return;const h=document.querySelector('.dbsel');w.querySelectorAll('.dbb.on').forEach(x=>x.classList.remove('on'));w.classList.toggle('hl',!!b);
+  const src=b||h;if(b)b.classList.add('on');h.innerHTML=`${esc(src.dataset.k)}<b>${esc(src.dataset.v)}</b>`}
+document.addEventListener('pointerover',e=>{const b=e.target.closest?.('.dbb');if(b&&e.pointerType==='mouse')depTip(b)});
+document.addEventListener('pointerout',e=>{if(e.pointerType==='mouse'&&e.target.closest?.('.dbars')&&!e.relatedTarget?.closest?.('.dbars'))depTip(null)});
+document.addEventListener('click',e=>{const b=e.target.closest?.('.dbb');if(b){depTip(b.classList.contains('on')&&e.pointerType!=='mouse'?null:b);return}if(!e.target.closest?.('.dbars'))depTip(null)});
 function vAhorros(){
   const ys=S.yields||[],yt=yTot(),d=sumBy(depDone(),'amount'),pend=S.deposits.filter(x=>x.month>=curYM).sort((a,b)=>a.month.localeCompare(b.month)),g=sumBy(S.savingsExp,'amount'),v=tripSav(),ts=S.trips.filter(t=>t.fromSavings);
   return `<div class="card pad hero"><div class="mut">Saldo de ahorros</div><div class="big">${fmt(d+yt-g-v)}</div><button class="btn sec" style="width:100%;margin:6px 0 4px" data-act="realbal">Actualizar saldo real</button>
