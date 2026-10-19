@@ -107,7 +107,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .moremenu{position:fixed;right:10px;bottom:calc(66px + env(safe-area-inset-bottom));z-index:21;background:var(--card);border:1px solid color-mix(in srgb,var(--accent) 22%,var(--line));border-radius:14px;padding:6px;min-width:190px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 .moremenu button{display:flex;gap:12px;align-items:center;width:100%;border:0;background:none;padding:12px 12px;border-radius:9px;font-size:15px;cursor:pointer;text-align:left}
 .moremenu button:hover,.moremenu button.on{background:var(--week);color:var(--accent)}
-.fab{position:fixed;right:18px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:7;width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:var(--onacc);font-size:30px;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer}
+.fab{position:fixed;right:18px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:7;width:52px;height:52px;border-radius:50%;border:0;background:var(--accent);color:var(--onacc);font-size:28px;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--card);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
 @media(min-width:700px){.ov{align-items:center}.sheet{border-radius:18px}}
@@ -298,6 +298,10 @@ body.priv #app input[data-money]:not(:focus),body.priv #app input.amt:not(:focus
 @media(min-width:900px){.sumwrap{align-items:stretch}.sumwrap>.card{display:flex;flex-direction:column;margin-bottom:12px}.sumcard .distr{margin-top:auto}.sumcard .sum+.distr,.sumcard .warn+.distr{margin-top:auto}}
 .sumcard{border:1px solid color-mix(in srgb,var(--accent) 22%,var(--line))}
 .sumcard .distr{padding-top:12px}
+.mfh{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:0;text-align:left;cursor:pointer}.mfh>span{flex:1;min-width:0}.mfh b{display:block;font-size:14px}.mfh small{display:block;color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sumcard:not(.op) .mfh .chev{transform:rotate(-90deg)}.sumcard:not(.op) .mfb{display:none}.sumcard.op .mfb{margin-top:12px}
+@media(max-width:899px){.sumwrap{display:flex;flex-direction:column}.sumwrap .hero{order:-1}}
+.fab{transition:transform .2s,opacity .2s}.fab.hide{transform:translateY(90px);opacity:0;pointer-events:none}
 .distr{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
 .dlab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px}.dlab span:first-child{color:var(--ink);font-weight:600}
 .dbar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--week);gap:2px}.dbar i{display:block;height:100%;min-width:3px}
@@ -424,6 +428,8 @@ async function pull(force){
   if(data&&(force||!remoteAt||data.updated_at>remoteAt)){S=data.data;remoteAt=data.updated_at;cache();return true}
   return false;
 }
+/* el + se esconde mientras bajás para no tapar montos, y vuelve al subir */
+let lastY=0;addEventListener('scroll',()=>{const y=scrollY,f=$('.fab');if(!f)return;if(y>lastY+6&&y>80)f.classList.add('hide');else if(y<lastY-6||y<80)f.classList.remove('hide');lastY=y},{passive:true});
 addEventListener('online',()=>{if(pending)push();if(user)shRefresh()});
 addEventListener('offline',()=>setSync(pending?'sin conexión · guardado en el celular':'sin conexión'));
 setInterval(()=>{if(pending&&user&&navigator.onLine)push()},30000);
@@ -579,12 +585,13 @@ function render(){
   $('#app').innerHTML={mes:vMes,ahorros:vAhorros,proy:vProy,sim:()=>simUI(true),fijos:vFijos,viajes:vViajes,comp:vComp,ajustes:vAjustes}[tab]();
 }
 
+let mfOpen=false;
 function vMes(){
-  const m=view,M=ensureMonth(m);
+  const m=view,M=ensureMonth(m);if(!num(M.salary))mfOpen=true;
   const cs=cardsAll().map(c=>cardTot(c,m));
   const tc=tcTotal(cs,M),tx=M.taxes.reduce((s,t)=>s+num(t.amount),0);
   const sv=savingOf(m),inc=incOf(m),owe=shOweMonth(m),rest=num(M.salary)+inc-sv-tc-tx-owe;
-    let h=(view===curYM?avisosHTML():'')+(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta o cuenta</b> para crear tus tarjetas, débito, transferencias o efectivo, y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+(()=>{const pd=shPending();if(!pd.length)return '';return `<div class="card pad" style="margin-bottom:12px"><div style="font-weight:650;margin-bottom:4px">Cargados a tu nombre en compartido</div><div class="hint" style="margin-bottom:6px">Los cargó ${esc(shName(pd[0].e.created_by))} diciendo que pagaste vos. Si salieron de una tarjeta tuya, agregalos y quedan vinculados (no se duplican).</div>`+pd.map(({e})=>`<div class="kv"><span style="min-width:0">${esc(e.descr||'Gasto')} <span class="mut">· ${(isU(e)?fmtU:fmt)(+e.cuota)}${e.cuotas>1?' x'+e.cuotas:''} · ${mLabel(e.first_month)}</span></span><span style="white-space:nowrap"><button class="lnk" data-act="shtocard" data-id="${e.id}">A mi tarjeta</button> <button class="lnk" data-act="shign" data-id="${e.id}">Ignorar</button></span></div>`).join('')+`</div>`})()+`<div class="sumwrap"><div class="card pad sumcard">
+    let h=(view===curYM?avisosHTML():'')+(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta o cuenta</b> para crear tus tarjetas, débito, transferencias o efectivo, y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+(()=>{const pd=shPending();if(!pd.length)return '';return `<div class="card pad" style="margin-bottom:12px"><div style="font-weight:650;margin-bottom:4px">Cargados a tu nombre en compartido</div><div class="hint" style="margin-bottom:6px">Los cargó ${esc(shName(pd[0].e.created_by))} diciendo que pagaste vos. Si salieron de una tarjeta tuya, agregalos y quedan vinculados (no se duplican).</div>`+pd.map(({e})=>`<div class="kv"><span style="min-width:0">${esc(e.descr||'Gasto')} <span class="mut">· ${(isU(e)?fmtU:fmt)(+e.cuota)}${e.cuotas>1?' x'+e.cuotas:''} · ${mLabel(e.first_month)}</span></span><span style="white-space:nowrap"><button class="lnk" data-act="shtocard" data-id="${e.id}">A mi tarjeta</button> <button class="lnk" data-act="shign" data-id="${e.id}">Ignorar</button></span></div>`).join('')+`</div>`})()+`<div class="sumwrap"><div class="card pad sumcard ${mfOpen?'op':''}"><button class="mfh" data-act="mftog" aria-expanded="${mfOpen}"><span><b>Datos del mes</b><small>Sueldo ${fmt(num(M.salary))} · Ahorro ${fmt(sv)}${M.usd?' · Dólar '+fmt(num(M.usd)):''}</small></span><svg class="chev" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="mfb">
     <div class="sum">
       <div class="fld"><label>Sueldo</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="salary" value="${M.salary?nfs(M.salary):''}" placeholder="0,00"></div>
       <div class="fld"><label>Ahorro esperado</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="saving" value="${sv?nfs(sv):''}" placeholder="0,00"></div>
@@ -592,8 +599,8 @@ function vMes(){
       <div class="fld"><label>${m>curYM?'Ahorros proyectados':'Ahorros disponibles'}</label><div style="padding:9px 0;font-weight:650">${fmt(m===curYM?savBal():savAt(m))}</div></div>
     </div>
     ${cs.some(x=>x.ub)?`<div class="sum" style="margin-top:10px"><div class="fld"><label>U$D del mes (neto)</label><div style="padding:9px 0;font-weight:650">${fmtU(cs.reduce((s,x)=>s+x.un,0))}</div></div><div class="fld"><label>U$D pagados en dólares</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="usdPaid" value="${M.usdPaid?nfs(M.usdPaid):''}" placeholder="0,00"></div></div><div class="hint">Lo que pagues en dólares no se suma al total en pesos; el resto se convierte con el dólar del mes.</div>`:''}
-    ${cs.some(x=>x.ub)&&!M.usd?'<div class="warn">Hay compras en USD y falta el dólar del mes.</div>':''}
-    ${distrHTML(num(M.salary)+inc,[['Ahorro',sv,'color-mix(in srgb,var(--accent) 60%,var(--ink))'],['Tarjetas y cuentas',tc,'color-mix(in srgb,var(--accent) 62%,var(--card))'],['Servicios',tx,'color-mix(in srgb,var(--accent) 40%,var(--card))'],['Compartidos',owe,'color-mix(in srgb,var(--accent) 24%,var(--card))']],rest)}
+    </div>${cs.some(x=>x.ub)&&!M.usd?'<div class="warn">Hay compras en USD y falta el dólar del mes.</div>':''}
+    ${distrHTML(num(M.salary)+inc,[['Ahorro',sv,'color-mix(in srgb,var(--accent) 45%,var(--card))'],['Tarjetas y cuentas',tc,'color-mix(in srgb,var(--muted) 75%,var(--card))'],['Servicios',tx,'color-mix(in srgb,var(--muted) 48%,var(--card))'],['Compartidos',owe,'color-mix(in srgb,var(--muted) 28%,var(--card))']],rest)}
   </div>
   <div class="card pad hero">
     <div class="kv"><span>Sueldo</span><span>${fmt(num(M.salary))}</span></div>${inc?`<div class="kv"><span>+ Otros ingresos y egresos</span><span class="${inc<0?'neg':'pos'}">${fmt(inc)}</span></div>`:''}
@@ -1188,7 +1195,7 @@ function purchaseForm(p,link){
     <div class="fld amtbig"><label id="amtlbl">Monto</label><input name="total" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required value="${amt0?nfs(amt0):''}" placeholder="0,00"><div class="hint" id="amthint"></div></div>
     ${fld('Descripción',`<div class="acwrap"><input name="desc" required value="${esc(p.desc)}" autocomplete="off"><div class="acl" id="acl"></div></div><div class="hint" id="achint"></div>`)}
     <div class="f2">${fld('Tarjeta',`<select name="card">${dest}</select>`)}<div class="creditonly">${fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${p.cuotas}">`)}</div></div>
-    <div class="dsum" id="dsum" ${showDate?'hidden':''}><span>📅 Hoy, ${dmy(todayISO()).slice(0,5)}</span><button type="button" id="dshow">Cambiar fecha</button></div>
+    <div class="dsum" id="dsum" ${showDate?'hidden':''}><span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" style="vertical-align:-3px;margin-right:4px;color:var(--muted)"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Hoy, ${dmy(todayISO()).slice(0,5)}</span><button type="button" id="dshow">Cambiar fecha</button></div>
     <div id="dfld" ${showDate?'':'hidden'}>${fld('Fecha',`<div class="dwrap"><input type="date" name="date" value="${p.date||''}"><button type="button" class="dclr" id="dclr" aria-label="Sin fecha" title="Sin fecha">×</button></div>`)}</div>
     <details class="more" id="more" ${openMore?'open':''}><summary>Más opciones</summary>
     <div class="f2">${fld('Moneda',curSeg(p.cur))}<div class="cardonly">${fld('Categoría',catSel(p.cat))}</div></div>
@@ -1283,6 +1290,7 @@ document.addEventListener('click',e=>{
   const t=e.target.closest('[data-act],[data-tab]');if(!t)return;
   if(t.dataset.tab){$('#moremenu')?.remove();tab=t.dataset.tab;if(tab==='viajes')tripOpen=t.dataset.trip||null;render();scrollTo(0,0);return}
   const id=t.dataset.id,a=t.dataset.act;
+  if(a==='mftog'){mfOpen=!t.closest('.sumcard').classList.contains('op');render();return}
   if(a==='ptog'){const m=t.dataset.m;pOpen.has(m)?pOpen.delete(m):pOpen.add(m);render();return}
   if(a==='priv'){setPriv(!priv);try{localStorage.setItem('gastos-priv',priv?'1':'0')}catch(e){}render()}
   else if(a==='prev'){view=addM(view,-1);render()}
