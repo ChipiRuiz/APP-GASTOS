@@ -594,7 +594,7 @@ const savAt=m=>sumBy(S.deposits.filter(x=>x.month<m),'amount')+yTot(m)-sumBy(S.s
 /* ---------- vistas ---------- */
 function render(){
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab||(b.classList.contains('nmorebtn')&&(['ajustes','sim','fijos'].includes(tab)||(tab==='viajes'&&innerWidth<=700)))));
-  $('#mnav').style.visibility=['mes','comp','fijos'].includes(tab)?'visible':'hidden';$('#mnav').style.display=['mes','comp','fijos'].includes(tab)?'':'none';
+  $('#mnav').style.visibility=['mes','comp','fijos','ahorros','ajustes'].includes(tab)?'visible':'hidden';$('#mnav').style.display=['mes','comp','fijos','ahorros','ajustes'].includes(tab)?'':'none';
   {const[y,mm]=view.split('-').map(Number),n=MESES[mm-1];$('#mlabel').innerHTML=`<span class="mfull">${n}</span><span class="mshort">${n.slice(0,3)}</span> ${y}`}
   $('.top').classList.toggle('nosrch',tab!=='mes');
   $('#ttl').textContent={mes:'Mis Gastos',ahorros:'Ahorros',proy:'Proyección',sim:'Simulador de compra',fijos:'Gastos fijos',viajes:'Vacaciones',comp:'Compartido',ajustes:'Ajustes'}[tab];
@@ -878,7 +878,7 @@ function vAhorros(){
   const ys=S.yields||[],yt=yTot(),d=sumBy(depDone(),'amount'),pend=S.deposits.filter(x=>x.month>=curYM).sort((a,b)=>a.month.localeCompare(b.month)),g=sumBy(S.savingsExp,'amount'),v=tripSav(),ts=S.trips.filter(t=>t.fromSavings);
   return `<div class="card pad hero"><div class="mut">Saldo de ahorros</div><div class="big">${fmt(d+yt-g-v)}</div><button class="btn sec" style="width:100%;margin:6px 0 4px" data-act="realbal">Actualizar saldo real</button>
     <div class="kv"><span>Total ahorrado</span><span>${fmt(d)}</span></div>${ys.length?`<div class="kv"><span>+ Rendimientos FCI</span><span class="${yt<0?'neg':'pos'}">${fmt(yt)}</span></div>`:''}<div class="kv"><span>• Gastado desde ahorros</span><span>${fmt(g)}</span></div>${ts.length?`<div class="kv"><span>• Vacaciones pagadas con ahorros</span><span>${fmt(v)}</span></div>`:''}</div>
-  <h2>Ahorro esperado por mes</h2><div class="card pad"><div class="sum">${mfa('saving','Ahorro esperado',savingOf(curYM))}</div><div class="hint" style="margin-top:8px">Vale desde ${mLabel(curYM).toLowerCase()} en adelante. Para un mes puntual, tocá ese mes en la lista o usá la tabla de Proyección.</div></div>
+  <h2>Ahorro esperado por mes</h2><div class="card pad"><div class="sum">${mfa('saving','Ahorro esperado',savingOf(view))}</div><div class="hint" style="margin-top:8px">Vale desde ${mLabel(view).toLowerCase()} en adelante; los meses anteriores no cambian. Para un mes puntual, tocá ese mes en la lista o usá la tabla de Proyección.</div></div>
   <div class="grid4"><div><h2>Ahorros</h2><div class="card">
     ${depBars()}${pend.length?`<div class="wk">Próximos · ${fmt(sumBy(pend,'amount'))}</div>`:''}${pend.map(depLi).join('')}
     ${depDone().length?`<div class="wk">Depositados · ${fmt(d)}</div>`:''}${[...depDone()].reverse().map(depLi).join('')}
@@ -1075,14 +1075,14 @@ function vFijos(){
     ${cur.length||sg.length?'':`<div class="banner">Todavía no hay gastos fijos en este mes. Aparecen los débitos automáticos y suscripciones, los impuestos y servicios, y los que marques con 📌 Gasto fijo al abrir un gasto.</div>`}`;
 }
 /* sueldo, dólar y ahorro esperado: cambian este mes y los siguientes que tenían el mismo valor; los meses cambiados aparte (en Proyección o en la lista de Ahorros) no se pisan */
-function setFrom(k,v){const m0=curYM,M0=ensureMonth(m0),old=k==='saving'?savingOf(m0):num(M0[k]);
+function setFrom(k,v){const m0=view,M0=ensureMonth(m0),old=k==='saving'?savingOf(m0):num(M0[k]);
   if(k==='saving'){const same=x=>x.month>m0&&!x.note&&+x.amount===old;if(v)S.deposits.filter(same).forEach(x=>x.amount=v);else S.deposits=S.deposits.filter(x=>!same(x));setSaving(m0,v)}
   else{for(const[m,M]of Object.entries(S.months))if(m>m0&&num(M[k])===old)M[k]=v;M0[k]=v}}
 const mfa=(k,l,v)=>`<div class="fld"><label>${l}</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mfa="${k}" value="${v?nfs(v):''}" placeholder="0,00"></div>`;
 function vAjustes(){
   const t=S.theme;
-  const M0=ensureMonth(curYM);
-  return `<h2>Sueldo y dólar</h2><div class="card pad"><div class="sum">${mfa('salary','Sueldo',num(M0.salary))}${mfa('usd','Dólar',num(M0.usd))}</div><div class="hint" style="margin-top:8px">Vale desde ${mLabel(curYM).toLowerCase()} en adelante. Para cambiar el sueldo de un mes puntual, usá la tabla de Proyección.</div></div>
+  const M0=ensureMonth(view);
+  return `<h2>Sueldo y dólar</h2><div class="card pad"><div class="sum">${mfa('salary','Sueldo',num(M0.salary))}${mfa('usd','Dólar',num(M0.usd))}</div><div class="hint" style="margin-top:8px">Vale desde ${mLabel(view).toLowerCase()} en adelante (el mes elegido arriba). Para cambiar el sueldo de un mes puntual, usá la tabla de Proyección.</div></div>
   <h2>Apariencia</h2><div class="card pad"><div class="pals">${Object.entries(PAL).map(([k,p])=>`<button class="pal ${t.p===k?'on':''}" data-act="pal" data-id="${k}"><i style="background:linear-gradient(135deg,${p.l.accent} 50%,${p.d.accent} 50%)"></i>${p.n}</button>`).join('')}</div>
     <div class="seg">${[['auto','Automático'],['light','Claro'],['dark','Oscuro']].map(([k,n])=>`<label><input type="radio" name="mode" data-mode="${k}" ${t.mode===k?'checked':''}><span>${n}</span></label>`).join('')}</div></div>
   <h2>Categorías</h2><div class="card pad"><div class="chips">${S.cats.map((c,i)=>`<span class="chip"><i style="background:${catSlot(c)>=0?CATPAL[window.__dark?'d':'l'][catSlot(c)]:'var(--muted)'}"></i>${esc(c)}<button data-act="delcat" data-id="${i}" aria-label="Borrar ${esc(c)}">×</button></span>`).join('')}</div>
@@ -1398,7 +1398,7 @@ document.addEventListener('change',e=>{const t=e.target;if(!isMoney(t))return;co
 
 document.addEventListener('change',e=>{
   const t=e.target;
-  if(t.dataset.mfa){setFrom(t.dataset.mfa,num(t.value));save();render();toast('Guardado desde '+mLabel(curYM).toLowerCase())}
+  if(t.dataset.mfa){setFrom(t.dataset.mfa,num(t.value));save();render();toast('Guardado desde '+mLabel(view).toLowerCase())}
   else if(t.dataset.mf){if(t.dataset.mf==='saving')setSaving(view,num(t.value));else S.months[view][t.dataset.mf]=num(t.value);save();render()}
   else if(t.dataset.pj){const m=t.dataset.m,v=num(t.value);if(t.dataset.pj==='sv')setSaving(m,v);else{/* crea los meses hasta el siguiente antes de cambiar, así el cambio queda solo en ese mes */for(let k=curYM;k<=addM(m,1);k=addM(k,1))ensureMonth(k);S.months[m].salary=v}save();render()}
   else if('myname' in t.dataset){S.myName=t.value.trim();save();shLoad().then(()=>toast('Nombre actualizado'))}
