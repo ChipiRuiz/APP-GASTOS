@@ -267,6 +267,9 @@ body.priv #app input[data-money]:not(:focus),body.priv #app input.amt:not(:focus
 .ptbl tr:not(.op) td .r-sub{display:none}
 .ptbl td:nth-child(2){flex-wrap:wrap}.ptbl td:nth-child(2) .r-sub{flex-basis:100%;text-align:right;margin-top:2px}}
 .cbars{display:grid;gap:12px}
+.tqh{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;padding:0;cursor:pointer;text-align:left}.tql{flex:1;font-weight:650;font-size:15px}.tql small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:1px}
+.tq:not(.op) .tqh .chev{transform:rotate(-90deg)}.tq:not(.op) .tqb{display:none}.tq.op .tqb{margin-top:12px;padding-top:4px;border-top:1px solid color-mix(in srgb,var(--accent) 25%,var(--line))}
+@media(min-width:900px){.tqd{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}.tqd .distr{margin-top:6px;border-top:0;padding-top:6px}}
 .anim{animation:reveal .22s ease-out}@keyframes reveal{from{opacity:0;clip-path:inset(0 0 100% 0)}to{opacity:1;clip-path:inset(0)}}@media(prefers-reduced-motion:reduce){.anim{animation:none}}
 .dbw{padding:14px 14px 6px}.dbhd{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted)}.dbhd b{display:block;font-size:17px;color:var(--ink);font-weight:700}
 .dbars{position:relative;display:grid;grid-template-columns:repeat(12,1fr);gap:3px;align-items:end;height:118px;margin-top:10px}
@@ -598,30 +601,22 @@ function render(){
   $('#app').innerHTML={mes:vMes,ahorros:vAhorros,proy:vProy,sim:()=>simUI(true),fijos:vFijos,viajes:vViajes,comp:vComp,ajustes:vAjustes}[tab]();
 }
 
-let mfOpen=false,animK=null;
+let mfOpen=false,animK=null,tqOpen=false;
 function vMes(){
   const m=view,M=ensureMonth(m);if(!num(M.salary))mfOpen=true;
   const cs=cardsAll().map(c=>cardTot(c,m));
   const tc=tcTotal(cs,M),tx=M.taxes.reduce((s,t)=>s+num(t.amount),0);
   const sv=savingOf(m),inc=incOf(m),owe=shOweMonth(m),rest=num(M.salary)+inc-sv-tc-tx-owe;
-    let h=(view===curYM?avisosHTML():'')+(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta o cuenta</b> para crear tus tarjetas, débito, transferencias o efectivo, y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+(()=>{const pd=shPending();if(!pd.length)return '';return `<div class="card pad" style="margin-bottom:12px"><div style="font-weight:650;margin-bottom:4px">Cargados a tu nombre en compartido</div><div class="hint" style="margin-bottom:6px">Los cargó ${esc(shName(pd[0].e.created_by))} diciendo que pagaste vos. Si salieron de una tarjeta tuya, agregalos y quedan vinculados (no se duplican).</div>`+pd.map(({e})=>`<div class="kv"><span style="min-width:0">${esc(e.descr||'Gasto')} <span class="mut">· ${(isU(e)?fmtU:fmt)(+e.cuota)}${e.cuotas>1?' x'+e.cuotas:''} · ${mLabel(e.first_month)}</span></span><span style="white-space:nowrap"><button class="lnk" data-act="shtocard" data-id="${e.id}">A mi tarjeta</button> <button class="lnk" data-act="shign" data-id="${e.id}">Ignorar</button></span></div>`).join('')+`</div>`})()+`<div class="sumwrap"><div class="card pad sumcard ${mfOpen?'op':''}"><button class="mfh" data-act="mftog" aria-expanded="${mfOpen}"><span><b>Datos del mes</b><small><span>Sueldo <b>${fmt(num(M.salary))}</b></span><span>Ahorro <b>${fmt(sv)}</b></span>${M.usd?`<span>Dólar <b>${fmt(num(M.usd))}</b></span>`:''}</small></span><svg class="chev" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="mfb">
-    <div class="sum">
-      <div class="fld"><label>Sueldo</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="salary" value="${M.salary?nfs(M.salary):''}" placeholder="0,00"></div>
-      <div class="fld"><label>Ahorro esperado</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="saving" value="${sv?nfs(sv):''}" placeholder="0,00"></div>
-      <div class="fld"><label>Dólar del mes</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mf="usd" value="${M.usd?nfs(M.usd):''}" placeholder="0,00"></div>
-      <div class="fld"><label>${m>curYM?'Ahorros proyectados':'Ahorros disponibles'}</label><div style="padding:9px 0;font-weight:650">${fmt(m===curYM?savBal():savAt(m))}</div></div>
-    </div>
-    ${cs.some(x=>x.ub)?`<div class="sum" style="margin-top:10px"><div class="fld"><label>U$D del mes (neto)</label><div style="padding:9px 0;font-weight:650">${fmtU(cs.reduce((s,x)=>s+x.un,0))}</div></div></div><div class="hint">Se convierte a pesos con el dólar del mes.</div>`:''}
-    </div>${cs.some(x=>x.ub)&&!M.usd?'<div class="warn">Hay compras en USD y falta el dólar del mes.</div>':''}
-    ${distrHTML(num(M.salary)+inc,[['Ahorro',sv,'color-mix(in srgb,var(--accent) 45%,var(--card))'],['Tarjetas y cuentas',tc,'color-mix(in srgb,var(--muted) 75%,var(--card))'],['Servicios',tx,'color-mix(in srgb,var(--muted) 48%,var(--card))'],['Compartidos',owe,'color-mix(in srgb,var(--muted) 28%,var(--card))']],rest)}
-  </div>
-  <div class="card pad hero">
+    let h=(view===curYM?avisosHTML():'')+(S.purchases.length?'':`<div class="banner">Todavía no hay gastos. Tocá <b>+ Nueva tarjeta o cuenta</b> para crear tus tarjetas, débito, transferencias o efectivo, y después cargá gastos con el botón <b>+</b>. Si tenés un archivo de datos, importalo en <b>Ajustes → Importar</b>.</div>`)+(()=>{const pd=shPending();if(!pd.length)return '';return `<div class="card pad" style="margin-bottom:12px"><div style="font-weight:650;margin-bottom:4px">Cargados a tu nombre en compartido</div><div class="hint" style="margin-bottom:6px">Los cargó ${esc(shName(pd[0].e.created_by))} diciendo que pagaste vos. Si salieron de una tarjeta tuya, agregalos y quedan vinculados (no se duplican).</div>`+pd.map(({e})=>`<div class="kv"><span style="min-width:0">${esc(e.descr||'Gasto')} <span class="mut">· ${(isU(e)?fmtU:fmt)(+e.cuota)}${e.cuotas>1?' x'+e.cuotas:''} · ${mLabel(e.first_month)}</span></span><span style="white-space:nowrap"><button class="lnk" data-act="shtocard" data-id="${e.id}">A mi tarjeta</button> <button class="lnk" data-act="shign" data-id="${e.id}">Ignorar</button></span></div>`).join('')+`</div>`})()+`${!num(M.salary)&&m>=curYM?'<div class="warn">Falta el sueldo: cargalo en <b>Ajustes</b>.</div>':''}${cs.some(x=>x.ub)&&!M.usd?'<div class="warn">Hay compras en dólares y falta el dólar del mes: cargalo en <b>Ajustes</b>.</div>':''}<div class="card pad hero tq ${tqOpen?'op':''}">
+    <button class="tqh" data-act="tqtog" aria-expanded="${tqOpen}"><span class="tql">Te queda<small>${mLabel(m)}</small></span><span class="big ${rest<0?'neg':''}">${fmt(rest)}</span><svg class="chev" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="tqb ${animK==='tq'?'anim':''}"><div class="tqd"><div>
     <div class="kv"><span>Sueldo</span><span>${fmt(num(M.salary))}</span></div>${inc?`<div class="kv"><span>+ Otros ingresos y egresos</span><span class="${inc<0?'neg':'pos'}">${fmt(inc)}</span></div>`:''}
     <div class="kv"><span>• Ahorro esperado</span><span>${fmt(sv)}</span></div>
     <div class="kv"><span>• Tarjetas y cuentas</span><span>${fmt(tc)}</span></div>
     <div class="kv"><span>• Impuestos y servicios</span><span>${fmt(tx)}</span></div>${owe?`<div class="kv"><span>• Compartidos (tu parte)</span><span>${fmt(owe)}</span></div>`:''}
-    <div class="kv" style="align-items:baseline"><span><b>Te queda</b></span><span class="big ${rest<0?'neg':''}">${fmt(rest)}</span></div>${endingHTML(cs,m)}
-  </div></div>
+    ${cs.some(x=>x.ub)?`<div class="kv"><span class="mut">Incluye U$D ${priv?'•••••':nf(cs.reduce((s,x)=>s+x.un,0))} al dólar ${M.usd?fmt(num(M.usd)):'(sin cargar)'}</span><span></span></div>`:''}
+    </div><div>${distrHTML(num(M.salary)+inc,[['Ahorro',sv,'color-mix(in srgb,var(--accent) 45%,var(--card))'],['Tarjetas y cuentas',tc,'color-mix(in srgb,var(--muted) 75%,var(--card))'],['Servicios',tx,'color-mix(in srgb,var(--muted) 48%,var(--card))'],['Compartidos',owe,'color-mix(in srgb,var(--muted) 28%,var(--card))']],rest)}</div></div>${endingHTML(cs,m)}</div>
+  </div>
   <h2>Tarjetas y cuentas</h2><div class="grid4">`;
   for(const x of cs){
     if(x.c.hidden&&!x.L.length)continue;
@@ -651,7 +646,7 @@ function vMes(){
     <input type="text" class="amt" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-tx="amount" data-id="${t.id}" value="${num(t.amount)?nfs(num(t.amount)):''}" placeholder="0,00">
     <button class="x" data-act="deltax" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('');
   h+=`<button class="lnk" data-act="addtax">+ Agregar</button></div></div>`;
-  const cat={},cit={},ad=(k,v,it)=>{cat[k]=(cat[k]||0)+v;(cit[k]=cit[k]||[]).push(it)};cs.forEach(x=>x.L.forEach(l=>ad(l.p.cat,l.net,{d:l.p.desc,s:(l.p.date?(l.p.date.slice(0,4)===m.slice(0,4)?dmy(l.p.date).slice(0,5):dmy(l.p.date))+' · ':'')+x.c.name+(l.p.cuotas>1&&!l.p.rec?' · cuota '+l.n+'/'+l.p.cuotas:''),v:l.net})));M.taxes.forEach(t=>{if(t.cat&&num(t.amount))ad(t.cat,num(t.amount),{d:t.name||'Servicio',s:'Impuestos y servicios',v:num(t.amount)})});
+  const cat={},cit={},ad=(k,v,it)=>{cat[k]=(cat[k]||0)+v;(cit[k]=cit[k]||[]).push(it)};cs.forEach(x=>x.L.forEach(l=>ad(l.p.cat,l.net,{d:l.p.desc,s:(l.p.date?(l.p.date.slice(0,4)===m.slice(0,4)?dmy(l.p.date).slice(0,5):dmy(l.p.date))+' · ':'')+x.c.name+(l.p.cuotas>1&&!l.p.rec?' · cuota '+l.n+'/'+l.p.cuotas:''),v:l.net})));if(owe)ad('COMPARTIDOS',owe,{d:'Tu parte de gastos compartidos',s:'Compartido',v:owe});M.taxes.forEach(t=>{if(t.cat&&num(t.amount))ad(t.cat,num(t.amount),{d:t.name||'Servicio',s:'Impuestos y servicios',v:num(t.amount)})});
   h+=`<div><h2>Por categoría</h2><div class="card pad">${catBarsHTML(cat,cit)}</div></div></div>`;
   return h;
 }
@@ -883,6 +878,7 @@ function vAhorros(){
   const ys=S.yields||[],yt=yTot(),d=sumBy(depDone(),'amount'),pend=S.deposits.filter(x=>x.month>=curYM).sort((a,b)=>a.month.localeCompare(b.month)),g=sumBy(S.savingsExp,'amount'),v=tripSav(),ts=S.trips.filter(t=>t.fromSavings);
   return `<div class="card pad hero"><div class="mut">Saldo de ahorros</div><div class="big">${fmt(d+yt-g-v)}</div><button class="btn sec" style="width:100%;margin:6px 0 4px" data-act="realbal">Actualizar saldo real</button>
     <div class="kv"><span>Total ahorrado</span><span>${fmt(d)}</span></div>${ys.length?`<div class="kv"><span>+ Rendimientos FCI</span><span class="${yt<0?'neg':'pos'}">${fmt(yt)}</span></div>`:''}<div class="kv"><span>• Gastado desde ahorros</span><span>${fmt(g)}</span></div>${ts.length?`<div class="kv"><span>• Vacaciones pagadas con ahorros</span><span>${fmt(v)}</span></div>`:''}</div>
+  <h2>Ahorro esperado por mes</h2><div class="card pad"><div class="sum">${mfa('saving','Ahorro esperado',savingOf(curYM))}</div><div class="hint" style="margin-top:8px">Vale desde ${mLabel(curYM).toLowerCase()} en adelante. Para un mes puntual, tocá ese mes en la lista o usá la tabla de Proyección.</div></div>
   <div class="grid4"><div><h2>Ahorros</h2><div class="card">
     ${depBars()}${pend.length?`<div class="wk">Próximos · ${fmt(sumBy(pend,'amount'))}</div>`:''}${pend.map(depLi).join('')}
     ${depDone().length?`<div class="wk">Depositados · ${fmt(d)}</div>`:''}${[...depDone()].reverse().map(depLi).join('')}
@@ -1078,9 +1074,16 @@ function vFijos(){
     ${sec('Impuestos y servicios',cur.filter(x=>x.kind==='tax'))}
     ${cur.length||sg.length?'':`<div class="banner">Todavía no hay gastos fijos en este mes. Aparecen los débitos automáticos y suscripciones, los impuestos y servicios, y los que marques con 📌 Gasto fijo al abrir un gasto.</div>`}`;
 }
+/* sueldo, dólar y ahorro esperado: cambian este mes y los siguientes que tenían el mismo valor; los meses cambiados aparte (en Proyección o en la lista de Ahorros) no se pisan */
+function setFrom(k,v){const m0=curYM,M0=ensureMonth(m0),old=k==='saving'?savingOf(m0):num(M0[k]);
+  if(k==='saving'){const same=x=>x.month>m0&&!x.note&&+x.amount===old;if(v)S.deposits.filter(same).forEach(x=>x.amount=v);else S.deposits=S.deposits.filter(x=>!same(x));setSaving(m0,v)}
+  else{for(const[m,M]of Object.entries(S.months))if(m>m0&&num(M[k])===old)M[k]=v;M0[k]=v}}
+const mfa=(k,l,v)=>`<div class="fld"><label>${l}</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mfa="${k}" value="${v?nfs(v):''}" placeholder="0,00"></div>`;
 function vAjustes(){
   const t=S.theme;
-  return `<h2>Apariencia</h2><div class="card pad"><div class="pals">${Object.entries(PAL).map(([k,p])=>`<button class="pal ${t.p===k?'on':''}" data-act="pal" data-id="${k}"><i style="background:linear-gradient(135deg,${p.l.accent} 50%,${p.d.accent} 50%)"></i>${p.n}</button>`).join('')}</div>
+  const M0=ensureMonth(curYM);
+  return `<h2>Sueldo y dólar</h2><div class="card pad"><div class="sum">${mfa('salary','Sueldo',num(M0.salary))}${mfa('usd','Dólar',num(M0.usd))}</div><div class="hint" style="margin-top:8px">Vale desde ${mLabel(curYM).toLowerCase()} en adelante. Para cambiar el sueldo de un mes puntual, usá la tabla de Proyección.</div></div>
+  <h2>Apariencia</h2><div class="card pad"><div class="pals">${Object.entries(PAL).map(([k,p])=>`<button class="pal ${t.p===k?'on':''}" data-act="pal" data-id="${k}"><i style="background:linear-gradient(135deg,${p.l.accent} 50%,${p.d.accent} 50%)"></i>${p.n}</button>`).join('')}</div>
     <div class="seg">${[['auto','Automático'],['light','Claro'],['dark','Oscuro']].map(([k,n])=>`<label><input type="radio" name="mode" data-mode="${k}" ${t.mode===k?'checked':''}><span>${n}</span></label>`).join('')}</div></div>
   <h2>Categorías</h2><div class="card pad"><div class="chips">${S.cats.map((c,i)=>`<span class="chip"><i style="background:${catSlot(c)>=0?CATPAL[window.__dark?'d':'l'][catSlot(c)]:'var(--muted)'}"></i>${esc(c)}<button data-act="delcat" data-id="${i}" aria-label="Borrar ${esc(c)}">×</button></span>`).join('')}</div>
     <button class="lnk" style="padding:12px 0 0" data-act="addcat">+ Nueva categoría</button><div class="hint">Las categorías son solo informativas: sirven para ver en qué se va la plata en "Por categoría".</div></div>
@@ -1312,6 +1315,7 @@ document.addEventListener('click',e=>{
   if(t.dataset.tab){$('#moremenu')?.remove();tab=t.dataset.tab;if(tab==='viajes')tripOpen=t.dataset.trip||null;render();scrollTo(0,0);return}
   const id=t.dataset.id,a=t.dataset.act;
   if(a==='cattog'){const k=t.dataset.k;catOpen.has(k)?catOpen.delete(k):catOpen.add(k);animK='cat:'+k;render();animK=null;return}
+  if(a==='tqtog'){tqOpen=!tqOpen;animK='tq';render();animK=null;return}
   if(a==='mftog'){mfOpen=!t.closest('.sumcard').classList.contains('op');render();return}
   if(a==='ptog'){const m=t.dataset.m;pOpen.has(m)?pOpen.delete(m):pOpen.add(m);animK='pj:'+m;render();animK=null;return}
   if(a==='priv'){setPriv(!priv);try{localStorage.setItem('gastos-priv',priv?'1':'0')}catch(e){}render()}
@@ -1394,8 +1398,9 @@ document.addEventListener('change',e=>{const t=e.target;if(!isMoney(t))return;co
 
 document.addEventListener('change',e=>{
   const t=e.target;
-  if(t.dataset.mf){if(t.dataset.mf==='saving')setSaving(view,num(t.value));else S.months[view][t.dataset.mf]=num(t.value);save();render()}
-  else if(t.dataset.pj){const m=t.dataset.m,v=num(t.value);if(t.dataset.pj==='sv')setSaving(m,v);else ensureMonth(m).salary=v;save();render()}
+  if(t.dataset.mfa){setFrom(t.dataset.mfa,num(t.value));save();render();toast('Guardado desde '+mLabel(curYM).toLowerCase())}
+  else if(t.dataset.mf){if(t.dataset.mf==='saving')setSaving(view,num(t.value));else S.months[view][t.dataset.mf]=num(t.value);save();render()}
+  else if(t.dataset.pj){const m=t.dataset.m,v=num(t.value);if(t.dataset.pj==='sv')setSaving(m,v);else{/* crea los meses hasta el siguiente antes de cambiar, así el cambio queda solo en ese mes */for(let k=curYM;k<=addM(m,1);k=addM(k,1))ensureMonth(k);S.months[m].salary=v}save();render()}
   else if('myname' in t.dataset){S.myName=t.value.trim();save();shLoad().then(()=>toast('Nombre actualizado'))}
   else if(t.dataset.ic){const x=S.months[view].incomes.find(y=>y.id===t.dataset.id);x[t.dataset.ic]=t.dataset.ic==='amount'?num(t.value):t.value;save();if(t.dataset.ic==='amount')render()}
   else if(t.dataset.tx){const x=S.months[view].taxes.find(y=>y.id===t.dataset.id);x[t.dataset.tx]=t.dataset.tx==='paid'?t.checked:t.dataset.tx==='amount'?num(t.value):t.value;if(t.dataset.tx==='cat'){const nm=(x.name||'').trim().toLowerCase();if(nm)for(const[k,M2]of Object.entries(S.months))if(k>view)(M2.taxes||[]).forEach(y=>{if((y.name||'').trim().toLowerCase()===nm&&!y.cat)y.cat=t.value})}save();if(t.dataset.tx!=='name')render()}
