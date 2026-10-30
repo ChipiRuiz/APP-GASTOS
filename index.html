@@ -178,6 +178,9 @@ body.priv #app input[data-money]:not(:focus),body.priv #app input.amt:not(:focus
 .fjtog input:checked+span{border-color:var(--accent);background:var(--soft);color:var(--accent)}.fjtog input:focus-visible+span{outline:2px solid var(--accent)}
 .fjtog small{color:var(--muted);font-size:12px}
 .fjtog input:disabled+span{opacity:.75;cursor:default}
+.pgtog{margin:-4px 0 10px}.pgtog input:checked+span{border-color:var(--pos);background:color-mix(in srgb,var(--pos) 13%,var(--card));color:var(--pos)}
+.pgtag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.03em;color:var(--pos);background:color-mix(in srgb,var(--pos) 14%,transparent);border-radius:999px;padding:1px 7px;margin-right:5px;vertical-align:1px}
+.row.pago .r-amt{color:var(--pos)}.row.pago{background:color-mix(in srgb,var(--pos) 5%,transparent)}
 .fjrowf{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}.fjrowf .fjtog{margin:0}
 .fjsel{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 10px;font-size:13.5px}
 .tsum{padding:12px 14px 6px;border-bottom:1px solid var(--line)}
@@ -534,7 +537,8 @@ const savingOf=m=>{const d=plainDep(m);return d?+d.amount:0};
 function setSaving(m,v){let d=plainDep(m);if(!v){if(d)S.deposits=S.deposits.filter(x=>x!==d);return}if(d)d.amount=v;else{S.deposits.push({id:uid(),month:m,amount:v,note:''});S.deposits.sort((a,b)=>a.month.localeCompare(b.month))}}
 function migrate(){let ch=false;
   if(!S.cards){S.cards=DEF_CARDS.map(c=>({...c,close:(S.close&&S.close[c.id])||c.close}));delete S.close;ch=true}for(const[m,M]of Object.entries(S.months||{})){if('saving'in M){if(M.saving&&!plainDep(m))setSaving(m,M.saving);delete M.saving;ch=true}}return ch}
-function cardTot(c,m){const L=lines(c.id,m),A=L.filter(l=>!l.u),U=L.filter(l=>l.u);const b=sumBy(A,'val'),r=sumBy(A,'ref'),ub=sumBy(U,'uval'),ur=sumBy(U,'uref'),sh=sumBy(A.filter(l=>l.sh),'ref'),ush=sumBy(U.filter(l=>l.sh),'uref');const R2=v=>Math.round(v*100)/100;return{c,L,b,r,sh,ush,rf:R2(r-sh),urf:R2(ur-ush),n:b-r,ub,ur,un:ub-ur}}
+/* los pagos a la tarjeta no cuentan en el bruto (como en el resumen del banco), pero sí bajan el neto */
+function cardTot(c,m){const L=lines(c.id,m),A=L.filter(l=>!l.u),U=L.filter(l=>l.u);const b=sumBy(A.filter(l=>!l.p.pago),'val'),pg=sumBy(A.filter(l=>l.p.pago),'val'),r=sumBy(A,'ref'),ub=sumBy(U.filter(l=>!l.p.pago),'uval'),upg=sumBy(U.filter(l=>l.p.pago),'uval'),ur=sumBy(U,'uref'),sh=sumBy(A.filter(l=>l.sh),'ref'),ush=sumBy(U.filter(l=>l.sh),'uref');const R2=v=>Math.round(v*100)/100;return{c,L,b,pg,r,sh,ush,rf:R2(r-sh),urf:R2(ur-ush),n:b+pg-r,ub,upg,ur,un:ub+upg-ur}}
 function tcTotal(cs,M){const ars=cs.reduce((s,x)=>s+x.n,0),un=cs.reduce((s,x)=>s+x.un,0);return ars+Math.max(0,un)*(num(M.usd)||0)}
 const incOf=m=>((S.months[m]||{}).incomes||[]).reduce((s,x)=>s+num(x.amount),0);
 /* saldo de reintegros: lo reintegrado en tarjetas desde S.refStart (sin compartidos ni "reintegro total", que es plata que te devuelve otra persona), más los ingresos y menos los egresos marcados ↩ */
@@ -627,8 +631,8 @@ function vMes(){
       const g=groups.find(g=>g[1][0]===l);if(g)rows+=`<div class="wk cu">${g[0]}</div>`;
       if(!l.p.rec&&l.p.cuotas<=1){if(!l.p.date){if(wk!=='none'){wk='none';rows+=`<div class="wk">Sin fecha</div>`}}else{const mo=monday(l.p.date),k=mo.toISOString().slice(0,10);
       if(k!==wk){wk=k;const su=new Date(mo);su.setDate(su.getDate()+6);let a=isoOf(mo),b=isoOf(su);if(l.p.date>=per[0]&&a<per[0])a=per[0];if(l.p.date<=per[1]&&b>per[1])b=per[1];rows+=`<div class="wk">Semana ${dmy(a).slice(0,5)} al ${dmy(b).slice(0,5)}</div>`}}}
-      rows+=`<div class="row" role="button" tabindex="0" data-act="edit" data-id="${l.p.id}">
-        <div style="min-width:0"><div class="r-desc">${esc(l.p.desc)}</div><div class="r-sub">${l.p.date?(l.p.date.slice(0,4)===m.slice(0,4)?dmy(l.p.date).slice(0,5):dmy(l.p.date))+' · ':''}${esc(l.p.cat)}${l.u?' · dólares':''}</div>${l.p.note?`<div class="r-note"><span>💬 ${esc(l.p.note)}</span><button class="nx" data-act="delnote" data-id="${l.p.id}" aria-label="Borrar comentario">×</button></div>`:''}</div>
+      rows+=`<div class="row${l.p.pago?' pago':''}" role="button" tabindex="0" data-act="edit" data-id="${l.p.id}">
+        <div style="min-width:0"><div class="r-desc">${esc(l.p.desc)}</div><div class="r-sub">${l.p.pago?'<span class="pgtag">💳 Pago</span>':''}${l.p.date?(l.p.date.slice(0,4)===m.slice(0,4)?dmy(l.p.date).slice(0,5):dmy(l.p.date))+(l.p.pago?'':' · '):''}${l.p.pago?'':esc(l.p.cat)}${l.u?' · dólares':''}</div>${l.p.note?`<div class="r-note"><span>💬 ${esc(l.p.note)}</span><button class="nx" data-act="delnote" data-id="${l.p.id}" aria-label="Borrar comentario">×</button></div>`:''}</div>
         <span class="r-cu">${l.p.rec?'↻':l.p.cuotas>1?l.n+'/'+l.p.cuotas:''}</span>
         <div class="r-amt">${l.u?fmtU(l.uval):fmt(l.val)}${l.ref||l.uref?`<small>${l.sh?`⇄ le toca a ${esc(l.p.shared.w||'la otra persona')} `:'↩ reint. '}${l.sh?(l.u?(l.uref<0?'-':'')+fmtU(l.uref):fmt(l.ref)):l.u?'-'+fmtU(l.uref):fmt(-l.ref)}</small><small class="r-net">neto ${l.u?fmtU(l.uval-l.uref):fmt(l.net)}</small>`:''}</div>
         <button class="dots ${l.p.note?'has':''}" data-act="note" data-id="${l.p.id}" aria-label="Comentario">⋯</button></div>`;
@@ -636,7 +640,7 @@ function vMes(){
     h+=`<section class="card cc ${opened.has(x.c.id)?'':'closed'}" style="--cc:${x.c.color}">
       <header data-act="toggle" data-id="${x.c.id}"><svg class="chev" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg><span class="dot"></span><h3><span class="cname">${esc(x.c.name)}</span><span class="cdate" title="${isCredit(x.c)?'Cierre '+closeDate(x.c,m):''}">${isCredit(x.c)?closeTxt(x.c,m):ATYPES[x.c.type]} · ${x.L.length} ${x.L.length===1?'gasto':'gastos'}</span></h3><b>${fmt(x.n)}${x.ub?`<span class="cdate" style="text-align:right">+ ${fmtU(x.un)}</span>`:''}</b><button class="x" data-act="editcard" data-id="${x.c.id}" aria-label="Editar tarjeta"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button></header>
       <div class="rows ${animK==='cc:'+x.c.id?'anim':''}">${rows||'<div class="empty">Sin cuotas este mes.</div>'}</div>
-      <footer><span><small>Bruto</small>${fmt(x.b)}</span>${x.rf||!x.sh?`<span class="pos"><small>Reint.</small>${fmt(x.rf)}</span>`:''}${x.sh?`<span class="pos"><small>⇄ Compartido</small>${fmt(x.sh)}</span>`:''}<b><small>Neto</small>${fmt(x.n)}</b></footer>${x.ub?`<footer class="ufoot"><span><small>U$D bruto</small>${fmtU(x.ub)}</span>${x.urf||!x.ush?`<span class="pos"><small>Reint.</small>${fmtU(x.urf)}</span>`:''}${x.ush?`<span class="pos"><small>⇄ Compartido</small>${fmtU(x.ush)}</span>`:''}<b><small>Neto</small>${fmtU(x.un)}</b></footer>`:''}</section>`;
+      <footer><span><small>Bruto</small>${fmt(x.b)}</span>${x.pg?`<span class="pos"><small>💳 Pagos</small>${fmt(x.pg)}</span>`:''}${x.rf||!x.sh?`<span class="pos"><small>Reint.</small>${fmt(x.rf)}</span>`:''}${x.sh?`<span class="pos"><small>⇄ Compartido</small>${fmt(x.sh)}</span>`:''}<b><small>Neto</small>${fmt(x.n)}</b></footer>${x.ub||x.upg?`<footer class="ufoot"><span><small>U$D bruto</small>${fmtU(x.ub)}</span>${x.upg?`<span class="pos"><small>💳 Pagos</small>${fmtU(x.upg)}</span>`:''}${x.urf||!x.ush?`<span class="pos"><small>Reint.</small>${fmtU(x.urf)}</span>`:''}${x.ush?`<span class="pos"><small>⇄ Compartido</small>${fmtU(x.ush)}</span>`:''}<b><small>Neto</small>${fmtU(x.un)}</b></footer>`:''}</section>`;
   }
   h+=`</div><button class="addcard" data-act="addcard">+ Nueva tarjeta o cuenta</button>`;
   h+=`<h2>Otros ingresos y egresos</h2><div class="card">${(M.incomes||[]).map(t=>`<div class="tax inc"><input type="text" data-ic="name" data-id="${t.id}" value="${esc(t.name)}" placeholder="Ej: Aguinaldo"><button class="incref ${t.ref?'on':''}" data-act="incref" data-id="${t.id}" aria-pressed="${!!t.ref}" title="Pagado con reintegros">↩ reint.</button><input type="text" class="amt" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-ic="amount" data-id="${t.id}" value="${num(t.amount)?nfs(num(t.amount)):''}" placeholder="0,00"><button class="x" data-act="delinc" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('')}<button class="lnk" data-act="addinc">+ Agregar ingreso</button>${(()=>{const r=refAvail(view);return r===null?'':`<div class="refbal"><span>Reintegros disponibles<small>Desde ${mLabel(S.refStart).toLowerCase()}, más y menos lo marcado con ↩</small></span><b class="${r<0?'neg':'pos'}">${fmt(r)}</b></div>`})()}</div>`;
@@ -646,7 +650,7 @@ function vMes(){
     <input type="text" class="amt" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-tx="amount" data-id="${t.id}" value="${num(t.amount)?nfs(num(t.amount)):''}" placeholder="0,00">
     <button class="x" data-act="deltax" data-id="${t.id}" aria-label="Quitar">×</button></div>`).join('');
   h+=`<button class="lnk" data-act="addtax">+ Agregar</button></div></div>`;
-  const cat={},cit={},ad=(k,v,it)=>{cat[k]=(cat[k]||0)+v;(cit[k]=cit[k]||[]).push(it)};cs.forEach(x=>x.L.forEach(l=>ad(l.p.cat,l.net,{d:l.p.desc,s:(l.p.date?(l.p.date.slice(0,4)===m.slice(0,4)?dmy(l.p.date).slice(0,5):dmy(l.p.date))+' · ':'')+x.c.name+(l.p.cuotas>1&&!l.p.rec?' · cuota '+l.n+'/'+l.p.cuotas:''),v:l.net})));if(owe)ad('COMPARTIDOS',owe,{d:'Tu parte de gastos compartidos',s:'Compartido',v:owe});M.taxes.forEach(t=>{if(t.cat&&num(t.amount))ad(t.cat,num(t.amount),{d:t.name||'Servicio',s:'Impuestos y servicios',v:num(t.amount)})});
+  const cat={},cit={},ad=(k,v,it)=>{cat[k]=(cat[k]||0)+v;(cit[k]=cit[k]||[]).push(it)};cs.forEach(x=>x.L.forEach(l=>!l.p.pago&&ad(l.p.cat,l.net,{d:l.p.desc,s:(l.p.date?(l.p.date.slice(0,4)===m.slice(0,4)?dmy(l.p.date).slice(0,5):dmy(l.p.date))+' · ':'')+x.c.name+(l.p.cuotas>1&&!l.p.rec?' · cuota '+l.n+'/'+l.p.cuotas:''),v:l.net})));if(owe)ad('COMPARTIDOS',owe,{d:'Tu parte de gastos compartidos',s:'Compartido',v:owe});M.taxes.forEach(t=>{if(t.cat&&num(t.amount))ad(t.cat,num(t.amount),{d:t.name||'Servicio',s:'Impuestos y servicios',v:num(t.amount)})});
   h+=`<div><h2>Por categoría</h2><div class="card pad">${catBarsHTML(cat,cit)}</div></div></div>`;
   return h;
 }
@@ -1217,6 +1221,7 @@ function purchaseForm(p,link){
   const f=sheet(`<h3>${isNew?'Nuevo gasto':'Editar gasto'}</h3>
     ${freq.length?`<div class="freq" role="group" aria-label="Gastos frecuentes">${freq.map((x,i)=>`<button type="button" data-fi="${i}">${esc(x.desc)}</button>`).join('')}</div>`:''}
     <div class="fld amtbig"><label id="amtlbl">Monto</label><input name="total" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required value="${amt0?nfs(amt0):''}" placeholder="0,00"><div class="hint" id="amthint"></div></div>
+    <label class="fjtog pgtog" id="pgw"><input type="checkbox" name="pago" ${p.pago?'checked':''}><span>💳 Es un pago a la tarjeta</span><small>No suma al Bruto, solo baja el Neto (como en el resumen del banco)</small></label>
     ${fld('Descripción',`<div class="acwrap"><input name="desc" required value="${esc(p.desc)}" autocomplete="off"><div class="acl" id="acl"></div></div><div class="hint" id="achint"></div>`)}
     <div class="f2">${fld('Tarjeta',`<select name="card">${dest}</select>`)}<div class="creditonly">${fld('Cuotas',`<input name="cuotas" inputmode="numeric" value="${p.cuotas}">`)}</div></div>
     <div class="dsum" id="dsum" ${showDate?'hidden':''}><span><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" style="vertical-align:-3px;margin-right:4px;color:var(--muted)"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Hoy, ${dmy(todayISO()).slice(0,5)}</span><button type="button" id="dshow">Cambiar fecha</button></div>
@@ -1241,7 +1246,8 @@ function purchaseForm(p,link){
     Object.assign(o,{card:d.card,date:d.date,desc:d.desc,cuotas:cu,cuota:Math.round(total*100)/100,cur:d.cur,cat:d.cat,first:d.first||(d.date?firstFor(d.card,d.date):view)});
     const nt=(d.note||'').trim();if(nt)o.note=nt;else delete o.note;
     delete o.noFijo;if(!d.rec){const k=fjKey(d.desc);if(k){S.fijos=(S.fijos||[]).filter(x=>x!==k);if(d.fijo)S.fijos.push(k)}}
-    if(d.rec){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew||cu>1||o.first>=view){delete o.rec;delete o.until}else o.until=view}
+    if(d.pago&&isCredit(cardById(d.card))){o.pago=true;o.cuotas=1;o.cuota=-Math.abs(o.cuota);delete o.rec;delete o.until}else delete o.pago;
+    if(d.rec&&!o.pago){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew||cu>1||o.first>=view){delete o.rec;delete o.until}else o.until=view}
     if(d.refAll&&o.card!=='AHORRO')o.refAll=true;else delete o.refAll;if(!isNew){if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
     if(isNew){const r=num(d.ref);if(r)o.refunds[o.first]=r;S.purchases.push(o)}
     syncShared(o,!!d.toshared,d.toledger,d.toshared?splitValue(f,'ps',o.cuota):null,isNew,link?.e.id);if(o.shared)o.shared.m=d.psmode;
@@ -1250,7 +1256,8 @@ function purchaseForm(p,link){
   const sync=()=>{const c=f.card.value,ah=c==='AHORRO',cr=isCredit(cardById(c));f.querySelectorAll('.cardonly').forEach(e=>e.style.display=ah?'none':'');f.querySelector('.creditonly').style.display=cr?'':'none';if(!cr)f.cuotas.value=1;$('#firstlbl').textContent=cr?'Primera cuota':'Mes';};
   const amtUI=()=>{const n=Math.max(1,parseInt(f.cuotas.value)||1),ah=f.card.value==='AHORRO',v=num(f.total.value),u=f.querySelector('[name=cur]:checked')?.value==='USD';
     $('#amtlbl').textContent=!ah&&n>1?'Valor de cada cuota':'Monto';
-    $('#amthint').textContent=!ah&&n>1&&v?`Total: ${u?fmtU(v*n):fmt(v*n)} en ${n} cuotas`:''};
+    $('#amthint').textContent=!ah&&n>1&&v?`Total: ${u?fmtU(v*n):fmt(v*n)} en ${n} cuotas`:'';
+    $('#pgw').style.display=isCredit(cardById(f.card.value))&&(v<0||f.pago.checked)?'':'none'};
   f.cuotas.oninput=amtUI;f.total.oninput=amtUI;f.querySelectorAll('[name=cur]').forEach(x=>x.onchange=amtUI);
   const dsync=()=>{$('#dclr').style.visibility=f.date.value?'visible':'hidden'};$('#dclr').onclick=()=>{f.date.value='';dsync();f.date.dispatchEvent(new Event('input'))};f.date.addEventListener('input',dsync);dsync();
   if(isNew&&f.first)f.first.addEventListener('change',()=>{const l=$('#reflbl');if(l)l.textContent='Reintegro en '+mLabel(f.first.value||view)});
