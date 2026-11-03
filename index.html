@@ -376,7 +376,7 @@ let priv=false;try{priv=localStorage.getItem('gastos-priv')==='1'}catch(e){}
 const setPriv=v=>{priv=v;document.body.classList.toggle('priv',v);const b=document.querySelector('.eyeb');if(b){const l=v?'Mostrar montos':'Ocultar montos';b.title=l;b.setAttribute('aria-label',l)}};setPriv(priv);
 const nfs=n=>(n<0?'-':'')+nf(n);
 const fmt=n=>priv?'$ •••••':(n<0?'-':'')+'$'+nf(n);
-const fmtU=n=>priv?'U$D •••••':'U$D'+nf(n);
+const fmtU=n=>priv?'U$D •••••':(n<0?'-':'')+'U$D'+nf(n);
 const num1=v=>{if(v.includes(','))v=v.replace(/\./g,'').replace(',','.');else if(/^-?\d{1,3}(\.\d{3})+$/.test(v))v=v.replace(/\./g,'');return parseFloat(v)||0};
 const normOps=v=>v.replace(/[−–—]/g,'-').replace(/[×xX·∙]/g,'*').replace(/[÷:]/g,'/');
 const isExpr=v=>/[+*\/()]/.test(normOps(v))||/.-/.test(normOps(v));
@@ -385,7 +385,7 @@ function calc(v){v=normOps(v);const t=v.match(/\d[\d.,]*|[-+*\/()]/g);if(!t||t.j
   T=()=>{let a=F();while(t[i]==='*'||t[i]==='/'){const o=t[i++],b=F();a=o==='*'?a*b:a/b}return a},
   F=()=>{const k=t[i++];if(k==='-')return -F();if(k==='+')return F();if(k==='('){const a=P();if(t[i++]!==')')throw 0;return a}if(k===undefined||!/\d/.test(k))throw 0;return num1(k)};
   try{const r=P();return i===t.length&&isFinite(r)?Math.round(r*100)/100:null}catch(e){return null}}
-const num=v=>{if(typeof v==='number')return v;v=String(v??'').trim().replace(/[$\s]/g,'');if(isExpr(v)){const r=calc(v);if(r!==null)return r}return num1(v)};
+const num=v=>{if(typeof v==='number')return v;v=String(v??'').trim().replace(/[$\s]/g,'').replace(/[−–—‐‑]/g,'-');if(/^[\d.,]+-$/.test(v))v='-'+v.slice(0,-1);if(isExpr(v)){const r=calc(v);if(r!==null)return r}return num1(v)};
 const ymOf=(y,m)=>y+'-'+String(m).padStart(2,'0');
 function addM(s,k){let[y,m]=s.split('-').map(Number);m+=k;y+=Math.floor((m-1)/12);m=((m-1)%12+12)%12+1;return ymOf(y,m)}
 function diffM(a,b){const[ay,am]=a.split('-').map(Number),[by,bm]=b.split('-').map(Number);return(ay-by)*12+am-bm}
@@ -637,11 +637,11 @@ function vMes(){
       rows+=`<div class="row${l.p.pago?' pago':''}" role="button" tabindex="0" data-act="edit" data-id="${l.p.id}">
         <div style="min-width:0"><div class="r-desc">${esc(l.p.desc)}</div><div class="r-sub">${l.p.pago?'<span class="pgtag">💳 Pago</span>':''}${l.p.date?(l.p.date.slice(0,4)===m.slice(0,4)?dmy(l.p.date).slice(0,5):dmy(l.p.date))+(l.p.pago?'':' · '):''}${l.p.pago?'':esc(l.p.cat)}${l.u?' · dólares':''}</div>${l.p.note?`<div class="r-note"><span>💬 ${esc(l.p.note)}</span><button class="nx" data-act="delnote" data-id="${l.p.id}" aria-label="Borrar comentario">×</button></div>`:''}</div>
         <span class="r-cu">${l.p.rec?'↻':l.p.cuotas>1?l.n+'/'+l.p.cuotas:''}</span>
-        <div class="r-amt">${l.u?fmtU(l.uval):fmt(l.val)}${l.ref||l.uref?`<small>${l.sh?`⇄ le toca a ${esc(l.p.shared.w||'la otra persona')} `:'↩ reint. '}${l.sh?(l.u?(l.uref<0?'-':'')+fmtU(l.uref):fmt(l.ref)):l.u?'-'+fmtU(l.uref):fmt(-l.ref)}</small><small class="r-net">neto ${l.u?fmtU(l.uval-l.uref):fmt(l.net)}</small>`:''}</div>
+        <div class="r-amt">${l.u?fmtU(l.uval):fmt(l.val)}${l.ref||l.uref?`<small>${l.sh?`⇄ le toca a ${esc(l.p.shared.w||'la otra persona')} `:'↩ reint. '}${l.sh?(l.u?fmtU(l.uref):fmt(l.ref)):l.u?fmtU(-l.uref):fmt(-l.ref)}</small><small class="r-net">neto ${l.u?fmtU(l.uval-l.uref):fmt(l.net)}</small>`:''}</div>
         <button class="dots ${l.p.note?'has':''}" data-act="note" data-id="${l.p.id}" aria-label="Comentario">⋯</button></div>`;
     }
     h+=`<section class="card cc ${opened.has(x.c.id)?'':'closed'}" style="--cc:${x.c.color}">
-      <header data-act="toggle" data-id="${x.c.id}"><svg class="chev" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg><span class="dot"></span><h3><span class="cname">${esc(x.c.name)}</span><span class="cdate" title="${isCredit(x.c)?'Cierre '+closeDate(x.c,m):''}">${isCredit(x.c)?closeTxt(x.c,m):ATYPES[x.c.type]} · ${x.L.length} ${x.L.length===1?'gasto':'gastos'}</span></h3><b>${fmt(x.n)}${x.ub?`<span class="cdate" style="text-align:right">+ ${fmtU(x.un)}</span>`:''}</b><button class="x" data-act="editcard" data-id="${x.c.id}" aria-label="Editar tarjeta"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button></header>
+      <header data-act="toggle" data-id="${x.c.id}"><svg class="chev" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg><span class="dot"></span><h3><span class="cname">${esc(x.c.name)}</span><span class="cdate" title="${isCredit(x.c)?'Cierre '+closeDate(x.c,m):''}">${isCredit(x.c)?closeTxt(x.c,m):ATYPES[x.c.type]} · ${x.L.length} ${x.L.length===1?'gasto':'gastos'}</span></h3><b>${fmt(x.n)}${x.ub?`<span class="cdate" style="text-align:right">${x.un<0?'−':'+'} ${fmtU(Math.abs(x.un))}</span>`:''}</b><button class="x" data-act="editcard" data-id="${x.c.id}" aria-label="Editar tarjeta"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button></header>
       <div class="rows ${animK==='cc:'+x.c.id?'anim':''}">${rows||'<div class="empty">Sin cuotas este mes.</div>'}</div>
       <footer><span><small>Bruto</small>${fmt(x.b)}</span>${x.rf||!x.sh?`<span class="pos"><small>Reint.</small>${fmt(x.rf)}</span>`:''}${x.sh?`<span class="pos"><small>⇄ Compartido</small>${fmt(x.sh)}</span>`:''}<b><small>Neto</small>${fmt(x.n)}</b></footer>${x.ub||x.upg?`<footer class="ufoot"><span><small>U$D bruto</small>${fmtU(x.ub)}</span>${x.urf||!x.ush?`<span class="pos"><small>Reint.</small>${fmtU(x.urf)}</span>`:''}${x.ush?`<span class="pos"><small>⇄ Compartido</small>${fmtU(x.ush)}</span>`:''}<b><small>Neto</small>${fmtU(x.un)}</b></footer>`:''}</section>`;
   }
@@ -1112,7 +1112,7 @@ function vAjustes(){
 function sheet(html,onSave,onDel){
   $('#ov').innerHTML=`<div class="ov"><form class="sheet">${html}<div class="btns">${onDel?'<button type="button" class="btn del" data-x="del">Eliminar</button>':''}<button type="button" class="btn sec" data-x="cancel">Cancelar</button><button class="btn">Guardar</button></div></form></div>`;
   const f=$('#ov form');
-  f.onsubmit=async e=>{e.preventDefault();const b=f.querySelector('.btn:not(.sec):not(.del)');if(b)b.disabled=true;const r=await onSave(Object.fromEntries(new FormData(f)),f);if(b)b.disabled=false;if(r!==false){close();save();render()}};
+  f.onsubmit=async e=>{e.preventDefault();f.querySelectorAll('input[data-money]').forEach(keepNeg);const b=f.querySelector('.btn:not(.sec):not(.del)');if(b)b.disabled=true;const r=await onSave(Object.fromEntries(new FormData(f)),f);if(b)b.disabled=false;if(r!==false){close();save();render()}};
   f.querySelector('[data-x=cancel]').onclick=close;
   if(onDel)f.querySelector('[data-x=del]').onclick=async()=>{if(!confirm('¿Eliminar?'))return;if(onDel.constructor.name==='AsyncFunction'){if(await onDel()!==false)close();return}if(withUndo('Eliminado',onDel)!==false)close()};
   $('#ov .ov').onclick=e=>{if(e.target.classList.contains('ov'))close()};
@@ -1414,7 +1414,10 @@ document.addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList?.contains('row'))e.target.click()});
 document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.sim;if(k){SIM[k]=e.target.value;const r=$('#simres');if(r)r.innerHTML=simRes()}});
 const isMoney=t=>t&&t.matches&&t.matches('input[data-money],input.amt');
-document.addEventListener('change',e=>{const t=e.target;if(!isMoney(t))return;const v=t.value.trim().replace(/[$\s]/g,'');if(!isExpr(v))return;const r=calc(v);if(r!==null)t.value=(r<0?'-':'')+nf(r)},true);
+/* un monto negativo (devolución, reintegro, egreso) no pierde el "-" si lo reescribís con el teclado numérico, que no tiene signo: para pasarlo a positivo hay que escribir "+" adelante */
+document.addEventListener('focusin',e=>{const t=e.target;if(isMoney(t))t.dataset.neg=num(t.value)<0?'1':''},true);
+function keepNeg(t){if(!isMoney(t)||t.dataset.neg!=='1')return;const v=t.value.trim();if(!/^[\d.,$\s]+$/.test(v)||!(num(v)>0))return;t.value='-'+v;toast('Quedó en negativo, como estaba. Para positivo escribí + adelante')}
+document.addEventListener('change',e=>{const t=e.target;if(!isMoney(t))return;keepNeg(t);const v=t.value.trim().replace(/[$\s]/g,'');if(isExpr(v)){const r=calc(v);if(r!==null)t.value=(r<0?'-':'')+nf(r)}t.dataset.neg=num(t.value)<0?'1':''},true);
 
 document.addEventListener('change',e=>{
   const t=e.target;
