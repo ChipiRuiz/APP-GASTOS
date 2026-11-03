@@ -47,6 +47,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .cc.closed .chev{transform:rotate(-90deg)}
 .wk.cu{color:var(--ink)}
 .wk{background:var(--week);font-size:12px;color:var(--muted);padding:5px 14px;font-weight:600}
+.yg>summary{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line);cursor:pointer;list-style:none;font-weight:600}.yg>summary::-webkit-details-marker{display:none}.yg>summary>span::before{content:'▸';display:inline-block;width:1em;color:var(--muted);transition:transform .15s}.yg[open]>summary>span::before{transform:rotate(90deg)}.yg>summary .mut{font-weight:400;font-size:13px}.yg[open]>summary{background:var(--week)}
 .row{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:10px 14px;cursor:pointer}
 .wk+.row{border-top:0}
 .row:hover{background:var(--soft)}
@@ -867,6 +868,13 @@ function endingHTML(cs,m){
   return `<div class="ending">¡Desde ${nx} tenés <b>+${fmt(tot)}</b> libres! Chau a ${L.length} ${L.length===1?'cuota':'cuotas'} 💪</div>`;
 }
 
+/* listas de ahorros agrupadas por año y plegables: el año actual arranca abierto, los anteriores cerrados */
+const yOpen={};
+function yGroups(k,items,yOf,li,tot){
+  const by={};items.forEach(x=>{const y=yOf(x)||curYM.slice(0,4);(by[y]=by[y]||[]).push(x)});
+  return Object.keys(by).sort().reverse().map(y=>{const o=yOpen[k+y]??(y===curYM.slice(0,4));const L=by[y];
+    return `<details class="yg" data-yg="${k+y}" ${o?'open':''}><summary><span>${y} <span class="mut">· ${L.length} ${L.length===1?'movimiento':'movimientos'}</span></span><b>${fmt(tot(L))}</b></summary>${L.map(li).join('')}</details>`}).join('')}
+document.addEventListener('toggle',e=>{const k=e.target?.dataset?.yg;if(k)yOpen[k]=e.target.open},true);
 const depLi=x=>`<button class="li" data-act="editdep" data-id="${x.id}"><span>${mLabel(x.month)}${x.note?` <span class="mut">· ${esc(x.note)}</span>`:''}</span><b class="${x.month>=curYM?'mut':'pos'}">${fmt(x.amount)}</b></button>`;
 /* barras de lo depositado en los últimos 12 meses (con nota incluida) */
 function depBars(){
@@ -887,11 +895,10 @@ function vAhorros(){
   <h2>Ahorro esperado por mes</h2><div class="card pad"><div class="sum">${mfa('saving','Ahorro esperado',savingOf(view))}</div><div class="hint" style="margin-top:8px">Vale desde ${mLabel(view).toLowerCase()} en adelante; los meses anteriores no cambian. Para un mes puntual, tocá ese mes en la lista o usá la tabla de Proyección.</div></div>
   <div class="grid4"><div><h2>Ahorros</h2><div class="card">
     ${depBars()}${pend.length?`<div class="wk">Próximos · ${fmt(sumBy(pend,'amount'))}</div>`:''}${pend.map(depLi).join('')}
-    ${depDone().length?`<div class="wk">Depositados · ${fmt(d)}</div>`:''}${[...depDone()].reverse().map(depLi).join('')}
-    ${[...ys].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<button class="li" data-act="edityld" data-id="${x.id}"><span>📈 Rendimientos FCI <span class="mut">· ${x.date?dmy(x.date):''}</span></span><b class="${x.amount<0?'neg':'pos'}">${fmt(x.amount)}</b></button>`).join('')}
+    ${depDone().length||ys.length?`<div class="wk">Depositados · ${fmt(d)}</div>`:''}${yGroups('d',[...[...depDone()].sort((a,b)=>b.month.localeCompare(a.month)).map(x=>({t:'d',x})),...[...ys].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>({t:'y',x}))],e=>e.t==='d'?e.x.month.slice(0,4):(e.x.date||'').slice(0,4),e=>e.t==='d'?depLi(e.x):`<button class="li" data-act="edityld" data-id="${e.x.id}"><span>📈 Rendimientos FCI <span class="mut">· ${e.x.date?dmy(e.x.date):''}</span></span><b class="${e.x.amount<0?'neg':'pos'}">${fmt(e.x.amount)}</b></button>`,L=>L.reduce((t,e)=>t+ +e.x.amount,0))}
     <button class="lnk" data-act="adddep">+ Agregar ahorro</button></div></div>
   <div><h2>Gastos desde ahorros</h2><div class="card">
-    ${[...S.savingsExp].reverse().map(x=>`<button class="li" data-act="editsx" data-id="${x.id}"><span>${esc(x.desc)}${x.date?` <span class="mut">· ${dmy(x.date)}</span>`:''}</span><b>${fmt(x.amount)}</b></button>`).join('')}
+    ${yGroups('g',[...S.savingsExp].sort((a,b)=>(b.date||'').localeCompare(a.date||'')),x=>(x.date||'').slice(0,4),x=>`<button class="li" data-act="editsx" data-id="${x.id}"><span>${esc(x.desc)}${x.date?` <span class="mut">· ${dmy(x.date)}</span>`:''}</span><b>${fmt(x.amount)}</b></button>`,L=>sumBy(L,'amount'))}
     ${ts.map(t=>`<button class="li" data-tab="viajes" data-trip="${t.id}"><span>✈ ${esc(t.name)} <span class="mut">· vacaciones</span></span><b>${fmt(tripSavAmt(t))}</b></button>`).join('')}
     <button class="lnk" data-act="addsx">+ Agregar gasto</button></div></div></div>`;
 }
