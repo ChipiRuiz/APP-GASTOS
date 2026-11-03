@@ -544,10 +544,12 @@ const incOf=m=>((S.months[m]||{}).incomes||[]).reduce((s,x)=>s+num(x.amount),0);
 /* saldo de reintegros: lo reintegrado en tarjetas desde S.refStart (sin compartidos ni "reintegro total", que es plata que te devuelve otra persona), más los ingresos y menos los egresos marcados ↩ */
 function refAvail(m){if(!S.refStart||m<S.refStart)return null;let t=0;for(let k=S.refStart;k<=m;k=addM(k,1)){for(const c of cardsAll())for(const l of lines(c.id,k))if(!l.sh&&!l.p.refAll)t+=l.ref;t-=((S.months[k]||{}).incomes||[]).filter(i=>i.ref).reduce((s,i)=>s-num(i.amount),0)}return Math.round(t*100)/100}
 function monthTotals(m){const M=S.months[m]||lastMonth(m);const tc=tcTotal(cardsAll().map(c=>cardTot(c,m)),{usd:rate(m)});const tx=(M.taxes||[]).reduce((s,t)=>s+num(t.amount),0);const sal=num(M.salary),inc=incOf(m),sv=savingOf(m),owe=shOweMonth(m);return{sal,inc,tc:tc+owe,tx,sv,owe,rest:sal+inc-sv-tc-tx-owe}}
+/* monto de un gasto en el mes m: p.cuota desde el primer mes; p.amts={mes:monto} guarda los cambios hechos desde un mes en adelante (los meses anteriores no cambian) */
+function cuAt(p,m){let v=p.cuota,b='';if(p.amts)for(const k in p.amts)if(k<=m&&k>b){b=k;v=p.amts[k]}return v}
 function lines(card,m){
   return S.purchases.filter(p=>p.card===card).map(p=>{
-    let n=diffM(m,p.first)+1,cu=p.cuota;
-    if(p.hist&&S.histEnd&&m<=S.histEnd){if(!(m in p.hist))return null;n=p.hist[m];cu=p.hc?.[m]??p.cuota}
+    let n=diffM(m,p.first)+1,cu=cuAt(p,m);
+    if(p.hist&&S.histEnd&&m<=S.histEnd){if(!(m in p.hist))return null;n=p.hist[m];cu=p.hc?.[m]??cuAt(p,m)}
     else if(p.rec){if(n<1||(p.until&&m>p.until))return null}else if(n<1||n>p.cuotas)return null;
     const u=p.cur==='USD',rt=u?rate(m):1,hasR=p.refunds&&(m in p.refunds),sh=!!p.shared&&!hasR&&(!p.shared.from||m>=p.shared.from),uref=sh?Math.round(cu*p.shared.s*100)/100:p.refAll?cu:hasR?p.refunds[m]:0;
     const val=cu*rt,ref=uref*rt;
@@ -1119,12 +1121,12 @@ let SQ={q:'',c:''};
 function srchMonth(p){if(lines(p.card,curYM).some(l=>l.p===p))return curYM;let m=p.first;if(!p.rec&&p.cuotas>1&&p.first<curYM){const end=addM(p.first,p.cuotas-1);m=end<curYM?end:curYM}return m}
 function srchRun(){
   const t=SQ.q.trim().toLowerCase(),dg=t.replace(/[^\d]/g,''),box=$('#sres');if(!box)return;
-  const r=t?S.purchases.filter(p=>(!SQ.c||p.card===SQ.c)&&((p.desc||'').toLowerCase().includes(t)||(p.note||'').toLowerCase().includes(t)||(dg.length>=3&&(String(Math.round(p.cuota)).includes(dg)||String(Math.round(p.cuota*(p.rec?1:p.cuotas||1))).includes(dg))))).sort((a,b)=>(b.date||b.first+'-00').localeCompare(a.date||a.first+'-00')).slice(0,200):[];
+  const r=t?S.purchases.filter(p=>(!SQ.c||p.card===SQ.c)&&((p.desc||'').toLowerCase().includes(t)||(p.note||'').toLowerCase().includes(t)||(dg.length>=3&&(String(Math.round(cuAt(p,curYM))).includes(dg)||String(Math.round(cuAt(p,curYM)*(p.rec?1:p.cuotas||1))).includes(dg))))).sort((a,b)=>(b.date||b.first+'-00').localeCompare(a.date||a.first+'-00')).slice(0,200):[];
   const hl=x=>{x=x||'';const i=x.toLowerCase().indexOf(t);return i<0||!t?esc(x):esc(x.slice(0,i))+'<mark>'+esc(x.slice(i,i+t.length))+'</mark>'+esc(x.slice(i+t.length))};
   $('#stot').innerHTML=t?`<span>${r.length} ${r.length===1?'gasto':'gastos'}</span>`:'<span>Buscá por descripción, comentario o monto, en todos los meses.</span>';
   box.style.display=t?'':'none';
-  box.innerHTML=r.map(p=>{const c=cardById(p.card),u=p.cur==='USD',F=u?fmtU:fmt,n=p.rec?'↻ todos los meses':p.cuotas>1?`${p.cuotas} cuotas de ${F(p.cuota)}`:'';
-    return `<div class="row" role="button" tabindex="0" data-act="srchgo" data-id="${p.id}"><div style="min-width:0"><div class="r-desc">${hl(p.desc)}</div><div class="r-sub">${esc(c?c.name:p.card)} · ${p.date?dmy(p.date):mLabel(p.first)}${n?' · '+n:''}</div></div><div class="r-amt">${F(p.rec?p.cuota:p.cuota*(p.cuotas||1))}</div></div>`}).join('')||'<div class="empty" style="padding:14px">No hay gastos con ese texto.</div>';
+  box.innerHTML=r.map(p=>{const c=cardById(p.card),u=p.cur==='USD',F=u?fmtU:fmt,n=p.rec?'↻ todos los meses':p.cuotas>1?`${p.cuotas} cuotas de ${F(cuAt(p,curYM))}`:'';
+    return `<div class="row" role="button" tabindex="0" data-act="srchgo" data-id="${p.id}"><div style="min-width:0"><div class="r-desc">${hl(p.desc)}</div><div class="r-sub">${esc(c?c.name:p.card)} · ${p.date?dmy(p.date):mLabel(p.first)}${n?' · '+n:''}</div></div><div class="r-amt">${F(p.rec?cuAt(p,curYM):p.cuota*(p.cuotas||1))}</div></div>`}).join('')||'<div class="empty" style="padding:14px">No hay gastos con ese texto.</div>';
 }
 function srchOpen(){
   const cs=cardsAll().filter(c=>!c.hidden);
@@ -1194,10 +1196,10 @@ function syncShared(o,want,lid,share,isNew,linkId){
   const from=o.shared?.from||(!isNew&&!o.rec&&o.first<view&&diffM(view,o.first)<o.cuotas?view:o.first),done=Math.max(0,diffM(from,o.first)),left=Math.max(1,o.cuotas-done);
   share=share==null?(o.shared?.s??.5):share;
   if(!sb||!user)return;
-  const row={cur:o.cur==='USD'?'USD':'ARS',descr:o.desc,date:o.date||null,cuota:o.cuota,cuotas:o.rec?1:left,first_month:from,updated_at:new Date().toISOString()};
+  const row={cur:o.cur==='USD'?'USD':'ARS',descr:o.desc,date:o.date||null,cuota:cuAt(o,from),cuotas:o.rec?1:left,first_month:from,updated_at:new Date().toISOString()};
   if(want&&!o.shared&&lid){const L=SH.all.find(x=>x.ledger.id===lid);const w=L?shOtherOf(L):'';
     o.shared={l:lid,e:null,s:share,w,from};save();render();
-    const dup=L&&(linkId?L.entries.find(e=>e.id===linkId):null)||L&&L.entries.find(e=>e.kind==='gasto'&&e.paid_by===user.id&&!e.source_purchase&&(e.cur||'ARS')===row.cur&&Math.abs(diffM(e.first_month,from))<=1&&Math.abs(+e.cuota-o.cuota)<0.01);
+    const dup=L&&(linkId?L.entries.find(e=>e.id===linkId):null)||L&&L.entries.find(e=>e.kind==='gasto'&&e.paid_by===user.id&&!e.source_purchase&&(e.cur||'ARS')===row.cur&&Math.abs(diffM(e.first_month,from))<=1&&Math.abs(+e.cuota-cuAt(o,from))<0.01);
     if(dup){o.shared.e=dup.id;save();sb.from('ledger_entries').update({...row,share,source_purchase:o.id}).eq('id',dup.id).then(({error})=>{
       if(error){delete o.shared;save();render();return alert('No se pudo vincular con compartido: '+error.message)}
       shLoad().then(()=>toast('Ya estaba en compartido: quedó vinculado'))});return}
@@ -1212,7 +1214,7 @@ function purchaseForm(p,link){
   const isNew=!p;
   p=p||{card:tab==='ahorros'?'AHORRO':lastCard(),date:todayISO(),desc:'',cuotas:1,cur:'ARS',cat:'COMPRAS VARIAS',refunds:{}};
   if(link){const e=link.e;Object.assign(p,{card:(cardsAll().find(c=>isCredit(c)&&!c.hidden)||{}).id||p.card,date:e.date||p.date,desc:e.descr||'',cuotas:e.cuotas,cuota:+e.cuota,cur:e.cur==='USD'?'USD':'ARS',shared:{l:link.L.ledger.id,s:+e.share,w:shOtherOf(link.L)||''}})}
-  const amt0=p.cuota||'';
+  const amt0=(isNew?p.cuota:cuAt(p,view))||'';
   const dest=cardsAll().filter(c=>!c.hidden||c.id===p.card).map(c=>`<option value="${c.id}" ${p.card===c.id?'selected':''}>${esc(c.name)}${isCredit(c)?'':' · '+ATYPES[c.type]}</option>`).join('')+(isNew?`<option value="AHORRO" ${p.card==='AHORRO'?'selected':''}>Desde ahorros</option>`:'');
   const inMonth=!isNew&&diffM(view,p.first)>=0&&(p.rec?(!p.until||view<=p.until):diffM(view,p.first)<p.cuotas);
   const freq=isNew&&!link?freqList():[];
@@ -1243,11 +1245,15 @@ function purchaseForm(p,link){
     if(d.card==='AHORRO'){S.savingsExp.push({id:uid(),desc:d.desc,amount:total,date:d.date,note:(d.note||'').trim()||undefined});return}
     const cu=Math.max(1,parseInt(d.cuotas)||1);
     const o=isNew?{id:uid(),refunds:{}}:p;
-    Object.assign(o,{card:d.card,date:d.date,desc:d.desc,cuotas:cu,cuota:Math.round(total*100)/100,cur:d.cur,cat:d.cat,first:d.first||(d.date?firstFor(d.card,d.date):view)});
+    const amt=Math.round(total*100)/100,prevAmt=isNew?null:cuAt(o,view),wasMulti=!isNew&&(o.rec||o.cuotas>1);
+    Object.assign(o,{card:d.card,date:d.date,desc:d.desc,cuotas:cu,cur:d.cur,cat:d.cat,first:d.first||(d.date?firstFor(d.card,d.date):view)});
+    /* cambiar el monto nunca toca los meses anteriores al que estás viendo: vale desde este mes en adelante */
+    if(isNew)o.cuota=amt;else if(Math.abs(amt-prevAmt)>=0.005){if(wasMulti&&view>o.first){const a={};for(const k in o.amts||{})if(k<view)a[k]=o.amts[k];a[view]=amt;o.amts=a}else{o.cuota=amt;delete o.amts}}
+    if(o.amts){for(const k of Object.keys(o.amts).sort())if(k<=o.first){o.cuota=o.amts[k];delete o.amts[k]}if(!Object.keys(o.amts).length)delete o.amts}
     const nt=(d.note||'').trim();if(nt)o.note=nt;else delete o.note;
     delete o.noFijo;if(!d.rec){const k=fjKey(d.desc);if(k){S.fijos=(S.fijos||[]).filter(x=>x!==k);if(d.fijo)S.fijos.push(k)}}
-    if(d.pago&&isCredit(cardById(d.card))){o.pago=true;o.cuotas=1;o.cuota=-Math.abs(o.cuota);delete o.rec;delete o.until}else delete o.pago;
-    if(d.rec&&!o.pago){o.rec=true;o.cuotas=1;o.cuota=total;delete o.until}else if(o.rec){if(isNew||cu>1||o.first>=view){delete o.rec;delete o.until}else o.until=view}
+    if(d.pago&&isCredit(cardById(d.card))){o.pago=true;o.cuotas=1;o.cuota=-Math.abs(amt);delete o.amts;delete o.rec;delete o.until}else delete o.pago;
+    if(d.rec&&!o.pago){o.rec=true;o.cuotas=1;delete o.until}else if(o.rec){if(isNew||cu>1||o.first>=view){delete o.rec;delete o.until}else o.until=view}
     if(d.refAll&&o.card!=='AHORRO')o.refAll=true;else delete o.refAll;if(!isNew){if(inMonth){const r=num(d.ref);if(r)o.refunds[view]=r;else delete o.refunds[view]}}
     if(isNew){const r=num(d.ref);if(r)o.refunds[o.first]=r;S.purchases.push(o)}
     syncShared(o,!!d.toshared,d.toledger,d.toshared?splitValue(f,'ps',o.cuota):null,isNew,link?.e.id);if(o.shared)o.shared.m=d.psmode;
@@ -1256,7 +1262,7 @@ function purchaseForm(p,link){
   const sync=()=>{const c=f.card.value,ah=c==='AHORRO',cr=isCredit(cardById(c));f.querySelectorAll('.cardonly').forEach(e=>e.style.display=ah?'none':'');f.querySelector('.creditonly').style.display=cr?'':'none';if(!cr)f.cuotas.value=1;$('#firstlbl').textContent=cr?'Primera cuota':'Mes';};
   const amtUI=()=>{const n=Math.max(1,parseInt(f.cuotas.value)||1),ah=f.card.value==='AHORRO',v=num(f.total.value),u=f.querySelector('[name=cur]:checked')?.value==='USD';
     $('#amtlbl').textContent=!ah&&n>1?'Valor de cada cuota':'Monto';
-    $('#amthint').textContent=!ah&&n>1&&v?`Total: ${u?fmtU(v*n):fmt(v*n)} en ${n} cuotas`:'';
+    $('#amthint').textContent=(!ah&&n>1&&v?`Total: ${u?fmtU(v*n):fmt(v*n)} en ${n} cuotas. `:'')+(!isNew&&(p.rec||p.cuotas>1)&&view>p.first?`Si cambiás el monto, vale desde ${mLabel(view)} en adelante. Los meses anteriores no cambian.`:'');
     $('#pgw').style.display=isCredit(cardById(f.card.value))&&(v<0||f.pago.checked)?'':'none'};
   f.cuotas.oninput=amtUI;f.total.oninput=amtUI;f.querySelectorAll('[name=cur]').forEach(x=>x.onchange=amtUI);
   const dsync=()=>{$('#dclr').style.visibility=f.date.value?'visible':'hidden'};$('#dclr').onclick=()=>{f.date.value='';dsync();f.date.dispatchEvent(new Event('input'))};f.date.addEventListener('input',dsync);dsync();
