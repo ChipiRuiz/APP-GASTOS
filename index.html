@@ -1262,7 +1262,7 @@ function purchaseForm(p,link){
   const sync=()=>{const c=f.card.value,ah=c==='AHORRO',cr=isCredit(cardById(c));f.querySelectorAll('.cardonly').forEach(e=>e.style.display=ah?'none':'');f.querySelector('.creditonly').style.display=cr?'':'none';if(!cr)f.cuotas.value=1;$('#firstlbl').textContent=cr?'Primera cuota':'Mes';};
   const amtUI=()=>{const n=Math.max(1,parseInt(f.cuotas.value)||1),ah=f.card.value==='AHORRO',v=num(f.total.value),u=f.querySelector('[name=cur]:checked')?.value==='USD';
     $('#amtlbl').textContent=!ah&&n>1?'Valor de cada cuota':'Monto';
-    $('#amthint').textContent=(!ah&&n>1&&v?`Total: ${u?fmtU(v*n):fmt(v*n)} en ${n} cuotas. `:'')+(!isNew&&(p.rec||p.cuotas>1)&&view>p.first?`Si cambiás el monto, vale desde ${mLabel(view)} en adelante. Los meses anteriores no cambian.`:'');
+    $('#amthint').textContent=!ah&&n>1&&v?`Total: ${u?fmtU(v*n):fmt(v*n)} en ${n} cuotas`:'';
     $('#pgw').style.display=isCredit(cardById(f.card.value))&&(v<0||f.pago.checked)?'':'none'};
   f.cuotas.oninput=amtUI;f.total.oninput=amtUI;f.querySelectorAll('[name=cur]').forEach(x=>x.onchange=amtUI);
   const dsync=()=>{$('#dclr').style.visibility=f.date.value?'visible':'hidden'};$('#dclr').onclick=()=>{f.date.value='';dsync();f.date.dispatchEvent(new Event('input'))};f.date.addEventListener('input',dsync);dsync();
