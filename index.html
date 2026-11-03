@@ -318,6 +318,7 @@ body.priv #app input[data-money]:not(:focus),body.priv #app input.amt:not(:focus
 @media(min-width:900px){.sumcard .mfb{display:block!important;margin-top:12px}.mfh{cursor:default;pointer-events:none}.mfh small,.mfh .chev{display:none!important}}
 .sumcard:not(.op) .mfh .chev{transform:rotate(-90deg)}.sumcard:not(.op) .mfb{display:none}.sumcard.op .mfb{margin-top:12px}.sumcard.op .mfh small{display:none}
 @media(max-width:899px){.sumwrap{display:flex;flex-direction:column}.sumwrap .hero{order:-1}}
+.hacts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 4px}.hacts .btn{width:100%;margin:0}
 .fab{transition:transform .2s,opacity .2s}.fab.hide{transform:translateY(90px);opacity:0;pointer-events:none}
 .distr{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
 .dlab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px}.dlab span:first-child{color:var(--ink);font-weight:600}
@@ -890,7 +891,7 @@ document.addEventListener('pointerout',e=>{if(e.pointerType==='mouse'&&e.target.
 document.addEventListener('click',e=>{const b=e.target.closest?.('.dbb');if(b){depTip(b.classList.contains('on')&&e.pointerType!=='mouse'?null:b);return}if(!e.target.closest?.('.dbars'))depTip(null)});
 function vAhorros(){
   const ys=S.yields||[],yt=yTot(),d=sumBy(depDone(),'amount'),pend=S.deposits.filter(x=>x.month>=curYM).sort((a,b)=>a.month.localeCompare(b.month)),g=sumBy(S.savingsExp,'amount'),v=tripSav(),ts=S.trips.filter(t=>t.fromSavings);
-  return `<div class="card pad hero"><div class="mut">Saldo de ahorros</div><div class="big">${fmt(d+yt-g-v)}</div><button class="btn sec" style="width:100%;margin:6px 0 4px" data-act="realbal">Actualizar saldo real</button>
+  return `<div class="card pad hero"><div class="mut">Saldo de ahorros</div><div class="big">${fmt(d+yt-g-v)}</div><div class="hacts"><button class="btn sec" data-act="realbal">Actualizar Rendimientos FCI</button><button class="btn sec" data-act="addsx">+ Agregar gasto</button></div>
     <div class="kv"><span>Total ahorrado</span><span>${fmt(d)}</span></div>${ys.length?`<div class="kv"><span>+ Rendimientos FCI</span><span class="${yt<0?'neg':'pos'}">${fmt(yt)}</span></div>`:''}<div class="kv"><span>• Gastado desde ahorros</span><span>${fmt(g)}</span></div>${ts.length?`<div class="kv"><span>• Vacaciones pagadas con ahorros</span><span>${fmt(v)}</span></div>`:''}</div>
   <h2>Ahorro esperado por mes</h2><div class="card pad"><div class="sum">${mfa('saving','Ahorro esperado',savingOf(view))}</div><div class="hint" style="margin-top:8px">Vale desde ${mLabel(view).toLowerCase()} en adelante; los meses anteriores no cambian. Para un mes puntual, tocá ese mes en la lista o usá la tabla de Proyección.</div></div>
   <div class="grid4"><div><h2>Ahorros</h2><div class="card">
@@ -899,8 +900,7 @@ function vAhorros(){
     <button class="lnk" data-act="adddep">+ Agregar ahorro</button></div></div>
   <div><h2>Gastos desde ahorros</h2><div class="card">
     ${S.savingsExp.length?`<details class="yg" data-yg="gall" ${yOpen.gall?'open':''}><summary><span>Gastados <span class="mut">· ${S.savingsExp.length} ${S.savingsExp.length===1?'movimiento':'movimientos'}</span></span><b>${fmt(g)}</b></summary>`:''}${[...S.savingsExp].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<button class="li" data-act="editsx" data-id="${x.id}"><span>${esc(x.desc)}${x.date?` <span class="mut">· ${dmy(x.date)}</span>`:''}</span><b>${fmt(x.amount)}</b></button>`).join('')}${S.savingsExp.length?'</details>':''}
-    ${ts.map(t=>`<button class="li" data-tab="viajes" data-trip="${t.id}"><span>✈ ${esc(t.name)} <span class="mut">· vacaciones</span></span><b>${fmt(tripSavAmt(t))}</b></button>`).join('')}
-    <button class="lnk" data-act="addsx">+ Agregar gasto</button></div></div></div>`;
+    ${!S.savingsExp.length&&!ts.length?'<div class="empty" style="padding:14px">Sin gastos desde ahorros. Agregalos con <b>+ Agregar gasto</b>, arriba.</div>':''}${ts.map(t=>`<button class="li" data-tab="viajes" data-trip="${t.id}"><span>✈ ${esc(t.name)} <span class="mut">· vacaciones</span></span><b>${fmt(tripSavAmt(t))}</b></button>`).join('')}</div></div></div>`;
 }
 
 let SIM={amt:'',n:'6',card:'',pct:'',cap:''};
@@ -1378,7 +1378,7 @@ document.addEventListener('click',e=>{
   else if(a==='deltax'){withUndo('Servicio eliminado',()=>{const M=S.months[view];M.taxes=M.taxes.filter(x=>x.id!==id)})}
   else if(a==='adddep')simpleForm('Nuevo ahorro',[['month','Mes','month',curYM],['amount','Monto','num'],['note','Nota']],null,d=>{S.deposits.push({id:uid(),month:d.month,amount:num(d.amount),note:d.note})});
   else if(a==='editdep'){const x=S.deposits.find(y=>y.id===id);simpleForm('Editar ahorro',[['month','Mes','month',x.month],['amount','Monto','num',nf(x.amount)],['note','Nota','',x.note]],x,d=>{Object.assign(x,{month:d.month,amount:num(d.amount),note:d.note})},()=>{S.deposits=S.deposits.filter(y=>y!==x)})}
-  else if(a==='realbal'){const app=savBal();const f=sheet(`<h3>Actualizar saldo real</h3><div class="hint" style="margin:-6px 0 10px">Poné lo que te muestra el banco hoy. La diferencia con la app se anota como rendimientos.</div>
+  else if(a==='realbal'){const app=savBal();const f=sheet(`<h3>Actualizar Rendimientos FCI</h3><div class="hint" style="margin:-6px 0 10px">Poné lo que te muestra el banco hoy. La diferencia con la app se anota como rendimientos.</div>
     ${fld('Saldo real','<input name="real" inputmode="text" data-money autocomplete="off" required placeholder="0,00">')}${fld('Fecha',`<input type="date" name="date" value="${todayISO()}">`)}
     <div class="kv"><span>La app calcula</span><b>${fmt(app)}</b></div><div class="kv"><span>Rendimiento</span><b id="ydiff">—</b></div>`,
     d=>{const v=num(d.real),df=Math.round((v-app)*100)/100;if(!v){alert('Falta el saldo');return false}if(Math.abs(df)<0.005){toast('Ya coincide con el banco');return}
