@@ -294,7 +294,15 @@ body.priv #app input[data-money]:not(:focus),body.priv #app input.amt:not(:focus
 .cbl{margin-top:8px;border-radius:10px;background:var(--week);padding:2px 10px}.cbi{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:7px 0;font-size:13px;border-top:1px solid var(--line)}.cbi:first-child{border-top:0}.cbi>span:first-child{min-width:0}.cbi b{display:block;font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cbi small{display:block;color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cbi>span:last-child{white-space:nowrap}
 .cbt{height:8px;border-radius:4px;background:color-mix(in srgb,var(--ink) 10%,transparent)}.cbt i{display:block;height:100%;border-radius:4px;background:var(--accent)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.usrc{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.usrc button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}.usrc button.on{background:var(--accent);border-color:var(--accent);color:var(--onacc,#fff);font-weight:650}
+.mset{padding:4px 14px}
+.mrw{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0}.mrw+.mrw{border-top:1px solid var(--line)}
+.mrw .mk{min-width:0}.mrw .mk b{display:block;font-size:15px;font-weight:650}.mrw .mk small{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:3px}
+.mrw input{width:150px;max-width:46vw;text-align:right;font-size:17px;font-weight:650;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:8px 10px;font-variant-numeric:tabular-nums}
+.mbig{display:flex;align-items:center;gap:4px;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mbig button{border:0;background:var(--week);color:var(--muted);border-radius:8px;width:32px;height:32px;display:grid;place-items:center;cursor:pointer}.mbig button:hover{color:var(--accent)}
+.badge{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}.badge.off{background:var(--week);color:var(--muted)}
+.usrc{display:flex;background:var(--week);border-radius:10px;padding:3px;gap:3px;margin:0 0 12px}.usrc button{flex:1;border:0;background:none;color:var(--muted);border-radius:8px;padding:7px 0;font-size:13px;font-weight:600;cursor:pointer}.usrc button.on{background:var(--card);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.usrc-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:2px 0 6px}
 .chip{display:inline-flex;align-items:center;gap:6px;background:var(--week);border:1px solid var(--line);border-radius:999px;padding:5px 4px 5px 10px;font-size:13px}
 .chip i{width:9px;height:9px;border-radius:3px}
 .chip button{border:0;background:none;color:var(--muted);font-size:15px;line-height:1;padding:0 6px;cursor:pointer;border-radius:999px}.chip button:hover{color:var(--neg)}
@@ -1165,15 +1173,18 @@ function setFrom(k,v){const m0=view,M0=ensureMonth(m0),old=k==='saving'?savingOf
   if(k==='saving'){const same=x=>x.month>m0&&!x.note&&+x.amount===old;if(v)S.deposits.filter(same).forEach(x=>x.amount=v);else S.deposits=S.deposits.filter(x=>!same(x));setSaving(m0,v)}
   else{for(const[m,M]of Object.entries(S.months))if(m>m0&&num(M[k])===old)M[k]=v;M0[k]=v}}
 const mfa=(k,l,v)=>`<div class="fld"><label>${l}</label><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mfa="${k}" value="${v?nfs(v):''}" placeholder="0,00"></div>`;
-function usdFld(M0){const auto=view>=curYM&&!M0.usdMan;
-  if(usdEdit||!auto)return mfa('usd','Dólar',num(M0.usd)).replace('</div>',`<div class="hint">${M0.usdMan&&view>=curYM?'Cargado a mano. <button type="button" class="lnk" data-act="usdauto">Volver a automático</button>':view<curYM?'Mes pasado: queda con este valor.':''}</div></div>`);
-  const ok=usdLive&&usdLive.src===usdSrc();
-  return `<div class="fld"><label>Dólar</label><div style="font-size:18px;font-weight:650;padding:6px 0">${num(M0.usd)?fmt(num(M0.usd)):'—'}</div><div class="hint">${ok?`Automático · dólar ${USDSRC[usdSrc()].toLowerCase()} · ${usdAt()}`:'Automático · buscando cotización…'} <button type="button" class="lnk" data-act="usdman">Cargar a mano</button></div></div>`}
+const PEN='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+const minp=(k,v)=>`<input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-mfa="${k}" value="${v?nfs(v):''}" placeholder="0,00" aria-label="${k==='usd'?'Dólar':'Sueldo'}">`;
+function usdFld(M0){const fut=view>=curYM,auto=fut&&!M0.usdMan,ok=usdLive&&usdLive.src===usdSrc();
+  if(usdEdit||!auto){const sub=!fut?'<span class="badge off">Mes pasado</span>':`<span class="badge off">Manual</span><button type="button" class="lnk" style="padding:0;font-size:12px" data-act="usdauto">Volver a automático</button>`;
+    return `<div class="mrw"><div class="mk"><b>Dólar</b><small>${sub}</small></div>${minp('usd',num(M0.usd))}</div>`}
+  return `<div class="mrw"><div class="mk"><b>Dólar</b><small><span class="badge">Auto</span>${ok?usdAt():'buscando…'}</small></div><div class="mbig">${num(M0.usd)?fmt(num(M0.usd)):'—'}<button type="button" data-act="usdman" aria-label="Cargar el dólar a mano" title="Cargar a mano">${PEN}</button></div></div>
+  <div class="usrc-l">Cotización de referencia</div><div class="usrc" role="group" aria-label="Cotización de referencia">${Object.entries(USDSRC).map(([k,n])=>`<button type="button" class="${usdSrc()===k?'on':''}" data-act="usdsrc" data-id="${k}">${n}</button>`).join('')}</div>`}
 function vAjustes(){
   const t=S.theme;
   const M0=ensureMonth(view);
-  return `<h2>Sueldo y dólar</h2><div class="card pad"><div class="sum">${mfa('salary','Sueldo',num(M0.salary))}${usdFld(M0)}</div><div class="hint" style="margin-top:8px">Vale desde ${mLabel(view).toLowerCase()} en adelante (el mes elegido arriba). Para cambiar el sueldo de un mes puntual, usá la tabla de Proyección.</div>
-  <div class="hint" style="margin-top:10px">Dólar automático (dolarapi.com), tomar de referencia:</div><div class="usrc">${Object.entries(USDSRC).map(([k,n])=>`<button type="button" class="${usdSrc()===k?'on':''}" data-act="usdsrc" data-id="${k}">${n}</button>`).join('')}</div></div>
+  return `<h2>Sueldo y dólar</h2><div class="card mset"><div class="mrw"><div class="mk"><b>Sueldo</b><small>Desde ${mLabel(view).toLowerCase()}</small></div>${minp('salary',num(M0.salary))}</div>${usdFld(M0)}</div>
+  <div class="hint" style="margin:6px 4px 0">Los cambios valen desde ${mLabel(view).toLowerCase()} en adelante. Para un mes puntual, usá la tabla de Proyección. El dólar automático sale de dolarapi.com.</div>
   <h2>Apariencia</h2><div class="card pad"><div class="pals">${Object.entries(PAL).map(([k,p])=>`<button class="pal ${t.p===k?'on':''}" data-act="pal" data-id="${k}"><i style="background:linear-gradient(135deg,${p.l.accent} 50%,${p.d.accent} 50%)"></i>${p.n}</button>`).join('')}</div>
     <div class="seg">${[['auto','Automático'],['light','Claro'],['dark','Oscuro']].map(([k,n])=>`<label><input type="radio" name="mode" data-mode="${k}" ${t.mode===k?'checked':''}><span>${n}</span></label>`).join('')}</div></div>
   <h2>Categorías</h2><div class="card pad"><div class="chips">${S.cats.map((c,i)=>`<span class="chip"><i style="background:${catSlot(c)>=0?CATPAL[window.__dark?'d':'l'][catSlot(c)]:'var(--muted)'}"></i>${esc(c)}<button data-act="delcat" data-id="${i}" aria-label="Borrar ${esc(c)}">×</button></span>`).join('')}</div>
