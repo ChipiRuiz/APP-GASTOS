@@ -746,7 +746,7 @@ function vComp(){
   let h=(SH.off?`<div class="banner">Sin conexión: esto es lo compartido de la última vez. Para cambiar algo acá necesitás internet.</div>`:'')+chips+`<div class="card pad hero"><div class="mut" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(SH.ledger.name)} · ${mLabel(m)}</span><button class="x" style="margin:-6px -8px 0 0" data-act="shedit" aria-label="Editar cuenta"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button></div><div class="kv" style="border:0;align-items:baseline"><span><b>${who}</b><div class="hint">neto del mes</div></span><span class="big ${b<-0.005?'neg':''}">${fmt(Math.abs(b))}</span></div>
     ${Math.abs(bu)>0.005?`<div class="kv"><span><b>${bu>0?esc(shOtherName())+' te debe':'Le debés'}</b> <span class="mut">en dólares</span></span><span class="${bu<0?'neg':''}" style="font-size:20px;font-weight:700">${fmtU(Math.abs(bu))}</span></div>`:''}
     ${!o?`<div class="warn" style="margin-top:8px">Todavía estás sola en esta cuenta. Invitá a la otra persona con ✎.</div>`:''}
-    <button class="btn" style="width:100%;margin-top:12px" data-act="shpay">Registrar pago</button></div>`;
+    <button class="btn" style="width:100%;margin-top:12px" data-act="shpay">Registrar pago</button><div class="f2" style="margin-top:8px"><button class="btn sec" data-act="shwa">Enviar texto</button><button class="btn sec" data-act="shpdf">Enviar PDF</button></div></div>`;
   const rows=SH.entries.flatMap(e=>{const ms=shMonthsOf(e),i=ms.indexOf(m);return i<0?[]:[{e,n:i+1}]}).sort((a,c)=>(a.e.date||'').localeCompare(c.e.date||''));
   let tot=0,totU=0;
   const op=!!S.shMovOpen;
@@ -780,6 +780,60 @@ function vLoans(){
       <div class="lnbtns">${done?'':`<button class="lnk" data-act="lnpay" data-id="${L.id}">+ Registrar devolución</button>`}<button class="lnk" data-act="lnmore" data-id="${L.id}">+ Prestar más</button></div></div></section>`}).join('')||`<div class="card pad hint" style="margin:0">Si le prestás plata a ${esc(shOtherName())} (o te presta), cargalo acá y anotá cada devolución. No se mezcla con el saldo de gastos.</div>`;
   return h+`<button class="btn sec" style="width:100%;margin-top:8px" data-act="lnadd">+ Préstamo</button>`;
 }
+/* ---------- compartir resumen (texto para WhatsApp o PDF) ---------- */
+function shSummary(m){
+  const me=(SH.members.find(x=>x.user_id===user?.id)||{}).name||(S.myName||'').trim()||'Yo',ot=shOtherName();
+  const who=id=>id===user?.id?me:shName(id),A=(v,u)=>(v<0?'-':'')+(u?'U$D':'$')+nf(v);
+  const bal=[['ARS',shMonthNet(m)],['USD',shMonthNet(m,SH.entries,'USD')]].filter(([c,v])=>c==='ARS'||Math.abs(v)>0.005).map(([c,v])=>{const u=c==='USD';
+    return {u,v,txt:Math.abs(v)<0.005?(u?'En dólares están a mano':'Están a mano'):v>0?`${ot} le debe a ${me}: ${A(v,u)}`:`${me} le debe a ${ot}: ${A(-v,u)}`}});
+  const rows=SH.entries.flatMap(e=>{const i=shMonthsOf(e).indexOf(m);return i<0?[]:[{e,n:i+1}]}).sort((a,c)=>(a.e.date||'').localeCompare(c.e.date||''));
+  const gastos=rows.filter(r=>r.e.kind!=='pago').map(({e,n})=>{const u=isU(e),c=+e.cuota,o=c*+e.share;
+    return {f:e.date?dmy(e.date).slice(0,5):'',d:(e.descr||'Gasto')+(e.cuotas>1?` (cuota ${n}/${e.cuotas})`:''),p:who(e.paid_by),o:e.paid_by===user?.id?ot:me,mt:A(c,u),pt:A(o,u)}});
+  const pagos=rows.filter(r=>r.e.kind==='pago').map(({e})=>({f:e.date?dmy(e.date).slice(0,5):'',d:e.descr||'Pago',p:who(e.paid_by),mt:A(+e.cuota,isU(e))}));
+  const loans=SH.loans.filter(x=>x.kind==='prestamo').map(L=>{const u=L.cur==='USD',tot=lnTotal(L),paid=SH.loans.filter(x=>x.loan_id===L.id&&x.kind==='devolucion').reduce((t,x)=>t+ +x.amount,0),left=Math.max(0,tot-paid);
+    return left<0.005?null:{d:L.descr||'Préstamo',l:who(L.lender),b:L.lender===user?.id?ot:me,tt:A(tot,u),ft:A(left,u)}}).filter(Boolean);
+  return {title:`${SH.ledger.name} · ${mLabel(m)}`,me,ot,bal,gastos,pagos,loans};
+}
+function shText(m){const s=shSummary(m),L=[`*${s.title}*`,...s.bal.map(b=>b.txt)];
+  if(s.gastos.length)L.push('','*Gastos*',...s.gastos.map(g=>`• ${g.f?g.f+' ':''}${g.d} · ${g.mt} (pagó ${g.p}, a ${g.o} le toca ${g.pt})`));
+  if(s.pagos.length)L.push('','*Pagos*',...s.pagos.map(p=>`• ${p.f?p.f+' ':''}${p.p} pagó ${p.mt}${p.d!=='Pago'?' · '+p.d:''}`));
+  if(s.loans.length)L.push('','*Préstamos*',...s.loans.map(x=>`• ${x.d}: ${x.l} le prestó ${x.tt} a ${x.b}, faltan ${x.ft}`));
+  if(!s.gastos.length&&!s.pagos.length)L.push('','Sin movimientos este mes.');
+  return L.join('\n')}
+async function shShareText(){const t=shText(view);
+  if(navigator.share&&matchMedia('(pointer:coarse)').matches){try{await navigator.share({text:t});return}catch(e){if(e.name==='AbortError')return}}
+  window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank','noopener')}
+/* PDF chico hecho a mano: Helvetica, A4, sin librerías */
+function pdfMake(pages){
+  const W1252={8364:128,8218:130,8222:132,8230:133,8226:149,8211:150,8212:151,8216:145,8217:146,8220:147,8221:148};
+  const enc=s=>[...String(s)].map(ch=>{const c=ch.codePointAt(0);if(ch==='('||ch===')'||ch==='\\')return '\\'+ch;if(c>=32&&c<127)return ch;const b=c>=160&&c<256?c:W1252[c]||(c===8722?45:0);return b?'\\'+b.toString(8).padStart(3,'0'):''}).join('');
+  const objs=[],add=s=>(objs.push(s),objs.length),kids=[];
+  add('<< /Type /Catalog /Pages 2 0 R >>');add('');
+  const f1=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>'),f2=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  for(const ops of pages){const st=ops.map(o=>o.r?`${o.c||'0.85 0.85 0.85'} rg ${o.x} ${o.y} ${o.w} ${o.h} re f`:`BT /F${o.b?2:1} ${o.s} Tf ${o.c||'0.1 0.1 0.12'} rg ${o.x.toFixed(2)} ${o.y} Td (${enc(o.t)}) Tj ET`).join('\n');
+    const c=add(`<< /Length ${st.length} >>\nstream\n${st}\nendstream`);
+    kids.push(add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${f1} 0 R /F2 ${f2} 0 R >> >> /Contents ${c} 0 R >>`))}
+  objs[1]=`<< /Type /Pages /Kids [${kids.map(k=>k+' 0 R').join(' ')}] /Count ${kids.length} >>`;
+  let out='%PDF-1.4\n';const off=[];objs.forEach((o,i)=>{off.push(out.length);out+=`${i+1} 0 obj\n${o}\nendobj\n`});
+  const x=out.length;out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+off.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+`trailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${x}\n%%EOF`;
+  return new Blob([out],{type:'application/pdf'})}
+const hW=(t,s)=>[...String(t)].reduce((w,ch)=>w+(/[0-9$]/.test(ch)?556:/[.,:; ]/.test(ch)?278:ch==='-'?333:/[UD]/.test(ch)?722:/[A-Z]/.test(ch)?667:/[ijlft]/.test(ch)?260:/[mw]/.test(ch)?833:530),0)*s/1000;
+const hFit=(t,s,max)=>{t=String(t);if(hW(t,s)<=max)return t;while(t.length>1&&hW(t+'…',s)>max)t=t.slice(0,-1);return t.trim()+'…'};
+function shPdf(m){const s=shSummary(m),pages=[];let ops,y;const MUT='0.45 0.45 0.5',X0=40,X1=555;
+  const T=(t,x,yy,o={})=>ops.push({t,x,y:yy,s:o.s||9.5,b:o.b,c:o.c}),R=(t,x,yy,o={})=>T(t,x-hW(t,o.s||9.5),yy,o),line=yy=>ops.push({r:1,x:X0,y:yy,w:X1-X0,h:0.6});
+  const np=()=>{ops=[];pages.push(ops);y=800;if(pages.length>1){T(s.title+' (sigue)',X0,y,{c:MUT});y-=24}},need=h=>{if(y-h<50)np()};
+  np();T(s.title,X0,y,{s:17,b:1});y-=26;s.bal.forEach(b=>{T(b.txt,X0,y,{s:12.5,b:1});y-=18});y-=4;T('Generado el '+dmy(todayISO()),X0,y,{s:8.5,c:MUT});y-=26;
+  const head=(name,cols)=>{need(50);T(name,X0,y,{s:12,b:1});y-=17;cols.forEach(([t,x,r])=>(r?R:T)(t,x,y,{s:8,b:1,c:MUT}));y-=5;line(y);y-=13};
+  const row=cells=>{need(16);cells.forEach(([t,x,r,max])=>(r?R:T)(max?hFit(t,9.5,max):t,x,y));y-=5;ops.push({r:1,x:X0,y,w:X1-X0,h:0.3,c:'0.9 0.9 0.92'});y-=11};
+  if(s.gastos.length){head('Gastos',[['FECHA',X0],['DESCRIPCIÓN',80],['PAGÓ',300],['MONTO',450,1],['LE TOCA AL OTRO',X1,1]]);s.gastos.forEach(g=>row([[g.f,X0],[g.d,80,0,212],[g.p,300,0,70],[g.mt,450,1],[g.pt,X1,1]]));y-=14}
+  if(s.pagos.length){head('Pagos',[['FECHA',X0],['DETALLE',80],['PAGÓ',300],['MONTO',X1,1]]);s.pagos.forEach(p=>row([[p.f,X0],[p.d,80,0,212],[p.p,300,0,140],[p.mt,X1,1]]));y-=14}
+  if(s.loans.length){head('Préstamos pendientes',[['DETALLE',X0],['PRESTÓ',230],['TOTAL',450,1],['FALTA',X1,1]]);s.loans.forEach(x=>row([[x.d,X0,0,182],[x.l+' a '+x.b,230,0,140],[x.tt,450,1],[x.ft,X1,1]]))}
+  if(!s.gastos.length&&!s.pagos.length)T('Sin movimientos este mes.',X0,y,{c:MUT});
+  pages.forEach((p,i)=>{if(pages.length>1)p.push({t:`${i+1}/${pages.length}`,x:X1-hW(`${i+1}/${pages.length}`,8),y:30,s:8,c:MUT})});
+  return pdfMake(pages)}
+async function shSharePdf(){const name=`Compartido ${SH.ledger.name} ${mLabel(view)}.pdf`.replace(/[\\/:*?"<>|]/g,''),f=new File([shPdf(view)],name,{type:'application/pdf'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:name});return}catch(e){if(e.name==='AbortError')return}}
+  const a=document.createElement('a'),u=URL.createObjectURL(f);a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('PDF descargado: mandalo desde WhatsApp')}
 async function lnSave(row,id){const q=id?sb.from('ledger_loans').update(row).eq('id',id):sb.from('ledger_loans').insert({...row,ledger_id:SH.ledger.id});
   const {error}=await q;if(error){alert('No se pudo guardar: '+error.message);return false}await shLoad();render();toast('Guardado')}
 async function lnDel(x){const {error}=await sb.from('ledger_loans').delete().eq('id',x.id);if(error){alert('No se pudo borrar');return false}
@@ -1361,6 +1415,8 @@ document.addEventListener('click',e=>{
   else if(a==='shsel'){shSelect(id);render()}
   else if(a==='shadd')shEntryForm(null,'gasto');
   else if(a==='shpay')shEntryForm(null,'pago');
+  else if(a==='shwa')shShareText();
+  else if(a==='shpdf')shSharePdf();
   else if(a==='shmov'){S.shMovOpen=!S.shMovOpen;save();render()}
   else if(a==='lnadd')lnForm();
   else if(a==='lnedit')lnForm(SH.loans.find(x=>x.id===id));
