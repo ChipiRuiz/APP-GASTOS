@@ -339,6 +339,10 @@ body.priv #app input[data-money]:not(:focus),body.priv #app input.amt:not(:focus
 .dleg2{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:11.5px;color:var(--muted)}.dleg2 i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}.dleg2 b{color:var(--ink);font-weight:600}
 .ending{margin-top:12px;padding:9px 11px;border-radius:10px;background:var(--week);font-size:12.5px}
 .banner{background:var(--soft);border:1px dashed var(--accent);border-radius:14px;padding:14px;margin-bottom:12px;font-size:14px}
+.pkl{margin-top:6px}.pkr{display:flex;align-items:center;gap:10px;width:100%;padding:9px 6px;margin:0 -6px;width:calc(100% + 12px);border:0;border-top:1px dashed var(--line);background:none;text-align:left;cursor:pointer;border-radius:10px}.pkr:first-child{border-top:0}.pkr.on{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.pkr .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 18%,var(--card));font-size:13px;font-weight:700;flex:none}.pkr .t{flex:1;min-width:0}.pkr .t b{display:block;font-weight:600}.pkr .t small{font-size:12px;color:var(--muted)}.pkr .t small.pos{color:var(--pos)}.pkr .t small.neg{color:var(--neg)}
+.pkr .a{text-align:right;font-weight:700;white-space:nowrap}.pkr .a small{display:block;font-weight:500;font-size:12px}.pkr .chev{color:var(--muted)}
+.pkchips{display:flex;gap:6px;margin:14px 2px 0;overflow-x:auto;scrollbar-width:none}.pkchips button{flex:none;padding:6px 13px;border-radius:99px;border:1px solid var(--line);background:var(--card);font-size:13px;font-weight:600;cursor:pointer}.pkchips button.on{background:var(--accent);color:var(--onacc);border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -562,7 +566,7 @@ async function usdFetch(){const src=usdSrc();
 function usdApply(){if(!usdLive||!S||!S.months||usdLive.src!==usdSrc())return;const M=ensureMonth(curYM);if(M.usdMan)return;const old=num(M.usd),v=usdLive.v;if(old===v)return;
   for(const[m,X]of Object.entries(S.months))if(m>curYM&&!X.usdMan&&num(X.usd)===old)X.usd=v;M.usd=v;save()}
 const usdAt=()=>{if(!usdLive||!usdLive.at)return '';const d=new Date(usdLive.at);if(isNaN(d))return '';const hm=d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});return d.toDateString()===new Date().toDateString()?'hoy '+hm:d.toLocaleDateString('es-AR',{day:'numeric',month:'short'})+' '+hm};
-const plainDep=m=>S.deposits.find(x=>x.month===m&&!x.note);
+const plainDep=m=>S.deposits.find(x=>x.month===m&&!x.note&&x.pk!=='USD');
 const savingOf=m=>{const d=plainDep(m);return d?+d.amount:0};
 function setSaving(m,v){let d=plainDep(m);if(!v){if(d)S.deposits=S.deposits.filter(x=>x!==d);return}if(d)d.amount=v;else{S.deposits.push({id:uid(),month:m,amount:v,note:''});S.deposits.sort((a,b)=>a.month.localeCompare(b.month))}}
 function migrate(){let ch=false;
@@ -624,7 +628,27 @@ const tripSavAmt=t=>t.savAmt?+t.savAmt:tripTot(t);
 const tripSav=()=>S.trips.filter(t=>t.fromSavings).reduce((s,t)=>s+tripSavAmt(t),0);
 const depDone=()=>S.deposits.filter(x=>x.month<curYM);
 const yTot=(m)=>sumBy((S.yields||[]).filter(x=>!m||(x.date||'').slice(0,7)<=m),'amount');
-const savBal=()=>sumBy(depDone(),'amount')+yTot()-sumBy(S.savingsExp,'amount')-tripSav();
+const savBal0=()=>sumBy(depDone(),'amount')+yTot()-sumBy(S.savingsExp,'amount')-tripSav();
+/* ahorros por moneda (Pesos, Dólares, FCI). Hasta que se reparte el saldo (S.savOpen) todo sigue junto en pesos.
+   Al repartir, lo cargado antes queda marcado old:1: se ve en el historial pero ya está dentro del saldo inicial de cada uno. */
+const PKS=['ARS','USD','FCI'],PKN={ARS:'Pesos',USD:'Dólares',FCI:'FCI'},PKI={ARS:'$',USD:'U$',FCI:'📈'};
+const pkF=k=>k==='USD'?fmtU:fmt,pkLow=k=>k==='FCI'?'FCI':PKN[k].toLowerCase();
+const depPk=x=>x.pk||(S.savOpen&&S.savOpen.def)||'ARS';
+const sxPk=x=>x.pk||'ARS';
+const tripPk=t=>t.savPk||'ARS';
+const tripPkAmt=t=>tripPk(t)==='USD'?+(t.savUsd||0):tripSavAmt(t);
+function pkBal(k){const o=S.savOpen;if(!o)return 0;const n=x=>!x.old;let b=+(o[k]||0);
+  b+=sumBy(depDone().filter(x=>n(x)&&depPk(x)===k),'amount');
+  if(k==='FCI')b+=sumBy((S.yields||[]).filter(n),'amount');
+  b-=sumBy(S.savingsExp.filter(x=>n(x)&&sxPk(x)===k),'amount');
+  b-=S.trips.filter(t=>t.fromSavings&&n(t)&&tripPk(t)===k).reduce((s,t)=>s+tripPkAmt(t),0);
+  (S.savMoves||[]).forEach(m=>{if(m.to===k)b+=+m.in||0;if(m.from===k)b-=+m.out||0});
+  return Math.round(b*100)/100}
+const pkTot=()=>pkBal('ARS')+pkBal('FCI')+pkBal('USD')*rate(curYM);
+const savBal=()=>S.savOpen?pkTot():savBal0();
+const moneyIn=(n,v)=>`<input name="${n}" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${v?nfs(v):''}" placeholder="0,00">`;
+/* selector de moneda para los formularios de ahorros */
+const pkSeg=(n,v,ks=PKS)=>`<div class="seg">${ks.map(k=>`<label><input type="radio" name="${n}" value="${k}" ${v===k?'checked':''}><span>${PKN[k]}</span></label>`).join('')}</div>`;
 const savAt=m=>sumBy(S.deposits.filter(x=>x.month<m),'amount')+yTot(m)-sumBy(S.savingsExp.filter(x=>!x.date||x.date.slice(0,7)<=m),'amount')-tripSav();
 
 /* ---------- vistas ---------- */
@@ -953,15 +977,15 @@ function endingHTML(cs,m){
 
 /* listas de ahorros agrupadas por año y plegables: el año actual arranca abierto, los anteriores cerrados */
 const yOpen={};
-function yGroups(k,items,yOf,li,tot){
+function yGroups(k,items,yOf,li,tot,fm=fmt){
   const by={};items.forEach(x=>{const y=yOf(x)||curYM.slice(0,4);(by[y]=by[y]||[]).push(x)});
   return Object.keys(by).sort().reverse().map(y=>{const o=yOpen[k+y]??(y===curYM.slice(0,4));const L=by[y];
-    return `<details class="yg" data-yg="${k+y}" ${o?'open':''}><summary><span>${y} <span class="mut">· ${L.length} ${L.length===1?'movimiento':'movimientos'}</span></span><b>${fmt(tot(L))}</b></summary>${L.map(li).join('')}</details>`}).join('')}
+    return `<details class="yg" data-yg="${k+y}" ${o?'open':''}><summary><span>${y} <span class="mut">· ${L.length} ${L.length===1?'movimiento':'movimientos'}</span></span><b>${fm(tot(L))}</b></summary>${L.map(li).join('')}</details>`}).join('')}
 document.addEventListener('toggle',e=>{const k=e.target?.dataset?.yg;if(k)yOpen[k]=e.target.open},true);
-const depLi=x=>`<button class="li" data-act="editdep" data-id="${x.id}"><span>${mLabel(x.month)}${x.note?` <span class="mut">· ${esc(x.note)}</span>`:''}</span><b class="${x.month>=curYM?'mut':'pos'}">${fmt(x.amount)}</b></button>`;
+const depLi=(x,F=fmt)=>`<button class="li" data-act="editdep" data-id="${x.id}"><span>${mLabel(x.month)}${x.note?` <span class="mut">· ${esc(x.note)}</span>`:''}</span><b class="${x.month>=curYM?'mut':'pos'}">${F(x.amount)}</b></button>`;
 /* barras de lo depositado en los últimos 12 meses (con nota incluida) */
 function depBars(){
-  const ms=[...Array(12)].map((_,i)=>addM(curYM,i-12)),v=ms.map(m=>S.deposits.filter(x=>x.month===m).reduce((s,x)=>s+ +x.amount,0));
+  const ms=[...Array(12)].map((_,i)=>addM(curYM,i-12)),v=ms.map(m=>S.deposits.filter(x=>x.month===m&&x.pk!=='USD').reduce((s,x)=>s+ +x.amount,0));
   const mx=Math.max(...v);if(mx<=0)return '';const tot=v.reduce((s,x)=>s+x,0);
   return `<div class="dbw"><div class="dbhd"><span class="dbsel" data-k="Promedio por mes" data-v="${fmt(tot/12)}">Promedio por mes<b>${fmt(tot/12)}</b></span></div>
   <div class="dbars">${ms.map((m,i)=>`<button type="button" class="dbb" data-k="${mLabel(m)}" data-v="${v[i]?fmt(v[i]):'Sin ahorro'}" aria-label="${mLabel(m)}: ${v[i]?fmt(v[i]):'sin ahorro'}"><i style="height:${v[i]>0?Math.max(3,v[i]/mx*100):0}%"></i><span>${MESES[+m.slice(5)-1].slice(0,3)}</span></button>`).join('')}</div></div>`}
@@ -971,18 +995,41 @@ function depTip(b){const w=document.querySelector('.dbars');if(!w)return;const h
 document.addEventListener('pointerover',e=>{const b=e.target.closest?.('.dbb');if(b&&e.pointerType==='mouse')depTip(b)});
 document.addEventListener('pointerout',e=>{if(e.pointerType==='mouse'&&e.target.closest?.('.dbars')&&!e.relatedTarget?.closest?.('.dbars'))depTip(null)});
 document.addEventListener('click',e=>{const b=e.target.closest?.('.dbb');if(b){depTip(b.classList.contains('on')&&e.pointerType!=='mouse'?null:b);return}if(!e.target.closest?.('.dbars'))depTip(null)});
+let savF='all';
 function vAhorros(){
-  const ys=S.yields||[],yt=yTot(),d=sumBy(depDone(),'amount'),pend=S.deposits.filter(x=>x.month>=curYM).sort((a,b)=>a.month.localeCompare(b.month)),g=sumBy(S.savingsExp,'amount'),v=tripSav(),ts=S.trips.filter(t=>t.fromSavings);
-  return `<div class="card pad hero"><div class="mut">Saldo de ahorros</div><div class="big">${fmt(d+yt-g-v)}</div><div class="hacts"><button class="btn sec" data-act="realbal">Actualizar Rendimientos FCI</button><button class="btn sec" data-act="addsx">+ Agregar gasto</button></div>
-    <div class="kv"><span>Total ahorrado</span><span>${fmt(d)}</span></div>${ys.length?`<div class="kv"><span>+ Rendimientos FCI</span><span class="${yt<0?'neg':'pos'}">${fmt(yt)}</span></div>`:''}<div class="kv"><span>• Gastado desde ahorros</span><span>${fmt(g)}</span></div>${ts.length?`<div class="kv"><span>• Vacaciones pagadas con ahorros</span><span>${fmt(v)}</span></div>`:''}</div>
-  <h2>Ahorro esperado por mes</h2><div class="card pad"><div class="sum">${mfa('saving','Ahorro esperado',savingOf(view))}</div><div class="hint" style="margin-top:8px">Vale desde ${mLabel(view).toLowerCase()} en adelante; los meses anteriores no cambian. Para un mes puntual, tocá ese mes en la lista o usá la tabla de Proyección.</div></div>
-  <div class="grid4"><div><h2>Ahorros</h2><div class="card">
-    ${depBars()}${pend.length?`<div class="wk">Próximos · ${fmt(sumBy(pend,'amount'))}</div>`:''}${pend.map(depLi).join('')}
-    ${depDone().length||ys.length?`<div class="wk">Depositados · ${fmt(d)}</div>`:''}${yGroups('d',[...[...depDone()].sort((a,b)=>b.month.localeCompare(a.month)).map(x=>({t:'d',x})),...[...ys].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>({t:'y',x}))],e=>e.t==='d'?e.x.month.slice(0,4):(e.x.date||'').slice(0,4),e=>e.t==='d'?depLi(e.x):`<button class="li" data-act="edityld" data-id="${e.x.id}"><span>📈 Rendimientos FCI <span class="mut">· ${e.x.date?dmy(e.x.date):''}</span></span><b class="${e.x.amount<0?'neg':'pos'}">${fmt(e.x.amount)}</b></button>`,L=>L.reduce((t,e)=>t+ +e.x.amount,0))}
-    <button class="lnk" data-act="adddep">+ Agregar ahorro</button></div></div>
+  const o=S.savOpen,F=o?savF:'all',all=F==='all',r=rate(curYM),ys=S.yields||[],yt=yTot(),d=sumBy(depDone(),'amount'),g=sumBy(S.savingsExp,'amount'),v=tripSav();
+  /* qué movimientos se ven con cada filtro: los cargados antes de separar (old) solo en Todos */
+  const inD=x=>all||!x.old&&depPk(x)===F,inY=x=>all||!x.old&&F==='FCI',inX=x=>all||!x.old&&sxPk(x)===F,inT=t=>all||!t.old&&tripPk(t)===F;
+  const toA=(n,k)=>k==='USD'?n*r:n,FM=all?fmt:pkF(F);
+  const dF=x=>o&&!x.old?pkF(depPk(x)):fmt,xF=x=>o&&!x.old?pkF(sxPk(x)):fmt;
+  const pend=S.deposits.filter(x=>x.month>=curYM&&inD(x)).sort((a,b)=>a.month.localeCompare(b.month)),done=depDone().filter(inD),yv=ys.filter(inY),mv=o?(S.savMoves||[]).filter(m=>all||m.from===F||m.to===F):[];
+  const sx=S.savingsExp.filter(inX),ts=S.trips.filter(t=>t.fromSavings&&inT(t));
+  const hero=o?`<div class="card pad hero"><div class="mut">Saldo de ahorros</div><div class="big">${fmt(pkTot())}</div><div class="pkl">${PKS.map(k=>{const b=pkBal(k);
+      const sub=k==='ARS'?'cuenta y efectivo':k==='USD'?(r?'al dólar del mes '+fmt(r):'falta el dólar del mes'):(ys.length?'rindió '+(yt<0?'':'+ ')+fmt(yt):'fondo común de inversión');
+      return `<button class="pkr ${F===k?'on':''}" data-act="savf" data-id="${k}"><span class="ic">${PKI[k]}</span><span class="t"><b>${PKN[k]}</b><small class="${k==='FCI'&&ys.length?(yt<0?'neg':'pos'):''}">${sub}</small></span><span class="a">${pkF(k)(b)}${k==='USD'&&r?`<small class="mut">≈ ${fmt(b*r)}</small>`:''}</span><span class="chev">›</span></button>`}).join('')}</div>
+      <div class="hacts"><button class="btn sec" data-act="savmove">⇄ Mover entre ahorros</button><button class="btn sec" data-act="addsx" data-id="${F}">+ Agregar gasto</button></div></div>`
+    :`<div class="card pad hero"><div class="mut">Saldo de ahorros</div><div class="big">${fmt(d+yt-g-v)}</div><div class="hacts"><button class="btn sec" data-act="realbal">Actualizar Rendimientos FCI</button><button class="btn sec" data-act="addsx">+ Agregar gasto</button></div>
+    <div class="kv"><span>Total ahorrado</span><span>${fmt(d)}</span></div>${ys.length?`<div class="kv"><span>+ Rendimientos FCI</span><span class="${yt<0?'neg':'pos'}">${fmt(yt)}</span></div>`:''}<div class="kv"><span>• Gastado desde ahorros</span><span>${fmt(g)}</span></div>${v?`<div class="kv"><span>• Vacaciones pagadas con ahorros</span><span>${fmt(v)}</span></div>`:''}
+    <button class="lnk" style="padding:8px 0 0" data-act="savsetup">Separar en pesos, dólares y FCI ›</button></div>`;
+  const chips=o?`<div class="pkchips">${['all',...PKS].map(k=>`<button class="${F===k?'on':''}" data-act="savf" data-id="${k}">${k==='all'?'Todos':PKN[k]}</button>`).join('')}</div>`:'';
+  /* lista de ahorros: depósitos, rendimientos y movimientos entre ahorros, por año */
+  const mvAmt=m=>F===m.to?+m.in:F===m.from?-m.out:0;
+  const ent=[...done.map(x=>({t:'d',x,k:x.month})),...yv.map(x=>({t:'y',x,k:x.date||''})),...mv.map(x=>({t:'m',x,k:x.date||''}))].sort((a,b)=>b.k.localeCompare(a.k));
+  const val=e=>e.t==='d'?(all?toA(+e.x.amount,o&&!e.x.old?depPk(e.x):'ARS'):+e.x.amount):e.t==='y'?+e.x.amount:all?0:mvAmt(e.x);
+  const li=e=>{const x=e.x;if(e.t==='d')return depLi(x,dF(x));if(e.t==='y')return `<button class="li" data-act="edityld" data-id="${x.id}"><span>📈 Rendimientos FCI <span class="mut">· ${x.date?dmy(x.date):''}</span></span><b class="${x.amount<0?'neg':'pos'}">${fmt(x.amount)}</b></button>`;
+    const n=mvAmt(x);return `<button class="li" data-act="editmove" data-id="${x.id}"><span>⇄ ${PKN[x.from]} → ${PKN[x.to]} <span class="mut">· ${x.date?dmy(x.date):''}${x.note?' · '+esc(x.note):''}</span></span><b class="${all?'mut':n<0?'neg':'pos'}">${all?`${pkF(x.from)(x.out)} → ${pkF(x.to)(x.in)}`:(n>0?'+':'')+pkF(F)(n)}</b></button>`};
+  const ini=!all?`<button class="li" data-act="savsetup"><span>Saldo al separar <span class="mut">· ${dmy(o.d)}</span></span><b>${pkF(F)(+o[F]||0)}</b></button>`:'';
+  const head=all?(done.length||yv.length?`<div class="wk">Depositados · ${fmt(d)}</div>`:''):`<div class="wk">Saldo en ${pkLow(F)} · ${pkF(F)(pkBal(F))}</div>`;
+  const fciBtn=F==='FCI'?`<div class="pad" style="padding-bottom:4px"><button class="btn sec" style="width:100%" data-act="realbal">Actualizar Rendimientos FCI</button></div>`:'';
+  const gv=x=>all?toA(+x.amount,o&&!x.old?sxPk(x):'ARS'):+x.amount,gt=sx.reduce((s,x)=>s+gv(x),0);
+  return hero+chips+(all?`<h2>Ahorro esperado por mes</h2><div class="card pad"><div class="sum">${mfa('saving','Ahorro esperado',savingOf(view))}</div><div class="hint" style="margin-top:8px">Vale desde ${mLabel(view).toLowerCase()} en adelante; los meses anteriores no cambian.${o?` Va a ${PKN[o.def]}.`:''} Para un mes puntual, tocá ese mes en la lista o usá la tabla de Proyección.</div></div>`:'')+
+  `<div class="grid4"><div><h2>Ahorros${all?'':' en '+pkLow(F)}</h2><div class="card">${fciBtn}
+    ${all?depBars():''}${pend.length?`<div class="wk">Próximos · ${FM(pend.reduce((s,x)=>s+(all?toA(+x.amount,o?depPk(x):'ARS'):+x.amount),0))}</div>`:''}${pend.map(x=>depLi(x,dF(x))).join('')}
+    ${head}${ini}${yGroups('d'+F,ent,e=>e.k.slice(0,4),li,L=>L.reduce((t,e)=>t+val(e),0),FM)}
+    <button class="lnk" data-act="adddep" data-id="${F}">+ Agregar ahorro${all?'':' en '+pkLow(F)}</button></div></div>
   <div><h2>Gastos desde ahorros</h2><div class="card">
-    ${S.savingsExp.length?`<details class="yg" data-yg="gall" ${yOpen.gall?'open':''}><summary><span>Gastados <span class="mut">· ${S.savingsExp.length} ${S.savingsExp.length===1?'movimiento':'movimientos'}</span></span><b>${fmt(g)}</b></summary>`:''}${[...S.savingsExp].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<button class="li" data-act="editsx" data-id="${x.id}"><span>${esc(x.desc)}${x.date?` <span class="mut">· ${dmy(x.date)}</span>`:''}</span><b>${fmt(x.amount)}</b></button>`).join('')}${S.savingsExp.length?'</details>':''}
-    ${!S.savingsExp.length&&!ts.length?'<div class="empty" style="padding:14px">Sin gastos desde ahorros. Agregalos con <b>+ Agregar gasto</b>, arriba.</div>':''}${ts.map(t=>`<button class="li" data-tab="viajes" data-trip="${t.id}"><span>✈ ${esc(t.name)} <span class="mut">· vacaciones</span></span><b>${fmt(tripSavAmt(t))}</b></button>`).join('')}</div></div></div>`;
+    ${sx.length?`<details class="yg" data-yg="gall" ${yOpen.gall?'open':''}><summary><span>Gastados <span class="mut">· ${sx.length} ${sx.length===1?'movimiento':'movimientos'}</span></span><b>${FM(gt)}</b></summary>`:''}${[...sx].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>`<button class="li" data-act="editsx" data-id="${x.id}"><span>${esc(x.desc)}${x.date?` <span class="mut">· ${dmy(x.date)}</span>`:''}</span><b>${xF(x)(x.amount)}</b></button>`).join('')}${sx.length?'</details>':''}
+    ${!sx.length&&!ts.length?'<div class="empty" style="padding:14px">Sin gastos desde ahorros. Agregalos con <b>+ Agregar gasto</b>, arriba.</div>':''}${ts.map(t=>`<button class="li" data-tab="viajes" data-trip="${t.id}"><span>✈ ${esc(t.name)} <span class="mut">· vacaciones</span></span><b>${o&&!t.old&&tripPk(t)==='USD'?fmtU(tripPkAmt(t)):fmt(tripSavAmt(t))}</b></button>`).join('')}</div></div></div>`;
 }
 
 let SIM={amt:'',n:'6',card:'',pct:'',cap:''};
@@ -1038,7 +1085,7 @@ document.addEventListener('click',e=>{const h=e.target.closest?.('.phit');if(h){
 const pOpen=new Set([curYM]);
 function vProy(){
   let bal=savBal();const start=bal;let rows='',n=12;const pts=[];
-  for(let i=0;i<n;i++){const m=addM(curYM,i),t=monthTotals(m),extra=S.deposits.filter(x=>x.month===m&&x.note).reduce((s,x)=>s+ +x.amount,0);bal+=t.sv+extra;pts.push([m,bal]);
+  for(let i=0;i<n;i++){const m=addM(curYM,i),t=monthTotals(m),extra=S.deposits.filter(x=>x.month===m&&x.note).reduce((s,x)=>s+ +x.amount*(x.pk==='USD'?rate(m):1),0);bal+=t.sv+extra;pts.push([m,bal]);
     rows+=`<tr class="${i===0?'cur':''} ${pOpen.has(m)?'op':''} ${animK==='pj:'+m?'anim':''}"><td data-act="ptog" data-m="${m}"><span class="pchev"></span>${mLabel(m)}</td><td data-l="Sueldo"><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-pj="sal" data-m="${m}" value="${t.sal?nfs(t.sal):''}" placeholder="0,00">${t.inc?`<div class="r-sub ${t.inc<0?'neg':'pos'}" title="Otros ingresos y egresos">${t.inc<0?'-':'+'} ${fmt(Math.abs(t.inc))} otros</div>`:''}</td><td data-l="Gastos">${fmt(t.tc)}</td><td data-l="Servicios">${fmt(t.tx)}</td>
     <td data-l="Ahorro"><input inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-pj="sv" data-m="${m}" value="${t.sv?nfs(t.sv):''}" placeholder="0,00"></td><td data-l="Te sobra" class="${t.rest<0?'neg':'pos'}"><b>${fmt(t.rest)}</b></td><td data-l="Acum.">${fmt(bal)}${extra?`<div class="r-sub">+ ${fmt(extra)} extra</div>`:''}</td></tr>`}
   return `<div class="card pad hero"><div class="mut">Ahorros hoy</div><div class="big">${fmt(start)}</div><div class="kv"><span>En ${mLabel(addM(curYM,n-1))}</span><b>${fmt(bal)}</b></div>${projChart(start,pts)}</div>
@@ -1339,7 +1386,7 @@ function purchaseForm(p,link){
   d=>{
     const total=num(d.total);if(!total)return alert('Falta el monto'),false;
     if(isNew)S.lastCard=d.card;
-    if(d.card==='AHORRO'){S.savingsExp.push({id:uid(),desc:d.desc,amount:total,date:d.date,note:(d.note||'').trim()||undefined});return}
+    if(d.card==='AHORRO'){S.savingsExp.push({id:uid(),desc:d.desc,amount:total,date:d.date,note:(d.note||'').trim()||undefined,pk:S.savOpen?(d.cur==='USD'?'USD':'ARS'):undefined});return}
     const cu=Math.max(1,parseInt(d.cuotas)||1);
     const o=isNew?{id:uid(),refunds:{}}:p;
     const amt=Math.round(total*100)/100,prevAmt=isNew?null:cuAt(o,view),wasMulti=!isNew&&(o.rec||o.cuotas>1);
@@ -1416,7 +1463,7 @@ function cardForm(c){
 }
 
 function simpleForm(title,fields,obj,onSave,onDel){
-  sheet(`<h3>${title}</h3>`+fields.map(([n,l,t,v])=>fld(l,`<input name="${n}" ${t==='num'?'inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"':t?`type="${t}"`:''} value="${esc(v??'')}" ${n==='amount'||n==='desc'||n==='name'?'required':''}>`)).join(''),onSave,onDel);
+  sheet(`<h3>${title}</h3>`+fields.map(([n,l,t,v,ks])=>t==='pk'?fld(l,pkSeg(n,v,ks)):fld(l,`<input name="${n}" ${t==='num'?'inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"':t?`type="${t}"`:''} value="${esc(v??'')}" ${n==='amount'||n==='desc'||n==='name'?'required':''}>`)).join(''),onSave,onDel);
 }
 
 /* ---------- eventos ---------- */
@@ -1468,19 +1515,41 @@ document.addEventListener('click',e=>{
   else if(a==='delinc'){withUndo('Ingreso eliminado',()=>{const M=S.months[view];M.incomes=M.incomes.filter(x=>x.id!==id)})}
   else if(a==='addtax'){S.months[view].taxes.push({id:uid(),name:'',amount:0,paid:false});save();render()}
   else if(a==='deltax'){withUndo('Servicio eliminado',()=>{const M=S.months[view];M.taxes=M.taxes.filter(x=>x.id!==id)})}
-  else if(a==='adddep')simpleForm('Nuevo ahorro',[['month','Mes','month',curYM],['amount','Monto','num'],['note','Nota']],null,d=>{S.deposits.push({id:uid(),month:d.month,amount:num(d.amount),note:d.note})});
-  else if(a==='editdep'){const x=S.deposits.find(y=>y.id===id);simpleForm('Editar ahorro',[['month','Mes','month',x.month],['amount','Monto','num',nf(x.amount)],['note','Nota','',x.note]],x,d=>{Object.assign(x,{month:d.month,amount:num(d.amount),note:d.note})},()=>{S.deposits=S.deposits.filter(y=>y!==x)})}
-  else if(a==='realbal'){const app=savBal();const f=sheet(`<h3>Actualizar Rendimientos FCI</h3><div class="hint" style="margin:-6px 0 10px">Poné lo que te muestra el banco hoy. La diferencia con la app se anota como rendimientos.</div>
+  else if(a==='adddep'){const o=S.savOpen;simpleForm('Nuevo ahorro',[['month','Mes','month',curYM],...(o?[['pk','Dónde','pk',PKS.includes(id)?id:o.def]]:[]),['amount','Monto','num'],['note','Nota']],null,d=>{S.deposits.push({id:uid(),month:d.month,amount:num(d.amount),note:d.note,...(o&&d.pk?{pk:d.pk}:{})})})}
+  else if(a==='editdep'){const x=S.deposits.find(y=>y.id===id),o=S.savOpen&&!x.old;simpleForm('Editar ahorro',[['month','Mes','month',x.month],...(o?[['pk','Dónde','pk',depPk(x)]]:[]),['amount','Monto','num',nf(x.amount)],['note','Nota','',x.note]],x,d=>{Object.assign(x,{month:d.month,amount:num(d.amount),note:d.note});if(o&&d.pk)x.pk=d.pk},()=>{S.deposits=S.deposits.filter(y=>y!==x)})}
+  else if(a==='realbal'){const app=S.savOpen?pkBal('FCI'):savBal();const f=sheet(`<h3>Actualizar Rendimientos FCI</h3><div class="hint" style="margin:-6px 0 10px">Poné lo que te muestra el banco hoy. La diferencia con la app se anota como rendimientos.</div>
     ${fld('Saldo real','<input name="real" inputmode="text" data-money autocomplete="off" required placeholder="0,00">')}${fld('Fecha',`<input type="date" name="date" value="${todayISO()}">`)}
-    <div class="kv"><span>La app calcula</span><b>${fmt(app)}</b></div><div class="kv"><span>Rendimiento</span><b id="ydiff">—</b></div>`,
+    <div class="kv"><span>La app calcula${S.savOpen?' en FCI':''}</span><b>${fmt(app)}</b></div><div class="kv"><span>Rendimiento</span><b id="ydiff">—</b></div>`,
     d=>{const v=num(d.real),df=Math.round((v-app)*100)/100;if(!v){alert('Falta el saldo');return false}if(Math.abs(df)<0.005){toast('Ya coincide con el banco');return}
       (S.yields=S.yields||[]).push({id:uid(),date:d.date||todayISO(),amount:df});toast('Rendimiento anotado: '+fmt(df))});
     f.real.addEventListener('input',()=>{const v=num(f.real.value),df=v-app;$('#ydiff').textContent=v?fmt(df):'—';$('#ydiff').className=v?(df<0?'neg':'pos'):''})}
   else if(a==='edityld'){const x=S.yields.find(y=>y.id===id);simpleForm('Rendimientos FCI',[['date','Fecha','date',x.date],['amount','Monto','num',(x.amount<0?'-':'')+nf(x.amount)]],x,d=>{Object.assign(x,{date:d.date,amount:num(d.amount)})},()=>{S.yields=S.yields.filter(y=>y!==x)})}
-  else if(a==='addsx')simpleForm('Gasto desde ahorros',[['desc','Descripción'],['date','Fecha','date',todayISO()],['amount','Monto','num']],null,d=>{S.savingsExp.push({id:uid(),desc:d.desc,date:d.date,amount:num(d.amount)})});
-  else if(a==='editsx'){const x=S.savingsExp.find(y=>y.id===id);simpleForm('Editar gasto desde ahorros',[['desc','Descripción','',x.desc],['date','Fecha','date',x.date],['amount','Monto','num',nf(x.amount)]],x,d=>{Object.assign(x,{desc:d.desc,date:d.date,amount:num(d.amount)})},()=>{S.savingsExp=S.savingsExp.filter(y=>y!==x)})}
+  else if(a==='addsx'){const o=S.savOpen;simpleForm('Gasto desde ahorros',[['desc','Descripción'],...(o?[['pk','Sale de','pk',PKS.includes(id)?id:'ARS']]:[]),['date','Fecha','date',todayISO()],['amount','Monto','num']],null,d=>{S.savingsExp.push({id:uid(),desc:d.desc,date:d.date,amount:num(d.amount),...(o&&d.pk?{pk:d.pk}:{})})})}
+  else if(a==='editsx'){const x=S.savingsExp.find(y=>y.id===id),o=S.savOpen&&!x.old;simpleForm('Editar gasto desde ahorros',[['desc','Descripción','',x.desc],...(o?[['pk','Sale de','pk',sxPk(x)]]:[]),['date','Fecha','date',x.date],['amount','Monto','num',nf(x.amount)]],x,d=>{Object.assign(x,{desc:d.desc,date:d.date,amount:num(d.amount)});if(o&&d.pk)x.pk=d.pk},()=>{S.savingsExp=S.savingsExp.filter(y=>y!==x)})}
+  else if(a==='savf'){savF=savF===id?'all':id;render()}
+  else if(a==='savsetup'){const o=S.savOpen,r=rate(curYM);const f=sheet(`<h3>${o?'Saldo inicial de cada ahorro':'Separar ahorros por moneda'}</h3><div class="hint" style="margin:-6px 0 10px">${o?`Lo que tenías el ${dmy(o.d)} en cada uno, cuando separaste los ahorros.`:'Poné cuánto tenés hoy en cada uno. Lo que cargaste antes queda en el historial, sin cambios.'}</div>
+    ${fld('Pesos <span class="mut">· cuenta y efectivo</span>',moneyIn('ARS',o&&o.ARS))}${fld('Dólares (U$D)',moneyIn('USD',o&&o.USD))}${fld('FCI',moneyIn('FCI',o&&o.FCI))}
+    ${fld('El ahorro de cada mes va a',pkSeg('def',o?o.def:((S.yields||[]).length?'FCI':'ARS'),['ARS','FCI']),'Cada ahorro se puede cambiar aparte.')}
+    ${o?'':`<div class="kv"><span>Hoy la app calcula</span><b>${fmt(savBal0())}</b></div>`}<div class="kv"><span>Suma${r?` <span class="mut">· dólar ${fmt(r)}</span>`:''}</span><b id="pksum">—</b></div>`,
+    d=>{const v={ARS:num(d.ARS),USD:num(d.USD),FCI:num(d.FCI)};if(!v.ARS&&!v.USD&&!v.FCI){alert('Poné al menos un saldo');return false}
+      if(o){Object.assign(o,v,{def:d.def||'ARS'});return}
+      S.deposits.forEach(x=>{if(x.month<curYM)x.old=1});(S.yields||[]).forEach(x=>x.old=1);S.savingsExp.forEach(x=>x.old=1);S.trips.forEach(t=>{if(t.fromSavings)t.old=1});
+      S.savOpen={m:curYM,d:todayISO(),...v,def:d.def||'ARS'};savF='all';toast('Listo: ahorros separados por moneda')},
+    o?()=>{delete S.savOpen;savF='all';[...S.deposits,...(S.yields||[]),...S.savingsExp,...S.trips].forEach(x=>delete x.old)}:null);
+    const up=()=>{$('#pksum').textContent=fmt(num(f.ARS.value)+num(f.FCI.value)+num(f.USD.value)*r)};f.addEventListener('input',up);up()}
+  else if(a==='savmove'||a==='editmove'){const x=a==='editmove'?(S.savMoves||[]).find(y=>y.id===id):null;
+    const f=sheet(`<h3>⇄ Mover entre ahorros</h3>${fld('Desde',pkSeg('from',x?x.from:'ARS'))}${fld('Hacia',pkSeg('to',x?x.to:'USD'))}
+    <div class="f2">${fld('<span id="mvo">Sale</span>',moneyIn('out',x&&x.out))}<div class="mvin">${fld('<span id="mvi">Entra</span>',moneyIn('in',x&&x.in))}</div></div><div class="hint" id="mvr" style="margin:-4px 0 10px"></div>
+    ${fld('Fecha',`<input type="date" name="date" value="${x?x.date:todayISO()}">`)}${fld('Nota',`<input name="note" value="${esc(x?.note||'')}" placeholder="Opcional">`)}`,
+    d=>{if(d.from===d.to){alert('Elegí dos ahorros distintos');return false}const same=(d.from==='USD')===(d.to==='USD'),out=num(d.out),inn=same?out:num(d.in);if(!out||!inn){alert('Falta el monto');return false}
+      const o=x||{id:uid()};Object.assign(o,{from:d.from,to:d.to,out,in:inn,date:d.date||todayISO(),note:(d.note||'').trim()||undefined});if(!x)(S.savMoves=S.savMoves||[]).push(o)},
+    x?()=>{S.savMoves=S.savMoves.filter(y=>y!==x)}:null);
+    const sy=()=>{const fr=f.querySelector('[name=from]:checked').value,to=f.querySelector('[name=to]:checked').value,same=(fr==='USD')===(to==='USD'),cu=k=>k==='USD'?'dólares':'pesos';
+      f.querySelector('.mvin').style.display=same?'none':'';$('#mvo').textContent=same?'Monto':'Sale ('+cu(fr)+')';$('#mvi').textContent='Entra ('+cu(to)+')';
+      const a=num(f.out.value),b=num(f.in.value);$('#mvr').textContent=!same&&a&&b?`Queda a ${fmt(fr==='USD'?b/a:a/b)} por dólar, fijo para siempre (no cambia con el dólar del mes).`:''};
+    f.addEventListener('input',sy);f.addEventListener('change',sy);sy()}
   else if(a==='addtrip'){const x=null;sheet(`<h3>Nuevo viaje</h3>${fld('Nombre','<input name="name" required>')}<div class="f2">${fld('Desde',`<input type="date" name="start" value="${x?.start||''}">`)}${fld('Hasta',`<input type="date" name="end" value="${x?.end||''}">`)}</div>${fld('Presupuesto ($)',`<input name="budget" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.budget?nfs(x.budget):''}" placeholder="Opcional">`,'Si lo dejás vacío, se usa la suma de los rubros.')}<details class="more" ${x&&x.rb&&Object.keys(x.rb).length?'open':''}><summary>Presupuesto por rubro</summary>${RUBROS.map(r=>fld(r+(RUBHINT[r]?` <span class="mut">· ${RUBHINT[r]}</span>`:''),`<input name="rb_${r}" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.rb?.[r]?nfs(x.rb[r]):''}" placeholder="Opcional">`)).join('')}</details>${covPick(S.trips.length%TRIPC.length)}<label class="chk"><input type="checkbox" name="fs"> Pagado con ahorros (se resta del saldo de ahorros)</label>`,d=>{const o={id:uid(),name:d.name,items:[],fromSavings:!!d.fs,rubDone:true,color:d.col!=null?+d.col:S.trips.length%TRIPC.length};tripDates(o,d);S.trips.push(o);tripOpen=o.id})}
-  else if(a==='edittrip'){const x=S.trips.find(y=>y.id===id);const f=sheet(`<h3>Editar viaje</h3>${fld('Nombre',`<input name="name" required value="${esc(x.name)}">`)}<div class="f2">${fld('Desde',`<input type="date" name="start" value="${x?.start||''}">`)}${fld('Hasta',`<input type="date" name="end" value="${x?.end||''}">`)}</div>${fld('Presupuesto ($)',`<input name="budget" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.budget?nfs(x.budget):''}" placeholder="Opcional">`,'Si lo dejás vacío, se usa la suma de los rubros.')}<details class="more" ${x&&x.rb&&Object.keys(x.rb).length?'open':''}><summary>Presupuesto por rubro</summary>${RUBROS.map(r=>fld(r+(RUBHINT[r]?` <span class="mut">· ${RUBHINT[r]}</span>`:''),`<input name="rb_${r}" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.rb?.[r]?nfs(x.rb[r]):''}" placeholder="Opcional">`)).join('')}</details>${covPick(tripIdx(x))}<label class="chk"><input type="checkbox" name="fs" ${x.fromSavings?'checked':''}> Pagado con ahorros (se resta del saldo de ahorros)</label><div class="savonly">${fld('Monto restado de ahorros',`<input name="sa" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x.savAmt?nfs(x.savAmt):''}" placeholder="${nf(tripTot(x))}">`,'Vacío = total del viaje.')}</div>`,d=>{x.name=d.name;x.fromSavings=!!d.fs;if(d.col!=null)x.color=+d.col;tripDates(x,d);const v=num(d.sa);if(x.fromSavings&&v)x.savAmt=v;else delete x.savAmt},()=>{S.trips=S.trips.filter(y=>y!==x)});const sy=()=>f.querySelector('.savonly').style.display=f.fs.checked?'':'none';f.fs.onchange=sy;sy()}
+  else if(a==='edittrip'){const x=S.trips.find(y=>y.id===id);const f=sheet(`<h3>Editar viaje</h3>${fld('Nombre',`<input name="name" required value="${esc(x.name)}">`)}<div class="f2">${fld('Desde',`<input type="date" name="start" value="${x?.start||''}">`)}${fld('Hasta',`<input type="date" name="end" value="${x?.end||''}">`)}</div>${fld('Presupuesto ($)',`<input name="budget" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.budget?nfs(x.budget):''}" placeholder="Opcional">`,'Si lo dejás vacío, se usa la suma de los rubros.')}<details class="more" ${x&&x.rb&&Object.keys(x.rb).length?'open':''}><summary>Presupuesto por rubro</summary>${RUBROS.map(r=>fld(r+(RUBHINT[r]?` <span class="mut">· ${RUBHINT[r]}</span>`:''),`<input name="rb_${r}" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x?.rb?.[r]?nfs(x.rb[r]):''}" placeholder="Opcional">`)).join('')}</details>${covPick(tripIdx(x))}<label class="chk"><input type="checkbox" name="fs" ${x.fromSavings?'checked':''}> Pagado con ahorros (se resta del saldo de ahorros)</label><div class="savonly">${fld('Monto restado de ahorros',`<input name="sa" inputmode="text" data-money autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="${x.savAmt?nfs(x.savAmt):''}" placeholder="${nf(tripTot(x))}">`,'Vacío = total del viaje.')}${S.savOpen&&!x.old?fld('Sale de',pkSeg('spk',tripPk(x)))+`<div class="savusd">${fld('Monto en dólares',moneyIn('su',x.savUsd))}</div>`:''}</div>`,d=>{x.name=d.name;x.fromSavings=!!d.fs;if(d.col!=null)x.color=+d.col;tripDates(x,d);const v=num(d.sa);if(x.fromSavings&&v)x.savAmt=v;else delete x.savAmt;if(S.savOpen&&!x.old&&d.spk){x.savPk=d.spk;const u=num(d.su);if(x.fromSavings&&d.spk==='USD'&&!u){alert('Falta el monto en dólares');return false}if(d.spk==='USD')x.savUsd=u;else delete x.savUsd}},()=>{S.trips=S.trips.filter(y=>y!==x)});const sy=()=>{f.querySelector('.savonly').style.display=f.fs.checked?'':'none';const u=f.querySelector('.savusd');if(u)u.style.display=f.querySelector('[name=spk]:checked')?.value==='USD'?'':'none'};f.fs.onchange=sy;f.addEventListener('change',sy);sy()}
   else if(a==='additem'||a==='edititem'){
     const tr=S.trips.find(y=>y.id===t.dataset.trip),it=a==='edititem'?tr.items.find(y=>y.id===id):null;
     const cur=it&&it.usd&&!it.ars?'USD':'ARS';
