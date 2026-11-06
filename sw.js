@@ -1,6 +1,6 @@
 // Permite abrir la app sin conexión: guarda la app y la librería de Supabase.
 // La app se pide primero a internet (para recibir cambios) y si no hay, sale de lo guardado.
-const C='gastos-v1';
+const C='gastos-v2';
 const CORE=['./','index.html','manifest.json','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

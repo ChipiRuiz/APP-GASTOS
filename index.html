@@ -2,6 +2,8 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://lmtljkmqnmuarfhukjva.supabase.co wss://lmtljkmqnmuarfhukjva.supabase.co https://cdn.jsdelivr.net; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Mis Gastos</title>
 <meta name="theme-color" content="#fbf4f6">
@@ -352,7 +354,7 @@ body.priv #app input[data-money]:not(:focus),body.priv #app input.amt:not(:focus
 <div id="ov"></div>
 <div id="login"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js" integrity="sha384-TcHRA3zBbn+Lexh5n+Oil4guNPOS3rjNDpGRAN46u/s/mB2IZ50ceC6TYDU2yvgK" crossorigin="anonymous"></script>
 <script>
 const SB_URL='https://lmtljkmqnmuarfhukjva.supabase.co',SB_KEY='sb_publishable_UsSM8UYydodapoO3fA4pcQ_zX-a4GV5';
 const sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY):null;
@@ -371,7 +373,7 @@ const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','
 
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,10);
-const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf=n=>{const a=Math.round(Math.abs(n)*100)/100;return a.toLocaleString('es-AR',{minimumFractionDigits:Number.isInteger(a)?0:2,maximumFractionDigits:2})};
 let priv=false;try{priv=localStorage.getItem('gastos-priv')==='1'}catch(e){}
 const setPriv=v=>{priv=v;document.body.classList.toggle('priv',v);const b=document.querySelector('.eyeb');if(b){const l=v?'Mostrar montos':'Ocultar montos';b.title=l;b.setAttribute('aria-label',l)}};setPriv(priv);
@@ -439,6 +441,9 @@ async function push(){
 }
 const isBlank=d=>!d||!['purchases','deposits','savingsExp','trips','cards'].some(k=>(d[k]||[]).length)&&!Object.values(d.months||{}).some(M=>num(M.salary)||(M.taxes||[]).length||(M.incomes||[]).length);
 async function pull(force){
+  /* primero pregunta solo la fecha (unos bytes): si la nube no cambió desde lo que ya tenemos, no baja todos los datos de nuevo */
+  if(!force&&remoteAt){const {data:h,error:he}=await sb.from('app_state').select('updated_at').eq('user_id',user.id).maybeSingle();
+    if(he)throw he;if(h&&!(h.updated_at>remoteAt))return false}
   const {data,error}=await sb.from('app_state').select('data,updated_at').eq('user_id',user.id).maybeSingle();
   if(error)throw error;
   /* nunca pisar datos cargados en este dispositivo con un estado vacío de la nube: se suben los de acá */
@@ -1409,7 +1414,11 @@ document.addEventListener('click',e=>{
   else if(a==='export'){const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download='gastos-'+todayISO()+'.json';l.click()}
   else if(a==='backups')bkOpen();
   else if(a==='chpass')showNewPass('',true);
-  else if(a==='logout'){if(confirm('¿Cerrar sesión?')){sb.auth.signOut().then(()=>location.reload())}}
+  else if(a==='logout'){if(confirm('¿Cerrar sesión?')){(async()=>{
+    /* antes de salir sube lo pendiente y, si quedó todo guardado, borra la copia local de los datos de este celular */
+    clearTimeout(pushT);if(pending&&navigator.onLine)await push();
+    if(!pending)try{localStorage.removeItem(cacheKey());localStorage.removeItem('gastos-sh-'+user.id)}catch(e){}
+    await sb.auth.signOut();location.reload()})()}}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList?.contains('row'))e.target.click()});
 document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.sim;if(k){SIM[k]=e.target.value;const r=$('#simres');if(r)r.innerHTML=simRes()}});
