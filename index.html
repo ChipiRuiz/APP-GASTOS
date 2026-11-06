@@ -552,7 +552,6 @@ async function usdFetch(){const src=usdSrc();
     if(!(v>0)||src!==usdSrc())return;usdLive={v,at:d.fechaActualizacion,src};usdApply();shRender()}catch(e){}}
 function usdApply(){if(!usdLive||!S||!S.months||usdLive.src!==usdSrc())return;const M=ensureMonth(curYM);if(M.usdMan)return;const old=num(M.usd),v=usdLive.v;if(old===v)return;
   for(const[m,X]of Object.entries(S.months))if(m>curYM&&!X.usdMan&&num(X.usd)===old)X.usd=v;M.usd=v;save()}
-const usdNow=()=>(usdLive&&usdLive.v)||rate(curYM);
 const usdAt=()=>{if(!usdLive||!usdLive.at)return '';const d=new Date(usdLive.at);if(isNaN(d))return '';const hm=d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});return d.toDateString()===new Date().toDateString()?'hoy '+hm:d.toLocaleDateString('es-AR',{day:'numeric',month:'short'})+' '+hm};
 const plainDep=m=>S.deposits.find(x=>x.month===m&&!x.note);
 const savingOf=m=>{const d=plainDep(m);return d?+d.amount:0};
@@ -610,7 +609,7 @@ function closeTxt(c,m){const d=closeDate(c,m);if(m!==curYM)return 'Cierre '+d;co
 function closeDate(c,m){if(!isCredit(c))return '';const x=closeISO(c,m);return x.slice(8,10)+'/'+x.slice(5,7)}
 function firstFor(card,iso){const m=iso.slice(0,7),c=cardById(card);if(c&&!isCredit(c))return m;if(iso<=closeISO(c,addM(m,-1)))return addM(m,-1);return iso>closeISO(c,m)?addM(m,1):m}
 const sumBy=(a,k)=>a.reduce((s,x)=>s+(+x[k]||0),0);
-const itemARS=i=>(+i.ars||0)+(+i.usd||0)*(+i.rate||usdNow());
+const itemARS=i=>(+i.ars||0)+(+i.usd||0)*(+i.rate||0);
 const tripTot=t=>t.items.reduce((s,i)=>s+itemARS(i),0);
 const tripSavAmt=t=>t.savAmt?+t.savAmt:tripTot(t);
 const tripSav=()=>S.trips.filter(t=>t.fromSavings).reduce((s,t)=>s+tripSavAmt(t),0);
@@ -1059,7 +1058,7 @@ function vTrip(t){
   h+=`<h2>${t.items.some(i=>i.rub)||Object.keys(x.rb).length?'Por rubro':'Gastos'}</h2><div class="card">`;
   h+=rubs.map(r=>{const[ic,rc]=RUBI[r],v=num(x.rb[r]||0),g=x.rs[r]||0,its=t.items.filter(i=>rubOf(i)===r);
     return `<div class="vrub" style="--rc:var(--${rc})"><span class="vico">${ic}</span><div style="min-width:0"><div class="n">${r}</div>${v?`<div class="tbar sm ${g>v?'over':''}"><i style="width:${Math.min(100,g/v*100)}%"></i></div>`:''}</div><div class="a">${fmt(g)}${v?`<small>de ${fmt(v)}</small>`:''}</div></div>`+
-      [...its].reverse().map(i=>`<div class="vitem" role="button" tabindex="0" data-act="edititem" data-trip="${t.id}" data-id="${i.id}"><div style="min-width:0">${esc(i.desc)}${i.usd?`<div class="s">${fmtU(i.usd)} ${i.rate?'@ '+fmt(i.rate):'<span class="mut">≈ dólar de hoy</span>'}</div>`:''}</div><span class="a">${fmt(itemARS(i))}</span></div>`).join('')}).join('')||'<div class="empty" style="padding:14px">Sin gastos todavía.</div>';
+      [...its].reverse().map(i=>`<div class="vitem" role="button" tabindex="0" data-act="edititem" data-trip="${t.id}" data-id="${i.id}"><div style="min-width:0">${esc(i.desc)}${i.usd?`<div class="s">${fmtU(i.usd)} ${i.rate?'@ '+fmt(i.rate):'<span class="warn">· sin cotización</span>'}</div>`:''}</div><span class="a">${fmt(itemARS(i))}</span></div>`).join('')}).join('')||'<div class="empty" style="padding:14px">Sin gastos todavía.</div>';
   h+=`<button class="vadd" data-act="additem" data-trip="${t.id}">+ Agregar gasto</button></div>`;
   return h;
 }
