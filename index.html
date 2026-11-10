@@ -66,6 +66,7 @@ h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute
 .swatches input:checked+i{border-color:var(--ink)}
 .r-desc{font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:52vw}
 @media(min-width:900px){.r-desc{max-width:280px}}
+@media(hover:none){.r-desc,.cbi b{overflow-x:auto;overflow-y:hidden;text-overflow:clip;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}.r-desc::-webkit-scrollbar,.cbi b::-webkit-scrollbar{display:none}.xs{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}.xs.xl{-webkit-mask-image:linear-gradient(90deg,transparent,#000 26px,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(90deg,transparent,#000 26px,#000 calc(100% - 26px),transparent)}.xs.xl.xr{-webkit-mask-image:linear-gradient(90deg,transparent,#000 26px);mask-image:linear-gradient(90deg,transparent,#000 26px)}}
 .r-sub{font-size:12px;color:var(--muted)}.row .r-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.r-cu:empty{background:none;padding:0}
 .r-cu{font-size:12px;color:var(--muted);background:var(--week);border-radius:6px;padding:2px 6px}
 .r-amt{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -652,6 +653,15 @@ const pkSeg=(n,v,ks=PKS)=>`<div class="seg">${ks.map(k=>`<label><input type="rad
 const savAt=m=>sumBy(S.deposits.filter(x=>x.month<m),'amount')+yTot(m)-sumBy(S.savingsExp.filter(x=>!x.date||x.date.slice(0,7)<=m),'amount')-tripSav();
 
 /* ---------- vistas ---------- */
+/* nombres largos: en el celu se deslizan para leerlos completos */
+const ovSel='.r-desc,.cbi b';
+const ovMark=el=>{const o=el.scrollWidth>el.clientWidth+1;el.classList.toggle('xs',o);el.classList.toggle('xl',o&&el.scrollLeft>2);el.classList.toggle('xr',o&&el.scrollLeft+el.clientWidth>=el.scrollWidth-2)};
+let ovRaf=0;const ovAll=()=>{cancelAnimationFrame(ovRaf);ovRaf=requestAnimationFrame(()=>document.querySelectorAll(ovSel).forEach(ovMark))};
+if(matchMedia('(hover:none)').matches){
+  new MutationObserver(ovAll).observe(document.body,{childList:true,subtree:true});
+  addEventListener('resize',ovAll);
+  document.addEventListener('scroll',e=>{const t=e.target;if(t.matches&&t.matches(ovSel))ovMark(t)},true);
+}
 function render(){
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab||(b.classList.contains('nmorebtn')&&(['ajustes','sim','fijos'].includes(tab)||(tab==='viajes'&&innerWidth<=700)))));
   $('#mnav').style.visibility=['mes','comp','fijos','ahorros','ajustes'].includes(tab)?'visible':'hidden';$('#mnav').style.display=['mes','comp','fijos','ahorros','ajustes'].includes(tab)?'':'none';
